@@ -1,0 +1,43 @@
+# low and high level (optional gc/boxing)
+# functional
+# ease-of-use
+# trait-based
+
+# KEYWORDS
+#{
+    let : definition
+        let x   : variable
+        let x() : function
+    
+    struct : structure type
+    type : type definition
+
+    const : constant definition
+}#
+
+let x int32 = 0 # defines variable
+let y(x int32) int32 = 0 # defines function
+
+type string struct {}
+type tpl {int32}
+type uuid real64
+
+alias tpl {int32}
+alias double real64
+
+let min<T impl +>(a T, b T) T 
+    select if a > b select b else select a
+
+struct Vec2<T>
+{
+    x T,
+    y T
+}
+
+let Format for Vec<some T>
+{
+    fn format(this Vec<T>) string
+    {
+        return "(x={this.x}, y={this.y})"
+    }
+}

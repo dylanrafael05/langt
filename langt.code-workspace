@@ -1,0 +1,20 @@
+{
+	"folders": [
+		{
+			"path": "langt-lsp"
+		},
+		{
+			"path": "langt-core"
+		},
+		{
+			"path": "langt-vscode"
+		},
+		{
+			"path": "langt-cli"
+		},
+		{
+			"path": "Examples"
+		}
+	],
+	"settings": {}
+}

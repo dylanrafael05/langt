@@ -1,0 +1,29 @@
+{
+  "name": "langt-vscode",
+  "displayName": "Langt VSCode",
+  "description": "",
+  "version": "0.0.1",
+  "engines": {
+    "vscode": "^1.73.0"
+  },
+  "categories": [
+    "Programming Languages"
+  ],
+  "contributes": {
+    "languages": [{
+      "id": "langt",
+      "aliases": ["Langt", "langt"],
+      "extensions": [".lgt"],
+      "configuration": "./language-configuration.json",
+      "icon": {
+        "dark":  "./icons/Dark.png",
+        "light": "./icons/Light.png"
+      }
+    }],
+    "grammars": [{
+      "language": "langt",
+      "scopeName": "source.lgt",
+      "path": "./syntaxes/langt.tmLanguage.json"
+    }]
+  }
+}

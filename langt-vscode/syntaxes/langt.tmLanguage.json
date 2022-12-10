@@ -1,0 +1,54 @@
+{
+	"$schema": "https://raw.githubusercontent.com/martinring/tmlanguage/master/tmlanguage.json",
+	"name": "Langt",
+	"patterns": [
+		{
+			"include": "#keywords"
+		},
+		{
+			"name": "constant.numeric",
+			"match": "\\d+(\\.\\d+)?"
+		},
+		{
+			"name": "variable",
+			"match": "\\b[\\w_$][\\w\\d_$]*"
+		},
+		{
+			"include": "#strings"
+		}
+	],
+	"repository": {
+		"keywords": {
+			"patterns": [
+				{
+					"name": "keyword.control.langt",
+					"match": "\\b(if|while|else|return)\\b"
+				},
+				{
+					"name": "keyword.operator.langt",
+					"match": "\\b(and|or|not|as|ptrto)\\b"
+				},
+				{
+					"name": "keyword.other.langt",
+					"match": "\\b(let|extern|struct)\\b"
+				},
+				{
+					"name": "keyword.other.type.langt",
+					"match": "\\b(int(8|16|32|64)|real(32|64)|bool|none)\\b"
+				}
+			]
+		},
+		"strings": {
+			"name": "string.quoted.double.langt",
+			"begin": "\"",
+			"end": "\"",
+			"patterns": [
+				{
+					"name": "constant.character.escape.langt",
+					"match": "\\\\."
+				}
+			]
+		}
+	},
+	"scopeName": "source.lgt"
+}
