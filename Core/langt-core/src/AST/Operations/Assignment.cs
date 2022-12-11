@@ -20,7 +20,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         Left.TypeCheckRaw(generator);
         Right.TypeCheck(generator);
 
-        if(!Left.TransformedType.IsPointer || !Left.Readable)
+        if(!Left.TransformedType.IsPointer || !Left.IsLValue)
         {
             generator.Diagnostics.Error($"Cannot assign to a non-assignable value", Range);
         }

@@ -29,31 +29,45 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
             IsVararg
         );
 
-    public bool SignatureMatches(ASTNode[] parameters, CodeGenerator generator, out ITransformer?[]? transformers, out SignatureMatchLevel level)
+    public bool SignatureMatches(ASTNode[] parameters, CodeGenerator generator, out ASTTypeMatchCreator[]? matchers, out SignatureMatchLevel level)
     {
-        transformers = null;
+        matchers = null;
         level = SignatureMatchLevel.None;
 
         if(parameters.Length < ParameterTypes.Length) return false;
         if(!IsVararg && parameters.Length != ParameterTypes.Length) return false;
 
-        var l = new List<ITransformer?>();
+        var l = new List<ASTTypeMatchCreator>();
 
         level = SignatureMatchLevel.Exact;
 
         for(var i = 0; i < ParameterTypes.Length; i++)
         {
-            if(!generator.CanMatch(ParameterTypes[i], parameters[i].TransformedType, parameters[i].Readable, out var t))
+            if(!generator.CanMatch(ParameterTypes[i], parameters[i], out var t))
             {
                 return false;
             }
 
-            if(t is not null) level = SignatureMatchLevel.Coerced;
+            if(t.Transformer is not null) level = SignatureMatchLevel.Coerced;
 
             l.Add(t);
         }
 
-        transformers = l.ToArray();
+        matchers = l.ToArray();
+        return true;
+    }
+
+    public bool MakeSignatureMatch(ASTNode[] parameters, CodeGenerator generator)
+    {
+        var m = SignatureMatches(parameters, generator, out var matchers, out _);
+
+        if(!m) return m;
+
+        for(int i = 0; i < parameters.Length; i++)
+        {
+            matchers![i].ApplyTo(parameters[i], generator);
+        }
+
         return true;
     }
 }

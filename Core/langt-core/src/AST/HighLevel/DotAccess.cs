@@ -18,7 +18,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
     public LangtStructureField? Field {get; private set;}
     public int? FieldIndex {get; private set;}
 
-    public override bool Readable => true;
+    public override bool IsLValue => true;
 
 
     public override void TypeCheckRaw(CodeGenerator generator)

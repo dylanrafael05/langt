@@ -113,32 +113,41 @@ public class CodeGenerator : IProjectDependency
         }
     }
 
-    public bool CanMatch(LangtType to, LangtType from, bool readPointer, out ITransformer? transformer) 
+    public bool CanMatch(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher) 
     {
-        transformer = null;
-        if(to == from) return true;
-
-        if(readPointer && from.IsPointer)
+        matcher = new();
+        
+        if(from.RequiresTypeDownflow)
         {
-            transformer = LangtReadPointer.Transformer(from);
+            if(!from.IsValidDownflow(to, this)) return false;
+
+            matcher = matcher with {DownflowType = to};
+        }
+
+        var ftype = matcher.DownflowType ?? from.TransformedType;
+
+        if(to == ftype) return true;
+
+        if(from.IsLValue && ftype.IsPointer)
+        {
+            matcher = matcher with {Transformer = LangtReadPointer.Transformer(ftype)};
             return true;
         }
 
-        var conv = ResolveConversion(to, from);
+        var conv = ResolveConversion(to, ftype);
         if(conv is null) return false;
 
-        transformer = conv.TransformProvider.TransformerFor(from, to);
+        matcher = matcher with {Transformer = conv.TransformProvider.TransformerFor(ftype, to)};
         return conv.IsImplicit;
     }
     public bool MakeMatch(LangtType to, ASTNode from) 
     {
-        if(!CanMatch(to, from.TransformedType, from.Readable, out var transformer))
+        if(!CanMatch(to, from, out var matcher))
         {
             return false;
         }
 
-        if(transformer is not null) from.ApplyTransform(transformer);
-
+        matcher.ApplyTo(from, this);
         return true;
     }
 
@@ -153,6 +162,24 @@ public class CodeGenerator : IProjectDependency
         => unnamedValues.Push(value);
     public void PushValue(LangtType type, LLVMValueRef value)
         => unnamedValues.Push(new(type, value));
+
+    public void LogStack(string source)
+    {
+        var res = "     Stack after " + source + "";
+
+        if(unnamedValues.Count == 0)
+        {
+            res += " is empty";
+        }
+        else foreach(var s in unnamedValues)
+        {
+            res += "\n\r            : type " + s.Type.Name + ", value " + s.LLVM.Name;
+        }
+
+        // TODO: ADD DEBUG FLAGS for CLI
+
+        Logger.Note(res);
+    }
 
     public LangtValue PopValue()
         => unnamedValues.Pop();

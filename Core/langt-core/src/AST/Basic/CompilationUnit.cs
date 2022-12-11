@@ -5,7 +5,9 @@ namespace Langt.AST;
 public record CompilationUnit(StatementGroup Group) : ASTNode
 {
     public override ASTChildContainer ChildContainer => new() {Group};
-    
+
+    public override bool BlockLike => true;
+
     public override void Initialize(CodeGenerator generator)
     {
         Group.Initialize(generator);
@@ -28,6 +30,6 @@ public record CompilationUnit(StatementGroup Group) : ASTNode
     }
     public override void LowerSelf(CodeGenerator lowerer)
     {
-        Group.LowerSelf(lowerer);
+        Group.Lower(lowerer);
     }
 }

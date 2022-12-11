@@ -175,12 +175,12 @@ public record DefineFunction(ASTToken Let,
 
         if(Body is FunctionExpressionBody exp)
         {
-            exp.LowerSelf(lowerer);
+            exp.Lower(lowerer);
             lowerer.Builder.BuildRet(lowerer.PopValue().LLVM);
         }
         else if(Body is FunctionBlockBody blk)
         {
-            blk.LowerSelf(lowerer);
+            blk.Lower(lowerer);
             if(FunctionType!.ReturnType == LangtType.None)
             {
                 lowerer.Builder.BuildRetVoid();

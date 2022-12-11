@@ -309,18 +309,21 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         if(CurrentType is TT.Star) 
         {
-            return new PointerType(Grab(), Type(state));
-        }
-        else if(CurrentType is TT.OpenParen)
-        {
-            var open = Grab();
-            var argspecs = SeparatedCollection(state, ArgumentSpec, t => t is TT.Comma, t => t is TT.CloseParen, false);
-            var ellipsis = CurrentType is TT.Ellipsis ? Grab() : null;
-            var close = Require(TT.CloseParen);
+            var star = Grab();
 
-            var ret = Type(state);
+            if(CurrentType is TT.OpenParen)
+            {
+                var open = Grab();
+                var argspecs = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.CloseParen, false);
+                var ellipsis = CurrentType is TT.Ellipsis ? Grab() : null;
+                var close = Require(TT.CloseParen);
 
-            return new FunctionPtrType(open, argspecs, ellipsis, close, ret);
+                var ret = Type(state);
+
+                return new FunctionPtrType(star, open, argspecs, ellipsis, close, ret);
+            }
+
+            return new PointerType(star, Type(state));
         }
 
         var ns = Namespace(state);

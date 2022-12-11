@@ -18,6 +18,9 @@ public abstract record LangtType(string Name) : INamedScoped
     public bool IsStructure => this is LangtStructureType;
     public LangtStructureType? Structure => this as LangtStructureType;
 
+    public bool IsFunction => this is LangtFunctionType;
+    public bool IsFunctionPtr => IsPointer && PointeeType!.IsFunction;
+
     public bool IsAlias => this is LangtAliasType;
     public virtual LangtType? AliasBaseType => null;
     

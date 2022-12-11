@@ -18,35 +18,57 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         }
     }
 
-    public LangtFunction? Function {get; private set;}
+    //public LangtFunction? Function {get; private set;}
+    private bool hasDirectFunction;
+    private LLVMValueRef functionValue;
     private LangtFunctionType? funcType;
 
     public override void TypeCheckRaw(CodeGenerator generator)
     {
         FunctionAST.TypeCheck(generator);
-
-        if(!FunctionAST.HasResolution || FunctionAST.Resolution is not LangtFunctionGroup functionGroup)
-        {
-            generator.Diagnostics.Error("Cannot call a non-functional expression", Range);
-            return;
-        }
         
         var givenArgs = Arguments.Values.ToArray();
+        
         foreach(var arg in givenArgs)
         {
             arg.TypeCheck(generator);
         }
 
-        Function = functionGroup.MatchOverload(givenArgs, Range, generator);
+        if(FunctionAST.HasResolution && FunctionAST.Resolution is LangtFunctionGroup functionGroup)
+        {
+            var function = functionGroup.MatchOverload(givenArgs, Range, generator);
 
-        if(Function is null) return;
+            if(function is null) return;
 
-        funcType = Function.Type;
-        ExpressionType = funcType.ReturnType;
+            funcType = function.Type;
+            ExpressionType = funcType.ReturnType;
+
+            hasDirectFunction = true;
+            functionValue = function.LLVMFunction;
+        }
+        else if(FunctionAST.TransformedType.IsFunctionPtr)
+        {
+            hasDirectFunction = false;
+
+            funcType = (LangtFunctionType)FunctionAST.TransformedType.PointeeType!;
+            ExpressionType = funcType!.ReturnType;
+
+            funcType.MakeSignatureMatch(Arguments.Values.ToArray(), generator);
+        }
+        else 
+        {
+            generator.Diagnostics.Error("Cannot call a non-functional expression", Range);
+        }
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
+        FunctionAST.Lower(lowerer);
+        if(!hasDirectFunction)
+        {
+            functionValue = lowerer.PopValue().LLVM;
+        }
+
         var args = Arguments.Values.ToArray();
         var llvmArgs = new LLVMValueRef[args.Length];
 
@@ -58,7 +80,11 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
 
         lowerer.PushValue(
             funcType!.ReturnType,
-            lowerer.Builder.BuildCall2(lowerer.LowerType(Function!.Type), Function!.LLVMFunction, llvmArgs)
+            lowerer.Builder.BuildCall2(
+                lowerer.LowerType(funcType),
+                functionValue, 
+                llvmArgs
+            )
         );
     }
 }

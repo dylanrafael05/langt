@@ -8,7 +8,7 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
 {
     public override ASTChildContainer ChildContainer => new() {Value, Open, IndexValue, Close};
 
-    public override bool Readable => true;
+    public override bool IsLValue => true;
 
     public override void Dump(VisitDumper visitor)
     {

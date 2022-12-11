@@ -21,44 +21,38 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
     public LangtFunction? MatchOverload(ASTNode[] parameters, SourceRange range, CodeGenerator generator)
     {
-        var o = ResolveOverload(parameters, range, generator, out var transformers);
+        var o = ResolveOverload(parameters, range, generator, out var matchers);
 
         if(o is null) return null;
 
-        for(int i = 0; i < transformers!.Length; i++)
+        for(int i = 0; i < matchers!.Length; i++)
         {
-            var t = transformers[i];
-            if(t is not null) 
-            {
-                parameters[i].ApplyTransform(t);
-            }
+            matchers[i].ApplyTo(parameters[i], generator);
         }
 
         return o;
     }
-    public LangtFunction? ResolveOverload(ASTNode[] parameters, SourceRange range, CodeGenerator generator, out ITransformer?[]? transformers) 
+
+    private (LangtFunction? value, ASTTypeMatchCreator[]? matchers) HandleOverload(
+        (LangtFunction value, ASTTypeMatchCreator[]? matchers, SignatureMatchLevel level)[] resolves, 
+        IEnumerable<LangtType> parameterTypes,
+        SourceRange range,
+        CodeGenerator generator,
+        bool err = true) 
     {
-        var resolves = overloads
-            .Select(o => new {value = o, matches = o.Type.SignatureMatches(parameters, generator, out var ts, out var lvl), transformers = ts, level = lvl})
-            .Where(o => o.matches)
-            .Select(o => new {o.value, o.transformers, o.level})
-            .ToArray();
-        
         if(resolves.Length == 0) 
         {
-            generator.Diagnostics.Error(
-                $"Could not resolve any matching overload for call to {this.GetFullName()} with types {string.Join(", ", parameters.Select(p => p.ExpressionType.Name))}", 
+            if(err) generator.Diagnostics.Error(
+                $"Could not resolve any matching overloads for call to {this.GetFullName()} with types {string.Join(", ", parameterTypes.Select(p => p.Name))}", 
                 range
             );
-
-            transformers = null;
-            return null;
+            
+            return (null, null);
         }
 
         if(resolves.Length == 1)
         {
-            transformers = resolves[0].transformers;
-            return resolves[0].value;
+            return (resolves[0].value, resolves[0].matchers);
         }
 
         for(var lvl = SignatureMatchLevel.Exact; lvl != SignatureMatchLevel.None; lvl++)
@@ -67,19 +61,53 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
             if(byLevel.Count() != 1)
             {
-                generator.Diagnostics.Error(
-                    $"Could not resolve any one matching overload for call to {this.GetFullName()} with types {string.Join(", ", parameters.Select(p => p.ExpressionType))}, multiple overloads are valid", 
+                if(err) generator.Diagnostics.Error(
+                    $"Could not resolve any one matching overload for call to {this.GetFullName()} with parameter types {string.Join(", ", parameterTypes.Select(p => p.Name))}, multiple overloads are valid", 
                     range
                 );
             }
             else
             {
-                transformers = byLevel.First().transformers;
-                return byLevel.First().value;
+                return (byLevel.First().value, byLevel.First().matchers);
             }
         }
 
-        transformers = null;
-        return null;
+        return (null, null);
+    }
+
+    public LangtFunction? ResolveOverload(ASTNode[] parameters, SourceRange range, CodeGenerator generator, out ASTTypeMatchCreator[]? matchers, bool err = true) 
+    {
+        var resolves = overloads
+            .Select(o => (value: o, matches: o.Type.SignatureMatches(parameters, generator, out var ts, out var lvl), matchers: ts, level: lvl))
+            .Where(o => o.matches)
+            .Select(o => (o.value, o.matchers, o.level))
+            .ToArray();
+        
+        (var v, matchers) = HandleOverload(
+            resolves, 
+            parameters.Select(p => p.TransformedType), 
+            range, 
+            generator, 
+            err
+        );
+
+        return v;
+    }
+    public LangtFunction? ResolveOverload(LangtFunctionType fnType, SourceRange range, CodeGenerator generator, bool err = true) 
+    {
+        var resolves = overloads
+            .Where(o => o.Type.ParameterTypes.SequenceEqual(fnType.ParameterTypes) && o.Type.IsVararg == fnType.IsVararg)
+            .Select(o => (o, (ASTTypeMatchCreator[]?) null, SignatureMatchLevel.Exact))
+            .ToArray();
+        
+        (var v, _) = HandleOverload(
+            resolves, 
+            fnType.ParameterTypes, 
+            range, 
+            generator, 
+            err
+        );
+
+        return v;
     }
 }

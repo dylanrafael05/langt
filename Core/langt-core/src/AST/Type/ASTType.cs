@@ -17,9 +17,9 @@ public abstract record ASTType() : ASTNode //TODO: implement distinction between
     public abstract LangtType? Resolve(CodeGenerator context);
 }
 
-public record FunctionPtrType(ASTToken Open, SeparatedCollection<ArgumentSpec> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
+public record FunctionPtrType(ASTToken Star, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
 {
-    public override ASTChildContainer ChildContainer => new() {Open, Arguments, Ellipsis, Close, ReturnType};
+    public override ASTChildContainer ChildContainer => new() {Star, Open, Arguments, Ellipsis, Close, ReturnType};
 
     public override LangtType? Resolve(CodeGenerator context)
     {
@@ -27,7 +27,7 @@ public record FunctionPtrType(ASTToken Open, SeparatedCollection<ArgumentSpec> A
         (
             ReturnType.Resolve(context) ?? LangtType.Error, 
             Ellipsis is not null, 
-            Arguments.Values.Select(t => t.Type.Resolve(context) ?? LangtType.Error).ToArray()
+            Arguments.Values.Select(t => t.Resolve(context) ?? LangtType.Error).ToArray()
         );
 
         return new LangtPointerType(fType);
