@@ -53,7 +53,14 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             funcType = (LangtFunctionType)FunctionAST.TransformedType.PointeeType!;
             ExpressionType = funcType!.ReturnType;
 
-            funcType.MakeSignatureMatch(Arguments.Values.ToArray(), generator);
+            if(!funcType.MakeSignatureMatch(Arguments.Values.ToArray(), generator))
+            {
+                generator.Diagnostics.Error(
+                    $"Could not call a function pointer of type {funcType.Name} " +
+                    $"with arguments of type {string.Join(", ", Arguments.Values.Select(a => a.TransformedType.GetFullName()))}", 
+                    Range
+                );
+            }
         }
         else 
         {
