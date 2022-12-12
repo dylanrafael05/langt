@@ -113,22 +113,20 @@ public class CodeGenerator : IProjectDependency
         }
     }
 
-    public bool CanMatch(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher) 
+    private bool MatchInternal(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher, bool downflowErr) 
     {
         matcher = new();
         
         if(from.RequiresTypeDownflow)
         {
-            if(!from.IsValidDownflow(to, this)) return false;
-
-            matcher = matcher with {DownflowType = to};
+            if(!from.AcceptDownflow(to, this, err: downflowErr)) return false;
         }
-
-        var ftype = matcher.DownflowType ?? from.TransformedType;
+        
+        var ftype = from.TransformedType;
 
         if(to == ftype) return true;
 
-        if(from.IsLValue && ftype.IsPointer)
+        if(from.IsLValue && ftype.PointeeType == to)
         {
             matcher = matcher with {Transformer = LangtReadPointer.Transformer(ftype)};
             return true;
@@ -140,9 +138,12 @@ public class CodeGenerator : IProjectDependency
         matcher = matcher with {Transformer = conv.TransformProvider.TransformerFor(ftype, to)};
         return conv.IsImplicit;
     }
+
+    public bool CanMatch(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher)
+        => MatchInternal(to, from, out matcher, false);
     public bool MakeMatch(LangtType to, ASTNode from) 
     {
-        if(!CanMatch(to, from, out var matcher))
+        if(!MatchInternal(to, from, out var matcher, true))
         {
             return false;
         }
@@ -158,6 +159,8 @@ public class CodeGenerator : IProjectDependency
         ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close a scope; the current scope is the global scope!");
     }
 
+
+    // TODO: reduce value smuggling by clearing discarded values and removing 'none' values
     public void PushValue(LangtValue value)
         => unnamedValues.Push(value);
     public void PushValue(LangtType type, LLVMValueRef value)

@@ -258,7 +258,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             if(let.Type is not TT.Extern)
             {
                 PassLineBreaks();
-                if(CurrentType is TT.EqualsSign) body = new FunctionExpressionBody(Grab(), Expression(newState));
+                if(CurrentType is TT.ArrowRight) body = new FunctionExpressionBody(Grab(), Expression(newState));
                 else if(CurrentType is TT.OpenBlock) body = new FunctionBlockBody(Block(newState, Statement));
                 else throw ParserException.Error("Expected start of function body but got " + CurrentTypeName);
             }

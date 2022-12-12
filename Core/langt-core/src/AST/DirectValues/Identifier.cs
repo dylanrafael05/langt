@@ -37,15 +37,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
         generator.Logger.Note("Identifier is variable: " + Variable.GetFullName());
     }
 
-    private LangtFunction? GetOverloadFromDownflow(LangtType downflowType, CodeGenerator generator, bool err)
-    {
-        var fp = (LangtFunctionType)downflowType.PointeeType!;
-        var fg = Resolution as LangtFunctionGroup;
-
-        return fg!.ResolveOverload(fp, Range, generator, err: err);
-    }
-
-    public override bool IsValidDownflow(LangtType? type, CodeGenerator generator)
+    public override bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true)
     {
         if(!IsFunctionGroup)
         {
@@ -54,30 +46,25 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 
         if(type is null || !type.IsFunctionPtr)
         {
+            if(err) generator.Diagnostics.Error("Cannot target-type a reference to a function group to non-function pointer", Range);
             return false;
         }
-        
-        var overl = GetOverloadFromDownflow(type, generator, false);
 
-        return overl is not null;
-    }
-    public override void AcceptDownflow(LangtType? type, CodeGenerator generator)
-    {
-        if(!IsFunctionGroup)
+        var fp = (LangtFunctionType)type.PointeeType!;
+        var fg = Resolution as LangtFunctionGroup;
+
+        Function = fg!.ResolveOverload(fp, Range, generator, false);
+
+        if(Function is null)
         {
-            return;
+            if(err) generator.Diagnostics.Error("Cannot target-type a reference to a function group to a function pointer which does not match any of the group's overloads", Range);
+            return false;
         }
 
-        if(type is null || !type.IsFunctionPtr)
-        {
-            throw new Exception("This should not be the case!");
-        }
-
-        Function = GetOverloadFromDownflow(type, generator, true);
         ExpressionType = type;
         IsFunction = true;
 
-        generator.Logger.Note("Downflow for identifier accepted: " + Function);
+        return true;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -90,7 +77,6 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
         }
         else if(IsFunction)
         {
-            var f = Function!.LLVMFunction;
             lowerer.PushValue(
                 ExpressionType, Function!.LLVMFunction
             );

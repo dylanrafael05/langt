@@ -10,6 +10,8 @@ public enum TokenType
     Type,
     Struct,
 
+    ArrowRight,
+
     Let,
     Extern,
 

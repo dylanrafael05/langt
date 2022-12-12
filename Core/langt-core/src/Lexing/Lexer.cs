@@ -129,11 +129,16 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
             '=' => Grab(2, TT.LessEqual),
             _   => Grab(1, TT.LessThan)
         },
+        
+        '-' => Next.Nullable() switch
+        {
+            '>' => Grab(2, TT.ArrowRight),
+            _   => Grab(1, TT.Minus)
+        },
 
         ',' => Grab(1, TT.Comma),
         
         '+' => Grab(1, TT.Plus),
-        '-' => Grab(1, TT.Minus),
         '*' => Grab(1, TT.Star),
         '/' => Grab(1, TT.Slash),
         '%' => Grab(1, TT.Percent),

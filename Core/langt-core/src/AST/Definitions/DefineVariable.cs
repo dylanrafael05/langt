@@ -28,9 +28,20 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
             if(tn is null) return;
 
             t = tn;
+
+            if(!Value.AcceptDownflow(t, generator))
+            {
+                return;
+            }
         }
         else
         {
+            if(Value.RequiresTypeDownflow)
+            {
+                generator.Diagnostics.Error("Cannot use both an inferred type and a target typed expression", Range);
+                return;
+            }
+
             t = Value.InferrableType ?? Value.TransformedType;
         }
         

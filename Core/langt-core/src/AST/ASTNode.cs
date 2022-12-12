@@ -92,19 +92,15 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// target type in order to type check?
     /// </summary>
     public virtual bool RequiresTypeDownflow => false;
-    
-    /// <summary>
-    /// Checks if the provided type is a valid type to target when type-checking
-    /// this AST node. Returns <see langword="true"/> by default to indicate that
-    /// this AST node does not care about target types. Note that this does not
-    /// indicate that the expression type and target type are compatible.
-    /// </summary>
-    public virtual bool IsValidDownflow(LangtType? type, CodeGenerator generator) => true;
+
     /// <summary>
     /// Updates this AST node so that it corresponds to the given target type.
+    /// Returns <see langword="true"/> of no errors were reported, 
+    /// and <see langword="false"/> otherwise.
+    /// Note that implementers should ensure this method can be called multiple
+    /// times, but can only produce a valid expression state if this returns <see langword="true"/>.
     /// </summary>
-    public virtual void AcceptDownflow(LangtType? type, CodeGenerator generator) 
-    {}
+    public virtual bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true) => true;
 
     /// <summary>
     /// Whether or not the current AST node has an unknown type, since it has not been 
