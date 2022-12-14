@@ -81,8 +81,6 @@ public class LangtScope : IScoped
 
         // Return the result, null or not
         return result;
-
-        // TODO: ensure all callsites account for possible nullness of resolutions
     }
 
     public LangtVariable? ResolveVariable(string name, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool propogate = true) 

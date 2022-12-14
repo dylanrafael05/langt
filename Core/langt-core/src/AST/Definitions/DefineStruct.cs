@@ -26,7 +26,7 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
         StructureType = t;
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void ImplementTypes(CodeGenerator generator)

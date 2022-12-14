@@ -30,12 +30,15 @@ public static class Program
                 noisy.AddAlias("-n");
             
             root.AddGlobalOption(noisy);
-            
-            var debug = new Option<bool>("--debug", "Whether or not to log debug information while building");
 
-                debug.AddAlias("-d");
-            
-            root.AddGlobalOption(debug);
+            var debugFlags = new Option<string[]>("--debug", "The flags to set debug for")
+            {
+                IsHidden = true,
+                Arity = ArgumentArity.ZeroOrMore,
+                AllowMultipleArgumentsPerToken = true
+            };
+            debugFlags.AddAlias("-d");
+            root.AddGlobalOption(debugFlags);
 
             var run = new Command("run", """Runs the provided Langt file or directory through by means of its "main" function""");
 
@@ -60,43 +63,41 @@ public static class Program
 
                 run.Add(runinput);
 
-            run.SetHandler(OnRun, runinput, noisy, debug);
+            run.SetHandler(OnRun, runinput, noisy, debugFlags);
             root.Add(run);
 
         root.TreatUnmatchedTokensAsErrors = true;
         await root.InvokeAsync(args);
     }
 
-    public static void SetFlags(bool noisy, bool debug)
+    public static void SetFlags(bool noisy)
     {
         Noisy = noisy;
-        Debug = debug;
     }
 
-    public static void OnRun(string input, bool noisy, bool debug)
+    public static void OnRun(string input, bool noisy, string[] debugFlags)
     {
-        SetFlags(noisy, debug);
+        SetFlags(noisy);
 
         Console.WriteLine();
 
-        var cliLogger = new LangtCLIReporter();
-        var logger = cliLogger as Codegen.ILogger;
-        var proj = new Codegen.LangtProject(cliLogger, input);
+        using ILogger logger = new CLILogger()
+        {
+            DebugFlags = debugFlags.ToHashSet()
+        };
+
+        logger.Init();
+        var proj = new LangtProject(logger, input);
 
         proj.LoadFromFileOrDirectory(input);
         proj.Build();
 
-        foreach(var d in proj.Diagnostics)
-        {
-            logger.Log(d.Severity, d.Message + " at " + d.Range);
-        }
+        proj.LogAllDiagnostics();
 
         if(proj.Diagnostics.AnyErrors)
         {
-            cliLogger.Abort();
+            CLILogger.Abort();
         }
-
-        logger.Note("Module dump:\n\r" + proj.Module!.Value.PrintToString().ReplaceLineEndings());
 
         logger.Note("Running function main in " + input + " . . .");
 

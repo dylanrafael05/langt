@@ -13,14 +13,15 @@ public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
     public override void TypeCheckRaw(CodeGenerator generator)
     {
-        ExpressionType = LangtType.Bool;
+        RawExpressionType = LangtType.Bool;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
-        lowerer.PushValue(
+        lowerer.PushValue( 
             LangtType.Bool,
-            LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, Tok.Type is TokenType.True ? 1ul : 0ul)
+            LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, Tok.Type is TokenType.True ? 1ul : 0ul),
+            DebugSourceName
         );
     }
 }

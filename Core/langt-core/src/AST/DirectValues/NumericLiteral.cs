@@ -22,7 +22,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
         {
             IntegerValue = long.Parse(Tok.ContentStr);
 
-            (ExpressionType, InferrableType) = IntegerValue switch 
+            (RawExpressionType, NaturalType) = IntegerValue switch 
             {
                 <= sbyte.MaxValue => (LangtType.Int8,  LangtType.Int32),
                 <= short.MaxValue => (LangtType.Int16, LangtType.Int32),
@@ -33,7 +33,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
         else
         {
             DoubleValue = double.Parse(Tok.ContentStr);
-            ExpressionType = LangtType.Real32; //todo: better handling of floating point literals
+            RawExpressionType = LangtType.Real32; //todo: better handling of floating point literals
         }
     }
 
@@ -41,16 +41,18 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
     {
         if(DoubleValue.HasValue)
         {
-            lowerer.PushValue(
-                ExpressionType,
-                LLVMValueRef.CreateConstReal(lowerer.LowerType(ExpressionType), DoubleValue!.Value)
+            lowerer.PushValue( 
+                RawExpressionType,
+                LLVMValueRef.CreateConstReal(lowerer.LowerType(RawExpressionType), DoubleValue!.Value),
+                DebugSourceName
             );
         }
         else
         {
             lowerer.PushValue(
-                ExpressionType,
-                LLVMValueRef.CreateConstInt(lowerer.LowerType(ExpressionType), ULongFormat.I64(IntegerValue!.Value))
+                RawExpressionType,
+                LLVMValueRef.CreateConstInt(lowerer.LowerType(RawExpressionType), ULongFormat.I64(IntegerValue!.Value)),
+                DebugSourceName
             );
         }
     }

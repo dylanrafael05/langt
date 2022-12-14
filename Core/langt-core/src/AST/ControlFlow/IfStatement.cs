@@ -35,7 +35,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
             Returns = Block.Returns && Else.Returns;
         }
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -51,7 +51,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
         var endBB   = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, If.Range.CharStart+".if.end"   );
 
         Condition.Lower(lowerer);
-        var c = lowerer.PopValue();
+        var c = lowerer.PopValue(DebugSourceName);
 
         lowerer.Builder.BuildCondBr(c.LLVM, trueBB, falseBB);
 

@@ -1,37 +1,97 @@
+using System.Reflection;
+using Langt.Codegen;
+
 namespace Langt;
 
-public class LangtCLIReporter : Codegen.ILogger
+public sealed class CLILogger : ILogger
 {
-    public void Log(DiagnosticSeverity severity, string message)
+    public IReadOnlySet<string> DebugFlags {get; set;} = new HashSet<string>();
+
+    private readonly IDictionary<string, StringBuilder> flagFileBuilders 
+        = new Dictionary<string, StringBuilder>();
+
+    public static string GetLogFile(string flag)
+        => Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, $"__log.{flag}.txt");
+
+    public void Init() 
     {
-        (Console.ForegroundColor, Console.BackgroundColor) = severity switch 
+        #if DEBUG
+        flagFileBuilders.Clear();
+
+        foreach(var flag in DebugFlags)
         {
-            DiagnosticSeverity.Log     => (ConsoleColor.DarkGray, ConsoleColor.Black),
-            DiagnosticSeverity.Note    => (ConsoleColor.DarkGray, ConsoleColor.Black),
-            DiagnosticSeverity.Warning => (ConsoleColor.Yellow,   ConsoleColor.Black),
-            DiagnosticSeverity.Error   => (ConsoleColor.Red,      ConsoleColor.Black),
-            DiagnosticSeverity.Fatal   => (ConsoleColor.DarkRed,  ConsoleColor.Black),
-            _                          => (ConsoleColor.Gray,     ConsoleColor.Black)
-        };
-
-        Console.Write(severity switch 
+            flagFileBuilders[flag] = new();
+        }
+        #endif
+    }
+    
+    public void Dispose()
+    {
+        #if DEBUG
+        foreach(var (n, b) in flagFileBuilders)
         {
-            DiagnosticSeverity.Log     => "[Info]",
-            DiagnosticSeverity.Warning => "[Warn]",
-            DiagnosticSeverity.Error   => "[Error]",
-            DiagnosticSeverity.Fatal   => "[Fatal]",
-            _                          => "[Note]"
-        });
-        
-        Console.Write(" ");
-        Console.Write(message);
-
-        Console.WriteLine();
-
-        Console.ResetColor();
+            File.WriteAllText(GetLogFile(n), b.ToString());
+        }
+        #endif
     }
 
-    public void Abort() 
+    public void Log(MessageSeverity severity, string message)
+    {
+        #if DEBUG
+        if(!severity.ShouldDisplay(DebugFlags)) return;
+        #endif
+
+        var (fg, bg) = severity.SeverityType switch 
+        {
+            MessageSeverityType.Debug   => (ConsoleColor.White,    ConsoleColor.Black),
+            MessageSeverityType.Log     => (ConsoleColor.DarkGray, ConsoleColor.Black),
+            MessageSeverityType.Note    => (ConsoleColor.DarkGray, ConsoleColor.Black),
+            MessageSeverityType.Warning => (ConsoleColor.Yellow,   ConsoleColor.Black),
+            MessageSeverityType.Error   => (ConsoleColor.Red,      ConsoleColor.Black),
+            MessageSeverityType.Fatal   => (ConsoleColor.DarkRed,  ConsoleColor.Black),
+            _                           => (ConsoleColor.Gray,     ConsoleColor.Black)
+        };
+
+        var resultantMessage = new StringBuilder();
+
+        resultantMessage.Append(severity.SeverityType switch 
+        {
+            MessageSeverityType.Debug   => "",
+            MessageSeverityType.Log     => "[Info] ",
+            MessageSeverityType.Warning => "[Warn] ",
+            MessageSeverityType.Error   => "[Error] ",
+            MessageSeverityType.Fatal   => "[Fatal] ",
+            _                           => "[Note] "
+        })
+            .Append(message)
+            .AppendLine();
+
+        #if DEBUG
+        if(severity.IsDebug)
+        {
+            flagFileBuilders[severity.Flag!].Append(resultantMessage);
+        }
+        else
+        #endif
+        {
+            var rm = resultantMessage.ToString();
+
+            (Console.ForegroundColor, Console.BackgroundColor) = (fg, bg);
+
+            Console.Write(rm);
+
+            #if DEBUG
+            foreach(var fb in flagFileBuilders.Values)
+            {
+                fb!.Append(rm);
+            }
+            #endif
+
+            Console.ResetColor();
+        }
+    }
+
+    public static void Abort() 
     {   
         Console.WriteLine("Aborting process . . . ");
         Console.WriteLine();

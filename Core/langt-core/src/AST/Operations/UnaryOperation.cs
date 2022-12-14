@@ -31,8 +31,8 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Operand.Lower(lowerer);
-        var o = lowerer.PopValue();
+        var o = lowerer.PopValue(DebugSourceName);
 
-        lowerer.PushValue(o.Type, lowerer.Builder.BuildNot(o.LLVM, "not"));
+        lowerer.PushValue(o.Type, lowerer.Builder.BuildNot(o.LLVM, "not"), DebugSourceName);
     }
 }

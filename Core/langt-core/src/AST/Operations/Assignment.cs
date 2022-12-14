@@ -30,7 +30,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
             generator.Diagnostics.Error($"Cannot assign value of type {Right.TransformedType.Name} to variable of type {Left.TransformedType.Name}", Range);
         }
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
 
         // TODO: make reading pointers the default, have a special case (stored in codeGenerator), for when values should be UNREAD
     }
@@ -40,7 +40,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         Left.Lower(lowerer);
         Right.Lower(lowerer);
 
-        var (right, left) = (lowerer.PopValue(), lowerer.PopValue());
+        var (right, left) = (lowerer.PopValue(DebugSourceName), lowerer.PopValue(DebugSourceName));
 
         lowerer.Builder.BuildStore(right.LLVM, left.LLVM);
     }

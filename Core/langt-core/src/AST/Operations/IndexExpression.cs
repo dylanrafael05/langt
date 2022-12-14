@@ -34,22 +34,23 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
             generator.Diagnostics.Error($"Cannot index with a non-integral index", Range);
         }
 
-        ExpressionType = Value.TransformedType;
+        RawExpressionType = Value.TransformedType;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Value.Lower(lowerer);
-        var val = lowerer.PopValue();
+        var val = lowerer.PopValue(DebugSourceName);
 
         IndexValue.Lower(lowerer);
-        var index = lowerer.PopValue();
+        var index = lowerer.PopValue(DebugSourceName);
 
         var pointeeType = lowerer.LowerType(Value.TransformedType.PointeeType!);
 
-        lowerer.PushValue(
+        lowerer.PushValue( 
             val.Type,
-            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name)
+            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
+            DebugSourceName
         );
     }
 }

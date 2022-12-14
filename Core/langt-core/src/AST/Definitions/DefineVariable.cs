@@ -42,7 +42,7 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
                 return;
             }
 
-            t = Value.InferrableType ?? Value.TransformedType;
+            t = Value.NaturalType ?? Value.TransformedType;
         }
         
         Variable = new LangtVariable(Identifier.ContentStr, t);
@@ -55,7 +55,7 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
             generator.Diagnostics.Error($"Cannot assign a variable of type {t.Name} to a value of type {Value.TransformedType.Name}", Range);
         }
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -63,7 +63,7 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
         if(Variable.UseCount > 0)
         {
             Value.Lower(lowerer);
-            lowerer.Builder.BuildStore(lowerer.PopValue().LLVM, Variable.UnderlyingValue!.LLVM);
+            lowerer.Builder.BuildStore(lowerer.PopValue(DebugSourceName).LLVM, Variable.UnderlyingValue!.LLVM);
         }
         else
         {

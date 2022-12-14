@@ -67,7 +67,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public ASTToken Require(
         Predicate<TT?> pred, 
         string? particularError = null, 
-        [CallerMemberName] string? passname = "!") // TODO: improve errors generated here with a 'context' string
+        [CallerMemberName] string? passname = "!")
     {
         if(Current.Exists && pred(CurrentType)) return Grab();
         
@@ -119,8 +119,6 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
         return new(new List<ASTNode>(Inner()));
     }
-
-    // TODO: reimplement dumping via a visitor
 
     public ASTNode Statement(ParserState state) => RecoverPoint(() =>
     {
@@ -515,7 +513,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         TT.OpenParen => ParentheticExpression(state),
         TT.Ampersand => PtrTo(state),
 
-        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), //TODO: see lower todo
+        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state),
         TT.Identifier => new Identifier(Grab()),
         TT.Integer or TT.Decimal
             => new NumericLiteral(Grab()),
@@ -529,7 +527,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public StructInitializer StructCreate(ParserState state)
     {
-        var type = Type(state); // TODO: ENSURE THIS IS A TYPE BEFORE PARSING!
+        var type = Type(state);
         var open = Require(TT.OpenBlock);
         var args = SeparatedCollection(state, Expression, t => t is TT.Comma, t => t is TT.CloseBlock);
         var close = Require(TT.CloseBlock);

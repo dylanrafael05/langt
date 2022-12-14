@@ -22,6 +22,7 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
         foreach(var s in Statements)
         {
             s.Lower(lowerer);
+            lowerer.DiscardValues(DebugSourceName);
         }
     }
 
@@ -32,7 +33,7 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
             s.TypeCheck(generator);
         }
 
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void DefineFunctions(CodeGenerator generator)

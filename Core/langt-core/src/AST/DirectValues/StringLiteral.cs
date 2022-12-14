@@ -48,16 +48,17 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
         Value = s;
 
-        ExpressionType = LangtType.PointerTo(LangtType.Int8);
+        RawExpressionType = LangtType.PointerTo(LangtType.Int8);
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
         var res = lowerer.Builder.BuildGlobalStringPtr(Value!, "str");
 
-        lowerer.PushValue(
-            ExpressionType,
-            res
+        lowerer.PushValue( 
+            RawExpressionType,
+            res,
+            DebugSourceName
         );
     }
 }

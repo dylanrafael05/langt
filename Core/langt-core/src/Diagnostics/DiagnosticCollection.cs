@@ -23,20 +23,20 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     public bool IsReadOnly => false;
 
     public void Note(string message, SourceRange range)
-        => Add(new(DiagnosticSeverity.Note, message, range));
+        => Add(new(MessageSeverity.Note, message, range));
     public void Warning(string message, SourceRange range)
-        => Add(new(DiagnosticSeverity.Warning, message, range));
+        => Add(new(MessageSeverity.Warning, message, range));
     public void Error(string message, SourceRange range)
-        => Add(new(DiagnosticSeverity.Error, message, range));
+        => Add(new(MessageSeverity.Error, message, range));
     public void Fatal(string message, SourceRange range)
-        => Add(new(DiagnosticSeverity.Fatal, message, range));
+        => Add(new(MessageSeverity.Fatal, message, range));
 
     public void Add(Diagnostic item)
     {
         items.Add(item);
         items = items.OrderBy(i => i.Range.Source.Name).ThenBy(i => i.Range.CharStart).ToList();
 
-        if(item.Severity >= DiagnosticSeverity.Error) ErrorCount++;
+        if(item.Severity.SeverityType >= MessageSeverity.Error.SeverityType) ErrorCount++;
     }
 
     public void Clear()
@@ -58,7 +58,7 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     {
         if(items.Remove(item))
         {
-            if(item.Severity >= DiagnosticSeverity.Error) ErrorCount--;
+            if(item.Severity.SeverityType >= MessageSeverity.Error.SeverityType) ErrorCount--;
             return true;
         }
 

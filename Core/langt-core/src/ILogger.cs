@@ -1,11 +1,17 @@
 namespace Langt.Codegen;
 
-public interface ILogger
+public interface ILogger : IDisposable
 {
-    void Log(DiagnosticSeverity severity, string message);
+    IReadOnlySet<string> DebugFlags {get; set;}
 
-    void Note(string message) => Log(DiagnosticSeverity.Note, message);
-    void Warning(string message) => Log(DiagnosticSeverity.Warning, message);
-    void Error(string message) => Log(DiagnosticSeverity.Error, message);
-    void Fatal(string message) => Log(DiagnosticSeverity.Fatal, message);
+    void Init();
+
+    void Log(MessageSeverity severity, string message);
+
+    void Debug(string message, string flag) => Log(MessageSeverity.Debug(flag), message);
+
+    void Note(string message)    => Log(MessageSeverity.Note, message);
+    void Warning(string message) => Log(MessageSeverity.Warning, message);
+    void Error(string message)   => Log(MessageSeverity.Error, message);
+    void Fatal(string message)   => Log(MessageSeverity.Fatal, message);
 }

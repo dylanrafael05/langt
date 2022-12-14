@@ -29,15 +29,13 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
             IsVararg
         );
 
-    public bool SignatureMatches(ASTNode[] parameters, CodeGenerator generator, out ASTTypeMatchCreator[]? matchers, out SignatureMatchLevel level)
+    public bool SignatureMatches(ASTNode[] parameters, CodeGenerator generator, out ASTTypeMatchCreator[] matchers, out SignatureMatchLevel level)
     {
-        matchers = null;
+        matchers = new ASTTypeMatchCreator[ParameterTypes.Length];
         level = SignatureMatchLevel.None;
 
         if(parameters.Length < ParameterTypes.Length) return false;
         if(!IsVararg && parameters.Length != ParameterTypes.Length) return false;
-
-        var l = new List<ASTTypeMatchCreator>();
 
         level = SignatureMatchLevel.Exact;
 
@@ -50,10 +48,9 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
 
             if(t.Transformer is not null) level = SignatureMatchLevel.Coerced;
 
-            l.Add(t);
+            matchers[i] = t;
         }
 
-        matchers = l.ToArray();
         return true;
     }
 
@@ -65,7 +62,7 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
 
         for(int i = 0; i < parameters.Length; i++)
         {
-            matchers![i].ApplyTo(parameters[i], generator);
+            matchers[i].ApplyTo(parameters[i], generator);
         }
 
         return true;

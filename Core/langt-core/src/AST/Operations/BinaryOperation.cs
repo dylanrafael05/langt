@@ -57,7 +57,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
             return LangtType.None;
         }
 
-        ExpressionType = Operator.Type switch
+        RawExpressionType = Operator.Type switch
         {
             TT.Plus or TT.Minus or TT.Star or TT.Slash or TT.Percent 
                 => DominantType,
@@ -74,7 +74,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         Right.Lower(lowerer);
         Left.Lower(lowerer);
 
-        var (l, r) = (lowerer.PopValue(), lowerer.PopValue());
+        var (l, r) = (lowerer.PopValue(DebugSourceName), lowerer.PopValue(DebugSourceName));
 
         LLVMValueRef Dummy(Action action)
         {
@@ -140,6 +140,6 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
             throw new Exception("this should theoretically be unreachable!");
         }
 
-        lowerer.PushValue(ExpressionType, v);
+        lowerer.PushValue(RawExpressionType, v, DebugSourceName);
     }
 }

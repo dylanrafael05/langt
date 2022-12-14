@@ -16,7 +16,7 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
 
     public override void TypeCheckRaw(CodeGenerator generator)
     {
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     // TODO: move resolution logic to TypeCheckRaw?

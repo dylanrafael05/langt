@@ -6,14 +6,14 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 {
     public LangtScope? HoldingScope { get; set; }
 
-    private List<LangtFunction> overloads = new();
+    private readonly List<LangtFunction> overloads = new();
     public IReadOnlyList<LangtFunction> Overloads => overloads;
 
-    public void AddFunctionOverload(LangtFunction overload, SourceRange range, DiagnosticCollection diagnostics)
+    public void AddFunctionOverload(LangtFunction overload, SourceRange range, CodeGenerator generator)
     {
-        if(overloads.Any(o => o.Type.ParameterTypes.SequenceEqual(overload.Type.ParameterTypes)))
+        if(ResolveExactOverload(overload.Type.ParameterTypes, overload.Type.IsVararg, range, generator, err: false) is not null)
         {
-            diagnostics.Error($"Cannot define an overload which has the same parameter types as another", range);
+            generator.Diagnostics.Error($"Cannot define an overload which has the same parameter types as another", range);
         }
 
         overloads.Add(overload);
@@ -34,7 +34,7 @@ public record LangtFunctionGroup(string Name) : INamedScoped
     }
 
     private (LangtFunction? value, ASTTypeMatchCreator[]? matchers) HandleOverload(
-        (LangtFunction value, ASTTypeMatchCreator[]? matchers, SignatureMatchLevel level)[] resolves, 
+        (LangtFunction value, ASTTypeMatchCreator[] matchers, SignatureMatchLevel level)[] resolves, 
         IEnumerable<LangtType> parameterTypes,
         SourceRange range,
         CodeGenerator generator,
@@ -57,9 +57,9 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
         for(var lvl = SignatureMatchLevel.Exact; lvl != SignatureMatchLevel.None; lvl++)
         {
-            var byLevel = resolves.Where(o => o.level == lvl);
+            var byLevel = resolves.Where(o => o.level == lvl).ToArray();
 
-            if(byLevel.Count() != 1)
+            if(byLevel.Length != 1)
             {
                 if(err) generator.Diagnostics.Error(
                     $"Could not resolve any one matching overload for call to {this.GetFullName()} with parameter types {string.Join(", ", parameterTypes.Select(p => p.Name))}, multiple overloads are valid", 
@@ -68,7 +68,7 @@ public record LangtFunctionGroup(string Name) : INamedScoped
             }
             else
             {
-                return (byLevel.First().value, byLevel.First().matchers);
+                return (byLevel[0].value, byLevel[0].matchers);
             }
         }
 
@@ -91,18 +91,27 @@ public record LangtFunctionGroup(string Name) : INamedScoped
             err
         );
 
+        if(v is not null) 
+        {
+            generator.Logger.Debug($"Found overload match ({string.Join(",", v.Type.ParameterTypes.Select(p => p.GetFullName()))}) for {this.GetFullName()}@line {range.LineStart}", "lowering");
+        }
+        else 
+        {
+            generator.Logger.Debug($"No found overload for {this.GetFullName()}@line {range.LineStart}", "lowering");
+        }
+
         return v;
     }
-    public LangtFunction? ResolveOverload(LangtFunctionType fnType, SourceRange range, CodeGenerator generator, bool err = true) 
+    public LangtFunction? ResolveExactOverload(LangtType[] parameterTypes, bool isVararg, SourceRange range, CodeGenerator generator, bool err = true) 
     {
         var resolves = overloads
-            .Where(o => o.Type.ParameterTypes.SequenceEqual(fnType.ParameterTypes) && o.Type.IsVararg == fnType.IsVararg)
-            .Select(o => (o, (ASTTypeMatchCreator[]?) null, SignatureMatchLevel.Exact))
+            .Where(o => o.Type.ParameterTypes.SequenceEqual(parameterTypes) && o.Type.IsVararg == isVararg)
+            .Select(o => (o, new ASTTypeMatchCreator[o.Type.ParameterTypes.Length], SignatureMatchLevel.Exact))
             .ToArray();
         
         (var v, _) = HandleOverload(
             resolves, 
-            fnType.ParameterTypes, 
+            parameterTypes, 
             range, 
             generator, 
             err

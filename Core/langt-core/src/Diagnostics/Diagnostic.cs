@@ -1,6 +1,6 @@
 namespace Langt;
 
-public record struct Diagnostic(DiagnosticSeverity Severity, string Message, SourceRange Range)
+public record struct Diagnostic(MessageSeverity Severity, string Message, SourceRange Range)
 {
     /// <summary>
     /// Get a unique (or as unique as possible) key for sorting this item.

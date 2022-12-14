@@ -119,7 +119,12 @@ public class CodeGenerator : IProjectDependency
         
         if(from.RequiresTypeDownflow)
         {
-            if(!from.AcceptDownflow(to, this, err: downflowErr)) return false;
+            if(!from.AcceptDownflow(to, this, err: downflowErr)) 
+            {
+                return false;
+            }
+
+            matcher = matcher with {DownflowType = to};
         }
         
         var ftype = from.TransformedType;
@@ -161,10 +166,30 @@ public class CodeGenerator : IProjectDependency
 
 
     // TODO: reduce value smuggling by clearing discarded values and removing 'none' values
-    public void PushValue(LangtValue value)
+    public void PushValueNoDebug(LangtValue value)
         => unnamedValues.Push(value);
-    public void PushValue(LangtType type, LLVMValueRef value)
-        => unnamedValues.Push(new(type, value));
+    public void PushValue(LangtType type, LLVMValueRef value, string debugSource)
+    {
+        Logger.Debug($"\tProduced one value from {debugSource}: type {type.GetFullName()}, value {value.Name}", "lowering");
+        unnamedValues.Push(new(type, value));
+    }
+
+    public LangtValue PopValue(string source)
+    {
+        var s = PopValueNoDebug();
+        Project.Logger.Debug($"     Consumed one value from {source}; type {s.Type.Name}, value {s.LLVM.Name}", "lowering");
+        return s;
+    }
+    public LangtValue PopValueNoDebug()
+    {
+        return unnamedValues.Pop();
+    }
+    
+    public void DiscardValues(string debugSource)
+    {
+        Logger.Debug($"Clearing stack from {debugSource}", "lowering");
+        unnamedValues.Clear();
+    }
 
     public void LogStack(string source)
     {
@@ -176,16 +201,11 @@ public class CodeGenerator : IProjectDependency
         }
         else foreach(var s in unnamedValues)
         {
-            res += "\n\r            : type " + s.Type.Name + ", value " + s.LLVM.Name;
+            res += "\r\n          : type " + s.Type.Name + ", value " + s.LLVM.Name;
         }
 
-        // TODO: ADD DEBUG FLAGS for CLI
-
-        Logger.Note(res);
+        Logger.Debug(res, "lowering");
     }
-
-    public LangtValue PopValue()
-        => unnamedValues.Pop();
 
     public bool Verify()
     {

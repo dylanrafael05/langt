@@ -91,11 +91,9 @@ public record DefineFunction(ASTToken Let,
             lf
         );
 
-        FunctionGroup.AddFunctionOverload(Function, Range, generator.Diagnostics);
+        FunctionGroup.AddFunctionOverload(Function, Range, generator);
         
-        ExpressionType = LangtType.None;
-        
-        // TODO: more rigorous resolution here
+        RawExpressionType = LangtType.None;
     }
 
     public override void TypeCheckRaw(CodeGenerator generator)
@@ -176,7 +174,7 @@ public record DefineFunction(ASTToken Let,
         if(Body is FunctionExpressionBody exp)
         {
             exp.Lower(lowerer);
-            lowerer.Builder.BuildRet(lowerer.PopValue().LLVM);
+            lowerer.Builder.BuildRet(lowerer.PopValue(DebugSourceName).LLVM);
         }
         else if(Body is FunctionBlockBody blk)
         {

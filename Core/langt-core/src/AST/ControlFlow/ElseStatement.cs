@@ -19,7 +19,7 @@ public record ElseStatement(ASTToken Else, ASTNode End) : ASTNode
         End.TypeCheck(generator);
         Returns = End.Returns;
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

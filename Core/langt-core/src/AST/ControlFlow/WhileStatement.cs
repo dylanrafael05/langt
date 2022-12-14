@@ -27,7 +27,7 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
             generator.Project.Diagnostics.Error("While condition must be a boolean, but was instead " + Condition.TransformedType.Name, Condition.Range);
         }
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -46,7 +46,7 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         lowerer.Builder.PositionAtEnd(condBB);
 
         Condition.Lower(lowerer);
-        var c = lowerer.PopValue();
+        var c = lowerer.PopValue(DebugSourceName);
 
         lowerer.Builder.BuildCondBr(c.LLVM, trueBB, breakBB);
 

@@ -24,20 +24,25 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 
     public override void TypeCheckRaw(CodeGenerator generator)
     {
-        HasResolution = true;
         Resolution = generator.ResolutionScope.Resolve(Tok.ContentStr, Range, generator.Diagnostics);
+        HasResolution = Resolution is not null;
 
-        //generator.Logger.Note("IDENTIFIER POITNS TO " + Resolution);
+        generator.Logger.Debug(DebugSourceName + " points to " + Resolution.GetFullName(), "lowering");
         
         if(!IsVariable) return;
 
-        ExpressionType = LangtType.PointerTo(Variable!.Type);
+        RawExpressionType = LangtType.PointerTo(Variable!.Type);
         Variable.UseCount++;
-
-        generator.Logger.Note("Identifier is variable: " + Variable.GetFullName());
     }
 
-    public override bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true)
+    protected override void ResetDownflowState(CodeGenerator generator)
+    {
+        IsFunction = false;
+        Function = null;
+
+        if(IsFunctionGroup) RawExpressionType = LangtType.Error;
+    }
+    protected override bool AcceptDownflowRaw(LangtType? type, CodeGenerator generator, bool err)
     {
         if(!IsFunctionGroup)
         {
@@ -53,7 +58,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
         var fp = (LangtFunctionType)type.PointeeType!;
         var fg = Resolution as LangtFunctionGroup;
 
-        Function = fg!.ResolveOverload(fp, Range, generator, false);
+        Function = fg!.ResolveExactOverload(fp.ParameterTypes, fp.IsVararg, Range, generator, false);
 
         if(Function is null)
         {
@@ -61,7 +66,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
             return false;
         }
 
-        ExpressionType = type;
+        RawExpressionType = type;
         IsFunction = true;
 
         return true;
@@ -71,14 +76,16 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     {
         if(IsVariable)
         {
-            lowerer.PushValue(
-                ExpressionType, Variable!.UnderlyingValue!.LLVM
+            lowerer.PushValue( 
+                RawExpressionType, Variable!.UnderlyingValue!.LLVM,
+                DebugSourceName
             );
         }
         else if(IsFunction)
         {
-            lowerer.PushValue(
-                ExpressionType, Function!.LLVMFunction
+            lowerer.PushValue( 
+                RawExpressionType, Function!.LLVMFunction,
+                DebugSourceName
             );
         }
     }

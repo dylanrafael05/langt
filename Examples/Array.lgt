@@ -1,5 +1,6 @@
 extern printf(text *int8 ...) none
 extern malloc(size int64) *none
+extern free(ptr *none) none
 
 struct int32Array 
 {
@@ -8,13 +9,17 @@ struct int32Array
 }
 
 let makei32a(size int32) int32Array -> int32Array {malloc(size*4) as *int32, size}
+let deli32a(arr int32Array) none
+{
+    free(arr.elements as *none)
+}
 
 let foreach(arr int32Array, fn *(int32) int32) none
 {
     let x = 0
     while x < arr.size 
     {
-        arr.elements[x*4] = fn(arr.elements[x*4])
+        arr.elements[x] = fn(arr.elements[x])
         x = x + 1
     }
 }
@@ -23,7 +28,7 @@ let foreach(arr int32Array, fn *(int32, int32) int32) none
     let x = 0
     while x < arr.size 
     {
-        arr.elements[x*4] = fn(arr.elements[x*4], x)
+        arr.elements[x] = fn(arr.elements[x], x)
         x = x + 1
     }
 }
@@ -43,4 +48,6 @@ let main() none
 
     foreach(arr, index)
     foreach(arr, print_item)
+
+    deli32a(arr)
 }

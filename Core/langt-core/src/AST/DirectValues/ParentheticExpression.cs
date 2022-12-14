@@ -14,7 +14,7 @@ public record ParentheticExpression(ASTToken Open, ASTNode Value, ASTToken End) 
     public override void TypeCheckRaw(CodeGenerator generator)
     {
         Value.TypeCheck(generator);
-        ExpressionType = Value.TransformedType;
+        RawExpressionType = Value.TransformedType;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

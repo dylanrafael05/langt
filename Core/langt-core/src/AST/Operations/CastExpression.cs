@@ -33,18 +33,19 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         }
 
         Transformer = conversion.TransformProvider.TransformerFor(Value.TransformedType, type);
-        ExpressionType = type;
+        RawExpressionType = type;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Value.Lower(lowerer);
 
-        var v = lowerer.PopValue();
+        var v = lowerer.PopValue(DebugSourceName);
 
-        lowerer.PushValue(new(
+        lowerer.PushValue( 
             Transformer!.Output,
-            Transformer.Perform(lowerer, v.LLVM)
-        ));
+            Transformer.Perform(lowerer, v.LLVM),
+            DebugSourceName
+        );
     }
 }

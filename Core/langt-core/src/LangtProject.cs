@@ -94,7 +94,7 @@ public class LangtProject
         }
 
 #if DEBUG
-        //. Logger.Note("Pre-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings());
+        Logger.Debug("Pre-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings(), "llvm");
         if(!cg.Verify()) return false;
 #endif
         
@@ -107,6 +107,8 @@ public class LangtProject
 
         Logger.Note("Done building!");
         Module = cg.Module;
+
+        Logger.Debug("Post-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings(), "llvm");
 
         return true;
 

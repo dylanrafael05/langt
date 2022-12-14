@@ -30,7 +30,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 
         Returns = true;
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -42,7 +42,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
         else
         {
             Value.Lower(lowerer);
-            lowerer.Builder.BuildRet(lowerer.PopValue().LLVM);
+            lowerer.Builder.BuildRet(lowerer.PopValue(DebugSourceName).LLVM);
         }
     }
 }

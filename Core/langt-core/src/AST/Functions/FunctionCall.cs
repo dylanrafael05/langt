@@ -41,7 +41,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             if(function is null) return;
 
             funcType = function.Type;
-            ExpressionType = funcType.ReturnType;
+            RawExpressionType = funcType.ReturnType;
 
             hasDirectFunction = true;
             functionValue = function.LLVMFunction;
@@ -51,9 +51,9 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             hasDirectFunction = false;
 
             funcType = (LangtFunctionType)FunctionAST.TransformedType.PointeeType!;
-            ExpressionType = funcType!.ReturnType;
+            RawExpressionType = funcType!.ReturnType;
 
-            if(!funcType.MakeSignatureMatch(Arguments.Values.ToArray(), generator))
+            if(!funcType.MakeSignatureMatch(givenArgs, generator))
             {
                 generator.Diagnostics.Error(
                     $"Could not call a function pointer of type {funcType.Name} " +
@@ -73,7 +73,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         FunctionAST.Lower(lowerer);
         if(!hasDirectFunction)
         {
-            functionValue = lowerer.PopValue().LLVM;
+            functionValue = lowerer.PopValue(DebugSourceName).LLVM;
         }
 
         var args = Arguments.Values.ToArray();
@@ -82,16 +82,18 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         for(var i = 0; i < args.Length; i++)
         {
             args[i].Lower(lowerer);
-            llvmArgs[i] = lowerer.PopValue().LLVM;
+            llvmArgs[i] = lowerer.PopValue(DebugSourceName).LLVM;
         }
 
-        lowerer.PushValue(
-            funcType!.ReturnType,
-            lowerer.Builder.BuildCall2(
-                lowerer.LowerType(funcType),
-                functionValue, 
-                llvmArgs
-            )
+        var r = lowerer.Builder.BuildCall2(
+            lowerer.LowerType(funcType!),
+            functionValue, 
+            llvmArgs
         );
+
+        if(funcType!.ReturnType != LangtType.None)
+        {
+            lowerer.PushValue(funcType!.ReturnType, r, DebugSourceName);
+        }
     }
 }

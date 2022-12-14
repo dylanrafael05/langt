@@ -16,7 +16,7 @@ public record FunctionBlockBody(Block Block) : FunctionBody
     {
         Block.TypeCheck(generator);
         Returns = Block.Returns;
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

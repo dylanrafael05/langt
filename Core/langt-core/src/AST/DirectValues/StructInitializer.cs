@@ -23,25 +23,25 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         var t = Type.Resolve(generator);
         if(t is null) return;
         
-        ExpressionType = t;
+        RawExpressionType = t;
 
-        if(!ExpressionType.IsStructure)
+        if(!RawExpressionType.IsStructure)
         {
-            generator.Diagnostics.Error($"Unknown structure type {ExpressionType.Name}", Range);
+            generator.Diagnostics.Error($"Unknown structure type {RawExpressionType.Name}", Range);
             return;
         }
 
         var args = Args.Values.ToList();
 
-        if(ExpressionType.Structure!.Fields.Count != args.Count)
+        if(RawExpressionType.Structure!.Fields.Count != args.Count)
         {
-            generator.Diagnostics.Error($"Incorrect number of fields for structure initializer of type {ExpressionType.Name}", Range);
+            generator.Diagnostics.Error($"Incorrect number of fields for structure initializer of type {RawExpressionType.Name}", Range);
             return;
         }
 
         for(int i = 0; i < args.Count; i++)
         {
-            var f = ExpressionType.Structure!.Fields[i];
+            var f = RawExpressionType.Structure!.Fields[i];
             var ftype = f.Type;
             var fname = f.Name;
 
@@ -49,7 +49,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
             if(!generator.MakeMatch(ftype, args[i]))
             {
-                generator.Diagnostics.Error($"Incorrect type for field '{fname}' in struct initializer for struct {ExpressionType.Name}; expected {ftype.Name} but got {args[i].TransformedType.Name}", Range);
+                generator.Diagnostics.Error($"Incorrect type for field '{fname}' in struct initializer for struct {RawExpressionType.Name}; expected {ftype.Name} but got {args[i].TransformedType.Name}", Range);
             }
         }
     }
@@ -62,20 +62,21 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         foreach(var arg in args)
         {
             arg.Lower(lowerer);
-            llvmArgs.Add(lowerer.PopValue().LLVM);
+            llvmArgs.Add(lowerer.PopValue(DebugSourceName).LLVM);
         }
 
-        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(ExpressionType), ExpressionType.Name+".builder");
+        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(RawExpressionType), RawExpressionType.Name+".builder");
 
         for(int i = 0; i < llvmArgs.Count; i++)
         {
-            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(ExpressionType), structBuild, (uint)i, ExpressionType.Name+".builder.element."+i);
+            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(RawExpressionType), structBuild, (uint)i, RawExpressionType.Name+".builder.element."+i);
             lowerer.Builder.BuildStore(llvmArgs[i], fptr);
         }
 
-        lowerer.PushValue(
-            ExpressionType,
-            lowerer.Builder.BuildLoad2(lowerer.LowerType(ExpressionType), structBuild, ExpressionType.Name)
+        lowerer.PushValue( 
+            RawExpressionType,
+            lowerer.Builder.BuildLoad2(lowerer.LowerType(RawExpressionType), structBuild, RawExpressionType.Name),
+            DebugSourceName
         );
     }
 }

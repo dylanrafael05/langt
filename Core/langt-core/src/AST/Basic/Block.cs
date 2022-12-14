@@ -35,7 +35,7 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
             Returns |= s.Returns;
         }
         
-        ExpressionType = LangtType.None;
+        RawExpressionType = LangtType.None;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -43,6 +43,7 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         foreach(var s in Statements)
         {
             s.Lower(lowerer);
+            lowerer.DiscardValues(DebugSourceName);
         }
     }
     

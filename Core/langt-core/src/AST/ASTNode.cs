@@ -63,19 +63,27 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// <summary>
     /// Get the sequence of all children in order. These children may be null.
     /// </summary>
-    public IEnumerable<ASTNode?> AllChildren => ChildContainer.AllChildren;
+    public IEnumerable<ASTNode?> AllChildren {get; private init;}
     /// <summary>
     /// Get the sequence of all non-null children in order.
     /// </summary>
-    public IEnumerable<ASTNode> Children => ChildContainer.Children;
+    public IEnumerable<ASTNode> Children {get; private init;}
 
     public ASTNode()
-    {}
+    {
+        var cc = ChildContainer;
+
+        AllChildren = cc.AllChildren.ToArray();
+        Children    = cc.Children.ToArray();
+
+        Range = SourceRange.CombineFrom(Children);
+        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
+    }
 
     /// <summary>
     /// Get the source range that contains the entirety of this AST node.
     /// </summary>
-    public virtual SourceRange Range => SourceRange.CombineFrom(Children);
+    public virtual SourceRange Range {get; private init;}
     
     /// <summary>
     /// Is the current AST node representative of an expression which can automatically
@@ -93,6 +101,11 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// </summary>
     public virtual bool RequiresTypeDownflow => false;
 
+    public string DebugSourceName {get; private init;}
+
+    protected virtual void ResetDownflowState(CodeGenerator generator) {}
+    protected virtual bool AcceptDownflowRaw(LangtType? type, CodeGenerator generator, bool err) => true;
+
     /// <summary>
     /// Updates this AST node so that it corresponds to the given target type.
     /// Returns <see langword="true"/> of no errors were reported, 
@@ -100,7 +113,11 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// Note that implementers should ensure this method can be called multiple
     /// times, but can only produce a valid expression state if this returns <see langword="true"/>.
     /// </summary>
-    public virtual bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true) => true;
+    public bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true) 
+    {
+        ResetDownflowState(generator);
+        return HasValidDownflow = AcceptDownflowRaw(type, generator, err);
+    }
 
     /// <summary>
     /// Whether or not the current AST node has an unknown type, since it has not been 
@@ -112,20 +129,20 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// What is the direct type (unaffected by transformers) of this AST node. Should be
     /// equal to <see cref="LangtType.Error"/> if this node is not an expression.
     /// </summary>
-    public LangtType ExpressionType {get; set;} = LangtType.Error;
+    protected LangtType RawExpressionType {get; set;} = LangtType.Error;
     /// <summary>
     /// What is the inferabble type of this AST node; what type should be used for type
-    /// inference of this expression if it is distinct from <see cref="ExpressionType"/>.
+    /// inference of this expression if it is distinct from <see cref="RawExpressionType"/>.
     /// Should be equal to <see langword="null"/> if this node is not an expression, or
     /// there is no distinction between the type to be inferred or the expression type itself. 
     /// </summary>
-    public LangtType? InferrableType {get; set;} = null;
+    public LangtType? NaturalType {get; protected set;} = null;
     /// <summary>
     /// What is the final, or fully transformed, type of this node.
     /// Found using all the <see cref="ITransformer"/> instances which have been applied to
     /// this AST node.
     /// </summary>
-    public LangtType TransformedType => AppliedTransformers.Count > 0 ? AppliedTransformers[^1].Output : ExpressionType;
+    public LangtType TransformedType => AppliedTransformers.Count > 0 ? AppliedTransformers[^1].Output : RawExpressionType;
 
     /// <summary>
     /// Whether or not this AST node contains a return statement.
@@ -217,10 +234,8 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     public virtual void LowerSelf(CodeGenerator generator)
         => generator.Logger.Note("Cannot yet lower AST Node of type " + GetType().Name);
     public void Lower(CodeGenerator generator)
-    {
-        var debugName = GetType().Name + " @" + Range.CharStart + ":line " + Range.LineStart;
-        
-        generator.Project.Logger.Note("Lowering " + debugName);
+    {   
+        generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
 
         if(Unreachable)
         {
@@ -232,16 +247,16 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
 
         if(AppliedTransformers.Count > 0)
         {
-            var v = generator.PopValue();
+            var v = generator.PopValueNoDebug();
             foreach(var trans in AppliedTransformers)
             {
-                generator.Project.Logger.Note("     Applying transformation " + trans.Name + " . . . ");
+                generator.Project.Logger.Debug("     Applying transformation " + trans.Name + " . . . ", "lowering");
                 v = new(trans.Output, trans.Perform(generator, v.LLVM));
             }
-            generator.PushValue(v);
+            generator.PushValueNoDebug(v);
         }
         
-        generator.LogStack(debugName);
+        generator.LogStack(DebugSourceName);
     }
 
     public virtual void Dump(VisitDumper visitor)

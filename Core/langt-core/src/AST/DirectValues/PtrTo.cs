@@ -23,9 +23,10 @@ public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
     public override void LowerSelf(CodeGenerator lowerer)
     {
         var f = Variable!.UnderlyingValue!;
-        lowerer.PushValue(
+        lowerer.PushValue( 
             f.Type, 
-            f.LLVM
+            f.LLVM,
+            DebugSourceName
         );
     }
 }

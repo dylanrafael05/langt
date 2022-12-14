@@ -2,24 +2,17 @@ using Langt.Lexing;
 
 namespace Langt.AST;
 
-public record SeparatedCollection<T> : ASTNode where T : ASTNode
+public record SeparatedCollection<T>(List<ASTNode> All) : ASTNode where T : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {items};
-
-    private readonly List<ASTNode> items;
-
-    public SeparatedCollection(List<ASTNode> items) 
-    {
-        this.items = items;
-    }
+    public override ASTChildContainer ChildContainer => new() {All};
 
     public IEnumerable<T> Values 
     {
         get 
         {
-            for(int i = 0; i < items.Count; i += 2)
+            for(int i = 0; i < All.Count; i += 2)
             {
-                yield return (T)items[i];
+                yield return (T)All[i];
             }
         }
     }
@@ -27,13 +20,10 @@ public record SeparatedCollection<T> : ASTNode where T : ASTNode
     {
         get 
         {
-            for(int i = 1; i < items.Count; i += 2)
+            for(int i = 1; i < All.Count; i += 2)
             {
-                yield return (ASTToken)items[i];
+                yield return (ASTToken)All[i];
             }
         }
     }
-    
-    public IEnumerable<ASTNode> All 
-        => items;
 }

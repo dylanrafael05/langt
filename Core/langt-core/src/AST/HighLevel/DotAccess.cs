@@ -57,7 +57,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         Field = field;
         FieldIndex = index;
 
-        ExpressionType = LangtType.PointerTo(Field!.Type);
+        RawExpressionType = LangtType.PointerTo(Field!.Type);
     }
 
     public override void LowerSelf(CodeGenerator lowerer)
@@ -66,16 +66,17 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         Left.Lower(lowerer);
 
-        var s = lowerer.PopValue();
+        var s = lowerer.PopValue(DebugSourceName);
 
-        lowerer.PushValue(
-            ExpressionType,
+        lowerer.PushValue( 
+            RawExpressionType,
             lowerer.Builder.BuildStructGEP2(
                 lowerer.LowerType(s.Type.PointeeType!), 
                 s.LLVM,
                 (uint)FieldIndex!.Value,
                 s.Type.PointeeType!.Name + "." + Field!.Name
-            )
+            ),
+            DebugSourceName
         );
     }
 }
