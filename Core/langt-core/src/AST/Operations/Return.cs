@@ -17,7 +17,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
         }
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         if(Value is null) return;
 

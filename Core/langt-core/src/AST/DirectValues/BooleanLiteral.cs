@@ -11,7 +11,7 @@ public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue
     public override void Dump(VisitDumper visitor)
         => visitor.PutString(Tok.ToString());
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         RawExpressionType = LangtType.Bool;
     }

@@ -96,7 +96,7 @@ public record DefineFunction(ASTToken Let,
         RawExpressionType = LangtType.None;
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         if(Let.Type is TokenType.Extern) return; //TODO: precheck extern existence
 

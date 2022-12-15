@@ -21,9 +21,9 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
     public override bool IsLValue => true;
 
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
-        Left.TypeCheckRaw(generator);
+        Left.TypeCheckSelf(generator);
 
         HasResolution = Left.HasResolution && Left.Resolution is not LangtVariable;
 

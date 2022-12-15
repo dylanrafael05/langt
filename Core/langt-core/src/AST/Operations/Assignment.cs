@@ -15,9 +15,9 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         visitor.Visit(Right);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
-        Left.TypeCheckRaw(generator);
+        Left.TypeCheckSelf(generator);
         Right.TypeCheck(generator);
 
         if(!Left.TransformedType.IsPointer || !Left.IsLValue)

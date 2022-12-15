@@ -16,7 +16,7 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
         visitor.Visit(Operand);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Operand.TypeCheck(generator);
         

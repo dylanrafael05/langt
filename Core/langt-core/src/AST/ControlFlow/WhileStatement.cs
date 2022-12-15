@@ -17,7 +17,7 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         visitor.Visit(Block);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Condition.TypeCheck(generator);
         Block.TypeCheck(generator);

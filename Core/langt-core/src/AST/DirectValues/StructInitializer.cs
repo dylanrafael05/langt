@@ -18,7 +18,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         }
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         var t = Type.Resolve(generator);
         if(t is null) return;

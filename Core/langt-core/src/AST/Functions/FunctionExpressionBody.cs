@@ -13,7 +13,7 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
         visitor.Visit(Expression);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Expression.TypeCheck(generator);
     }

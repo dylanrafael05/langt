@@ -37,7 +37,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         }
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Left.TypeCheck(generator);
         Right.TypeCheck(generator);

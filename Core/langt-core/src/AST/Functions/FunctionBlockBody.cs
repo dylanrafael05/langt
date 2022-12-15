@@ -12,7 +12,7 @@ public record FunctionBlockBody(Block Block) : FunctionBody
         visitor.Visit(Block);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Block.TypeCheck(generator);
         Returns = Block.Returns;

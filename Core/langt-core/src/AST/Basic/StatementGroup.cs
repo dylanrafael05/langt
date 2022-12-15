@@ -26,7 +26,7 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
         }
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         foreach(var s in Statements)
         {

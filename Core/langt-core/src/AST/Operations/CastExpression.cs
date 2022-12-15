@@ -17,7 +17,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 
     public ITransformer? Transformer {get; private set;}
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Value.TypeCheck(generator);
 

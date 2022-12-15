@@ -23,7 +23,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
     private LLVMValueRef functionValue;
     private LangtFunctionType? funcType;
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         FunctionAST.TypeCheck(generator);
         

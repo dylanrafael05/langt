@@ -21,7 +21,7 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
         AliasType!.SetBase(Type.Resolve(generator));
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {}
 
     public override void LowerSelf(CodeGenerator generator)

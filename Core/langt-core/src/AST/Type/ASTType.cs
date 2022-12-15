@@ -9,7 +9,7 @@ namespace Langt.AST;
 /// </summary>
 public abstract record ASTType() : ASTNode //TODO: implement distinction between type definition and implementation
 {
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {}
     public override void LowerSelf(CodeGenerator lowerer)
     {}

@@ -18,7 +18,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
         if(Else is not null) visitor.Visit(Else);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Condition.TypeCheck(generator);
         Block.TypeCheck(generator);

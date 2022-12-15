@@ -15,7 +15,7 @@ public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
 
     public LangtVariable? Variable {get; private set;}
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Variable = generator.ResolutionScope.ResolveVariable(Var.ContentStr, Range, generator.Diagnostics);
     }

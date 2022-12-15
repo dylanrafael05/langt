@@ -50,6 +50,15 @@ public class ASTChildContainer : IEnumerable<ASTChildSpec>
     }
 }
 
+public record struct TypeCheckState(CodeGenerator CG, LangtType TargetType, bool TryRead, bool ProduceDiagnostics)
+{
+    public static TypeCheckState Start(CodeGenerator gen) => new(gen, LangtType.None, true, true);
+}
+
+[Serializable]
+public class TypeCheckException : Exception
+{}
+
 /// <summary>
 /// Represents any construct directly present in the AST.
 /// </summary>
@@ -191,6 +200,8 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// </summary>
     public List<ITransformer> AppliedTransformers {get; private init;} = new();
 
+    public bool PassedInitialTypeCheck {get; private set;} = false;
+
     /// <summary>
     /// Apply the given transform to this AST node.
     /// </summary>
@@ -220,15 +231,72 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     {}
     public virtual void DefineFunctions(CodeGenerator generator)
     {}
-    public virtual void TypeCheckRaw(CodeGenerator generator) //TODO: should this be abstract?
-        => generator.Logger.Note("Cannot yet type-check AST Node of type " + GetType().Name);
-    public void TypeCheck(CodeGenerator generator)
+
+    public void Error(TypeCheckState state, string message)
     {
-        if(BlockLike || !ContainsInvalid)
+        if(state.ProduceDiagnostics) state.CG.Diagnostics.Error(message, Range);
+        throw new TypeCheckException();
+    }
+    public void Warning(TypeCheckState state, string message)
+    {
+        if(state.ProduceDiagnostics) state.CG.Diagnostics.Warning(message, Range);
+    }
+    public void Note(TypeCheckState state, string message)
+    {
+        if(state.ProduceDiagnostics) state.CG.Diagnostics.Note(message, Range);
+    }
+
+    /// <summary>
+    /// Perform the initial steps of type checking.
+    /// Errors in this step should generally be considered fatal or unavoidable.
+    /// The given "target type" from the state may be null.
+    /// </summary>
+    protected virtual void InitialTypeCheckSelf(TypeCheckState state) 
+    {
+        Error(state, "Cannot yet type-check node of type " + GetType().Name);
+    }
+    /// <summary>
+    /// Perform the final steps of type checking.
+    /// This method, under certain circumstances where multiple type-checks must occur 
+    /// (function overload resolution namely).
+    /// </summary>
+    protected virtual void TypeCheckSelf(TypeCheckState state)
+    {}
+
+    private void TypeCheckInternal(TypeCheckState state)
+    {
+        TypeCheckSelf(state);
+        if(state.TryRead) TryRead();
+    }
+
+    public void TypeCheck(TypeCheckState state) 
+    {
+        state = state with {ProduceDiagnostics=true};
+
+        InitialTypeCheckSelf(state);
+        TypeCheckInternal(state);
+    }
+
+    public bool TryTypeCheck(TypeCheckState state)
+    {
+        state = state with {ProduceDiagnostics=false};
+
+        if(!BlockLike && ContainsInvalid)
         {
-            TypeCheckRaw(generator);
-            TryRead();
+            return true; // TODO: is this valid?
         }
+
+        try 
+        {
+            InitialTypeCheckSelf(state);
+            TypeCheckInternal(state);
+        }
+        catch(TypeCheckException)
+        {
+            return false;
+        }
+
+        return true;
     }
 
     public virtual void LowerSelf(CodeGenerator generator)

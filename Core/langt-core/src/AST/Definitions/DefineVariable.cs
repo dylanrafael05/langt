@@ -16,7 +16,7 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
 
     public LangtVariable Variable {get; private set;} = null!;
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Value.TypeCheck(generator);
 

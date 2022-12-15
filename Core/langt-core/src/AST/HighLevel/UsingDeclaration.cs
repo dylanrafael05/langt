@@ -6,7 +6,7 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 {
     public override ASTChildContainer ChildContainer => new() {Using, Identifier};
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {}
     public override void LowerSelf(CodeGenerator generator)
     {}

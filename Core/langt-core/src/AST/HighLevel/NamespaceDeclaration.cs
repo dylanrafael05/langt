@@ -23,7 +23,7 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
         if(LNamespace is null) return;
         generator.SetCurrentNamespace(LNamespace!);
     }
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         if(LNamespace is null) return;
         generator.SetCurrentNamespace(LNamespace!);

@@ -14,7 +14,7 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
         visitor.Visit(Type);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         RawExpressionType = LangtType.None;
     }

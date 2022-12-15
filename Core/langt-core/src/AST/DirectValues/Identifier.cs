@@ -22,7 +22,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     public LangtVariable? Variable => Resolution as LangtVariable;
     public LangtFunction? Function {get; private set;}
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Resolution = generator.ResolutionScope.Resolve(Tok.ContentStr, Range, generator.Diagnostics);
         HasResolution = Resolution is not null;

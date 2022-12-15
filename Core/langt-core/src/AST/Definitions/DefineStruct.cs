@@ -45,7 +45,7 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
         }
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {}
 
     public override void LowerSelf(CodeGenerator generator)

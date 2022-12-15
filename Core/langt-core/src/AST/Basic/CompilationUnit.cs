@@ -24,7 +24,7 @@ public record CompilationUnit(StatementGroup Group) : ASTNode
     {
         Group.DefineFunctions(generator);
     }
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         Group.TypeCheck(generator);
     }

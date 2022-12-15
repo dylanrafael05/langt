@@ -18,7 +18,7 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         visitor.Visit(IndexValue);
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         // TODO: should this be raw or not vvvvvv
         Value.TypeCheck(generator);

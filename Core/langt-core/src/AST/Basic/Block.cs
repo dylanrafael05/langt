@@ -19,7 +19,7 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         visitor.PutString("}");
     }
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         foreach(var s in Statements)
         {

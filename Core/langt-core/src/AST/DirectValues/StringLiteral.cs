@@ -14,7 +14,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
     public string? Value {get; private set;}
 
-    public override void TypeCheckRaw(CodeGenerator generator)
+    public override void TypeCheckSelf(CodeGenerator generator)
     {
         var source = Tok.Content;
         var s = "";
