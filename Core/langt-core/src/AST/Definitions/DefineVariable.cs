@@ -16,29 +16,24 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
 
     public LangtVariable Variable {get; private set;} = null!;
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Value.TypeCheck(generator);
-
         LangtType t;
 
         if(Type is not null)
         {
-            var tn = Type.Resolve(generator);
+            var tn = Type.Resolve(state);
             if(tn is null) return;
 
             t = tn;
-
-            if(!Value.AcceptDownflow(t, generator))
-            {
-                return;
-            }
+            
+            Value.TypeCheck(state, t);
         }
         else
         {
-            if(Value.RequiresTypeDownflow)
+            if(!Value.TryTypeCheck(state))
             {
-                generator.Diagnostics.Error("Cannot use both an inferred type and a target typed expression", Range);
+                state.Error("Cannot use both an inferred type and a target typed expression", Range);
                 return;
             }
 
@@ -46,13 +41,13 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
         }
         
         Variable = new LangtVariable(Identifier.ContentStr, t);
-        var couldDef = generator.ResolutionScope.DefineVariable(Variable, Range, generator.Project.Diagnostics);
+        var couldDef = state.CG.ResolutionScope.DefineVariable(Variable, Range, state);
 
         if(!couldDef) return;
 
-        if(!generator.MakeMatch(t, Value))
+        if(!state.MakeMatch(t, Value))
         {
-            generator.Diagnostics.Error($"Cannot assign a variable of type {t.Name} to a value of type {Value.TransformedType.Name}", Range);
+            state.Error($"Cannot assign a variable of type {t.Name} to a value of type {Value.TransformedType.Name}", Range);
         }
         
         RawExpressionType = LangtType.None;

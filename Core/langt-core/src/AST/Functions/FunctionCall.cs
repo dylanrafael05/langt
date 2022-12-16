@@ -23,20 +23,20 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
     private LLVMValueRef functionValue;
     private LangtFunctionType? funcType;
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        FunctionAST.TypeCheck(generator);
+        FunctionAST.TypeCheck(state);
         
         var givenArgs = Arguments.Values.ToArray();
         
         foreach(var arg in givenArgs)
         {
-            arg.TypeCheck(generator);
+            arg.TypeCheck(state);
         }
 
         if(FunctionAST.HasResolution && FunctionAST.Resolution is LangtFunctionGroup functionGroup)
         {
-            var function = functionGroup.MatchOverload(givenArgs, Range, generator);
+            var function = functionGroup.MatchOverload(givenArgs, this, state);
 
             if(function is null) return;
 
@@ -53,18 +53,18 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             funcType = (LangtFunctionType)FunctionAST.TransformedType.PointeeType!;
             RawExpressionType = funcType!.ReturnType;
 
-            if(!funcType.MakeSignatureMatch(givenArgs, generator))
+            if(!funcType.MakeSignatureMatch(givenArgs, state))
             {
-                generator.Diagnostics.Error(
+                state.Error(
                     $"Could not call a function pointer of type {funcType.Name} " +
-                    $"with arguments of type {string.Join(", ", Arguments.Values.Select(a => a.TransformedType.GetFullName()))}", 
+                    $"with arguments of type {string.Join(", ", Arguments.Values.Select(a => a.TransformedType.GetFullName()))}",
                     Range
                 );
             }
         }
         else 
         {
-            generator.Diagnostics.Error("Cannot call a non-functional expression", Range);
+            state.Error("Cannot call a non-functional expression", Range);
         }
     }
 

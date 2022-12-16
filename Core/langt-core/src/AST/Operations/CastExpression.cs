@@ -17,18 +17,18 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 
     public ITransformer? Transformer {get; private set;}
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Value.TypeCheck(generator);
+        Value.TypeCheck(state);
 
-        var type = Type.Resolve(generator);
+        var type = Type.Resolve(state);
         if(type is null) return;
 
-        var conversion = generator.ResolveConversion(type, Value.TransformedType);
+        var conversion = state.CG.ResolveConversion(type, Value.TransformedType);
 
         if(conversion is null)
         {
-            generator.Diagnostics.Error($"Could not find a conversion from {Value.TransformedType.Name} to {type.Name}", Range);
+            state.Error($"Could not find a conversion from {Value.TransformedType.Name} to {type.Name}", Range);
             return;
         }
 

@@ -17,13 +17,13 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         visitor.Visit(Right);
     }
 
-    public static LangtType? Dominate(CodeGenerator generator, ASTNode l, ASTNode r, SourceRange range)
+    private LangtType? Dominate(TypeCheckState state, ASTNode l, ASTNode r, SourceRange range)
     {
-        if(!generator.MakeMatch(l.TransformedType, r))
+        if(!state.MakeMatch(l.TransformedType, r))
         {
-            if(!generator.MakeMatch(r.TransformedType, l))
+            if(!state.MakeMatch(r.TransformedType, l))
             {
-                generator.Diagnostics.Error($"Cannot perform any binary operations on values of types {l.TransformedType.Name} and {r.TransformedType.Name}", range);
+                state.Error($"Cannot perform any binary operations on values of types {l.TransformedType.Name} and {r.TransformedType.Name}", Range);
                 return null;
             }
             else
@@ -37,18 +37,18 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         }
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Left.TypeCheck(generator);
-        Right.TypeCheck(generator);
+        Left.TypeCheck(state);
+        Right.TypeCheck(state);
 
-        DominantType = Dominate(generator, Left, Right, Range);
+        DominantType = Dominate(state, Left, Right, Range);
 
         if(DominantType is null) return;
 
         if(!DominantType.IsInteger && !DominantType.IsReal && DominantType != LangtType.Bool)
         {
-            generator.Diagnostics.Error($"Operation {Operator.ContentStr} is unsupported for values of type {DominantType.Name}", Range);
+            state.Error($"Operation {Operator.ContentStr} is unsupported for values of type {DominantType.Name}", Range);
         }
 
         static LangtType Dummy(Action action)
@@ -63,7 +63,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
                 => DominantType,
             TT.DoubleEquals or TT.NotEquals or TT.GreaterThan or TT.LessThan or TT.GreaterEqual or TT.LessEqual or TT.And or TT.Or 
                 => LangtType.Bool,
-            _ => Dummy(() => generator.Diagnostics.Error($"Unknown operation {Operator.ContentStr}", Range))
+            _ => Dummy(() => state.Error($"Unknown operation {Operator.ContentStr}", Range))
         };
     }
 

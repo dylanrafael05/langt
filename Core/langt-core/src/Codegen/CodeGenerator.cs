@@ -113,50 +113,6 @@ public class CodeGenerator : IProjectDependency
         }
     }
 
-    private bool MatchInternal(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher, bool downflowErr) 
-    {
-        matcher = new();
-        
-        if(from.RequiresTypeDownflow)
-        {
-            if(!from.AcceptDownflow(to, this, err: downflowErr)) 
-            {
-                return false;
-            }
-
-            matcher = matcher with {DownflowType = to};
-        }
-        
-        var ftype = from.TransformedType;
-
-        if(to == ftype) return true;
-
-        if(from.IsLValue && ftype.PointeeType == to)
-        {
-            matcher = matcher with {Transformer = LangtReadPointer.Transformer(ftype)};
-            return true;
-        }
-
-        var conv = ResolveConversion(to, ftype);
-        if(conv is null) return false;
-
-        matcher = matcher with {Transformer = conv.TransformProvider.TransformerFor(ftype, to)};
-        return conv.IsImplicit;
-    }
-
-    public bool CanMatch(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher)
-        => MatchInternal(to, from, out matcher, false);
-    public bool MakeMatch(LangtType to, ASTNode from) 
-    {
-        if(!MatchInternal(to, from, out var matcher, true))
-        {
-            return false;
-        }
-
-        matcher.ApplyTo(from, this);
-        return true;
-    }
-
     public LangtScope CreateUnnamedScope()
         => ResolutionScope = ResolutionScope.AddUnnamedScope();
     public void CloseScope()

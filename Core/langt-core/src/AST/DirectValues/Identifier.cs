@@ -22,12 +22,12 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     public LangtVariable? Variable => Resolution as LangtVariable;
     public LangtFunction? Function {get; private set;}
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Resolution = generator.ResolutionScope.Resolve(Tok.ContentStr, Range, generator.Diagnostics);
+        Resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range, state);
         HasResolution = Resolution is not null;
 
-        generator.Logger.Debug(DebugSourceName + " points to " + Resolution.GetFullName(), "lowering");
+        state.CG.Logger.Debug(DebugSourceName + " points to " + Resolution.GetFullName(), "lowering");
         
         if(!IsVariable) return;
 
@@ -35,41 +35,42 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
         Variable.UseCount++;
     }
 
-    protected override void ResetDownflowState(CodeGenerator generator)
+    protected override void ResetTargetTypeData(TypeCheckState state)
     {
         IsFunction = false;
         Function = null;
 
         if(IsFunctionGroup) RawExpressionType = LangtType.Error;
     }
-    protected override bool AcceptDownflowRaw(LangtType? type, CodeGenerator generator, bool err)
+    protected override void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType = null)
     {
         if(!IsFunctionGroup)
         {
-            return true;
+            return;
         }
 
-        if(type is null || !type.IsFunctionPtr)
+        if(targetType is null)
         {
-            if(err) generator.Diagnostics.Error("Cannot target-type a reference to a function group to non-function pointer", Range);
-            return false;
+            state.Error("Function group references require a target type", Range);
+        }
+        
+        if(!targetType.IsFunctionPtr)
+        {
+            state.Error("Cannot target-type a reference to a function group to non-function pointer", Range);
         }
 
-        var fp = (LangtFunctionType)type.PointeeType!;
+        var fp = (LangtFunctionType)targetType.PointeeType!;
         var fg = Resolution as LangtFunctionGroup;
 
-        Function = fg!.ResolveExactOverload(fp.ParameterTypes, fp.IsVararg, Range, generator, false);
+        Function = fg!.ResolveExactOverload(fp.ParameterTypes, fp.IsVararg, this, state, false);
 
         if(Function is null)
         {
-            if(err) generator.Diagnostics.Error("Cannot target-type a reference to a function group to a function pointer which does not match any of the group's overloads", Range);
-            return false;
+            state.Error("Cannot target-type a reference to a function group to a function pointer which does not match any of the group's overloads", Range);
         }
 
-        RawExpressionType = type;
+        RawExpressionType = targetType;
         IsFunction = true;
-
-        return true;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

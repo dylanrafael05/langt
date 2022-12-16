@@ -13,9 +13,9 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
         visitor.Visit(Expression);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Expression.TypeCheck(generator);
+        Expression.TypeCheck(state);
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

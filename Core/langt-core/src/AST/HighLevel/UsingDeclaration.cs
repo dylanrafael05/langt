@@ -6,20 +6,20 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 {
     public override ASTChildContainer ChildContainer => new() {Using, Identifier};
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {}
     public override void LowerSelf(CodeGenerator generator)
     {}
 
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
-        var ns = Identifier.Resolve(generator);
+        var ns = Identifier.Resolve(state);
         if(ns is null)
         {
-            generator.Diagnostics.Error("Cannot have a 'using' declaration which uses a non-namespace", Range);
+            state.Error("Cannot have a 'using' declaration which uses a non-namespace", Range);
             return; 
         }
 
-        generator.CurrentFile!.Scope.IncludedNamespaces.Add(ns);
+        state.CG.CurrentFile!.Scope.IncludedNamespaces.Add(ns);
     }
 }

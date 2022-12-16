@@ -7,6 +7,6 @@ public record SimpleNamespace(ASTToken Name) : ASTNamespace
 {
     public override ASTChildContainer ChildContainer => new() {Name};
 
-    public override LangtNamespace? Resolve(CodeGenerator generator, [NotNullWhen(true)] bool allowDefinitions = false)
-        => ResolveFrom(generator.Project.GlobalScope, Name.ContentStr, generator, allowDefinitions);
+    public override LangtNamespace? Resolve(ASTPassState state, [NotNullWhen(true)] bool allowDefinitions = false)
+        => ResolveFrom(state.CG.Project.GlobalScope, Name.ContentStr, state, allowDefinitions);
 }

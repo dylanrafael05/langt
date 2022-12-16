@@ -8,25 +8,25 @@ public record CompilationUnit(StatementGroup Group) : ASTNode
 
     public override bool BlockLike => true;
 
-    public override void Initialize(CodeGenerator generator)
+    public override void Initialize(ASTPassState state)
     {
-        Group.Initialize(generator);
+        TryPass(Group.Initialize, state);
     }
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
-        Group.DefineTypes(generator);
+        TryPass(Group.DefineTypes, state);
     }
-    public override void ImplementTypes(CodeGenerator generator)
+    public override void ImplementTypes(ASTPassState state)
     {
-        Group.ImplementTypes(generator);
+        TryPass(Group.ImplementTypes, state);
     }
-    public override void DefineFunctions(CodeGenerator generator)
+    public override void DefineFunctions(ASTPassState state)
     {
-        Group.DefineFunctions(generator);
+        TryPass(Group.DefineFunctions, state);
     }
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Group.TypeCheck(generator);
+        Group.TryTypeCheck(state);
     }
     public override void LowerSelf(CodeGenerator lowerer)
     {

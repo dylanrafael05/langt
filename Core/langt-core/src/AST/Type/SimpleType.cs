@@ -13,6 +13,6 @@ public record SimpleType(ASTToken Name) : ASTType
         visitor.VisitNoDepth(Name);
     }
 
-    public override LangtType? Resolve(CodeGenerator context)
-        => context.ResolutionScope.ResolveType(Name.ContentStr, Range, context.Diagnostics);
+    public override LangtType? Resolve(ASTPassState state)
+        => state.CG.ResolutionScope.ResolveType(Name.ContentStr, Range, state);
 }

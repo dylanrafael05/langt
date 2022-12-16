@@ -11,6 +11,6 @@ public record ASTInvalid(SourceRange ErrRange) : ASTNode
 
     public override void Dump(VisitDumper visitor)
     {}
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {}
 }

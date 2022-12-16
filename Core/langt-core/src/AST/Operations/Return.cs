@@ -17,15 +17,15 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
         }
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         if(Value is null) return;
 
-        Value.TypeCheck(generator);
+        Value.TypeCheck(state);
 
-        if(!generator.MakeMatch(generator.CurrentFunction!.Type.ReturnType, Value))
+        if(!state.MakeMatch(state.CG.CurrentFunction!.Type.ReturnType, Value))
         {
-            generator.Diagnostics.Error($"Return type {Value.TransformedType.Name} does not match function return type {generator.CurrentFunction!.Type.ReturnType.Name}", Range);
+            state.Error($"Return type {Value.TransformedType.Name} does not match function return type {state.CG.CurrentFunction!.Type.ReturnType.Name}", Range);
         }
 
         Returns = true;

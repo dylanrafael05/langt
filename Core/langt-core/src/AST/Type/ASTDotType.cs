@@ -6,12 +6,12 @@ public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier)
 {
     public override ASTChildContainer ChildContainer => new() {Namespace, Dot, Identifier};
 
-    public override LangtType? Resolve(CodeGenerator context)
+    public override LangtType? Resolve(ASTPassState state)
     {
-        var ns = Namespace.Resolve(context);
+        var ns = Namespace.Resolve(state);
 
         if(ns is null) return null;
 
-        return ns.ResolveType(Identifier.ContentStr, Range, context.Diagnostics);
+        return ns.ResolveType(Identifier.ContentStr, Range, state);
     }
 }   

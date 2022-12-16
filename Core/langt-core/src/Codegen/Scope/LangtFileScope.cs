@@ -1,3 +1,5 @@
+using Langt.AST;
+
 namespace Langt.Codegen;
 
 public class LangtFileScope : LangtScope
@@ -10,10 +12,10 @@ public class LangtFileScope : LangtScope
     // A list of namespaces included by the source code with 'using blah.blah.blah' directives
     public List<LangtNamespace> IncludedNamespaces {get; init;} = new();
 
-    public override TOut? Resolve<TOut>(string input, string outputType, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool entry = true, bool propogate = true) where TOut : class
+    public override TOut? Resolve<TOut>(string input, string outputType, SourceRange range, ASTPassState state, bool entry = true, bool propogate = true) where TOut : class
     {
         // Get basic result, allowing errors if propogation is absent
-        var baseResult = HoldingScope?.Resolve<TOut>(input, outputType, range, diagnostics, err && !propogate, false, propogate);
+        var baseResult = HoldingScope?.Resolve<TOut>(input, outputType, range, state with {Noisy = state.Noisy && !propogate}, false, propogate);
 
         // End propogation here if necessary
         if(!propogate) return baseResult;
@@ -26,16 +28,16 @@ public class LangtFileScope : LangtScope
         {
             // Include the given namespaces in the search, 
             // but do not produce for resolution errors (note the 'false')
-            var nResult = n.Resolve<TOut>(input, outputType, range, diagnostics, false, false, propogate);
+            var nResult = n.Resolve<TOut>(input, outputType, range, state with {Noisy = false}, false, propogate);
             if(nResult is not null && !allResults.Contains(nResult)) allResults.Add(nResult);
         }
 
         // Return normal circumstances
         if(allResults.Count == 0) 
         {
-            if(entry && err) 
+            if(entry) 
             {
-                diagnostics.Error($"Could not find {outputType} named {input}", range);
+                state.Error($"Could not find {outputType} named {input}", range);
             }
             return null;
         }
@@ -43,9 +45,9 @@ public class LangtFileScope : LangtScope
         if(allResults.Count == 1) return allResults.First();
 
         // If allowed, produce an ambiguous resolution error
-        if(entry && err)
+        if(entry)
         {
-            diagnostics.Error(
+            state.Error(
                 "Ambiguity between " + 
                 string.Join(", ", allResults.Select(t => t.FullName)) +
                 "; either disambiguate, remove includes, or use explicit '.' accesses"
@@ -56,8 +58,8 @@ public class LangtFileScope : LangtScope
         return null;
     }
 
-    public override bool Define(INamedScoped obj, SourceRange sourceRange, DiagnosticCollection collector)
-        => HoldingScope!.Define(obj, sourceRange, collector);
+    public override bool Define(INamedScoped obj, SourceRange sourceRange, ASTPassState state)
+        => HoldingScope!.Define(obj, sourceRange, state);
 
     public override void ForceDefine(INamedScoped obj)
         => HoldingScope!.ForceDefine(obj);

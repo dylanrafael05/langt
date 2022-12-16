@@ -13,9 +13,9 @@ public record PointerType(ASTToken Ptr, ASTType Type) : ASTType
         visitor.Visit(Type);
     }
 
-    public override LangtType? Resolve(CodeGenerator context)
+    public override LangtType? Resolve(ASTPassState state)
     {
-        var t = Type.Resolve(context);
+        var t = Type.Resolve(state);
         if(t is null) return null;
         return LangtType.PointerTo(t);
     }

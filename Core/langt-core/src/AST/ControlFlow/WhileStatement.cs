@@ -17,14 +17,14 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         visitor.Visit(Block);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Condition.TypeCheck(generator);
-        Block.TypeCheck(generator);
+        Condition.TypeCheck(state);
+        Block.TypeCheck(state);
 
-        if(!generator.MakeMatch(LangtType.Bool, Condition))
+        if(!state.MakeMatch(LangtType.Bool, Condition))
         {
-            generator.Project.Diagnostics.Error("While condition must be a boolean, but was instead " + Condition.TransformedType.Name, Condition.Range);
+            state.Error("While condition must be a boolean, but was instead " + Condition.TransformedType.Name, Range);
         }
         
         RawExpressionType = LangtType.None;

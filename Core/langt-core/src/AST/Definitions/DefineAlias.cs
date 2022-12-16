@@ -8,20 +8,20 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
 
     public LangtAliasType? AliasType {get; private set;}
 
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
         var t = new LangtAliasType(Name.ContentStr);
-        generator.ResolutionScope.DefineType(t, Range, generator.Diagnostics);
+        state.CG.ResolutionScope.DefineType(t, Range, state);
 
         AliasType = t;
     }
 
-    public override void ImplementTypes(CodeGenerator generator)
+    public override void ImplementTypes(ASTPassState state)
     {
-        AliasType!.SetBase(Type.Resolve(generator));
+        AliasType!.SetBase(Type.Resolve(state));
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {}
 
     public override void LowerSelf(CodeGenerator generator)

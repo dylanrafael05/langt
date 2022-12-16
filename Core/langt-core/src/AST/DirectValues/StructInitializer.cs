@@ -18,16 +18,16 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         }
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        var t = Type.Resolve(generator);
+        var t = Type.Resolve(state);
         if(t is null) return;
         
         RawExpressionType = t;
 
         if(!RawExpressionType.IsStructure)
         {
-            generator.Diagnostics.Error($"Unknown structure type {RawExpressionType.Name}", Range);
+            state.Error($"Unknown structure type {RawExpressionType.Name}", Range);
             return;
         }
 
@@ -35,7 +35,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
         if(RawExpressionType.Structure!.Fields.Count != args.Count)
         {
-            generator.Diagnostics.Error($"Incorrect number of fields for structure initializer of type {RawExpressionType.Name}", Range);
+            state.Error($"Incorrect number of fields for structure initializer of type {RawExpressionType.Name}", Range);
             return;
         }
 
@@ -45,11 +45,11 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
             var ftype = f.Type;
             var fname = f.Name;
 
-            args[i].TypeCheck(generator);
+            args[i].TypeCheck(state);
 
-            if(!generator.MakeMatch(ftype, args[i]))
+            if(!state.MakeMatch(ftype, args[i]))
             {
-                generator.Diagnostics.Error($"Incorrect type for field '{fname}' in struct initializer for struct {RawExpressionType.Name}; expected {ftype.Name} but got {args[i].TransformedType.Name}", Range);
+                state.Error($"Incorrect type for field '{fname}' in struct initializer for struct {RawExpressionType.Name}; expected {ftype.Name} but got {args[i].TransformedType.Name}", Range);
             }
         }
     }

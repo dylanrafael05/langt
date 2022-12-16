@@ -16,15 +16,15 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
         visitor.Visit(Operand);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Operand.TypeCheck(generator);
+        Operand.TypeCheck(state);
         
         if(Operator.Type is not TT.Not) throw new Exception("Unknown unary operator " + Operator.Type);
 
-        if(!generator.MakeMatch(Codegen.LangtType.Bool, Operand))
+        if(!state.MakeMatch(LangtType.Bool, Operand))
         {
-            generator.Diagnostics.Error("Cannot negate non-boolean value", Range);
+            state.Error("Cannot negate non-boolean value", Range);
         }
     }
 

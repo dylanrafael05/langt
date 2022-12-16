@@ -16,7 +16,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
     public long? IntegerValue {get; set;}
     public double? DoubleValue {get; set;}
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         if(Tok.Type is TokenType.Integer)
         {

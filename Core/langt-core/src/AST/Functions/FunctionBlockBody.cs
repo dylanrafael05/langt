@@ -12,9 +12,9 @@ public record FunctionBlockBody(Block Block) : FunctionBody
         visitor.Visit(Block);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Block.TypeCheck(generator);
+        Block.TypeCheck(state);
         Returns = Block.Returns;
         RawExpressionType = LangtType.None;
     }

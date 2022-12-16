@@ -9,25 +9,25 @@ namespace Langt.AST;
 /// </summary>
 public abstract record ASTType() : ASTNode //TODO: implement distinction between type definition and implementation
 {
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {}
     public override void LowerSelf(CodeGenerator lowerer)
     {}
     
-    public abstract LangtType? Resolve(CodeGenerator context);
+    public abstract LangtType? Resolve(ASTPassState state);
 }
 
 public record FunctionPtrType(ASTToken Star, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
 {
     public override ASTChildContainer ChildContainer => new() {Star, Open, Arguments, Ellipsis, Close, ReturnType};
 
-    public override LangtType? Resolve(CodeGenerator context)
+    public override LangtType? Resolve(ASTPassState state)
     {
         var fType = new LangtFunctionType
         (
-            ReturnType.Resolve(context) ?? LangtType.Error, 
+            ReturnType.Resolve(state) ?? LangtType.Error, 
             Ellipsis is not null, 
-            Arguments.Values.Select(t => t.Resolve(context) ?? LangtType.Error).ToArray()
+            Arguments.Values.Select(t => t.Resolve(state) ?? LangtType.Error).ToArray()
         );
 
         return new LangtPointerType(fType);

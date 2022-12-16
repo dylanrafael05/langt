@@ -18,20 +18,20 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         visitor.Visit(IndexValue);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         // TODO: should this be raw or not vvvvvv
-        Value.TypeCheck(generator);
-        IndexValue.TypeCheck(generator);
+        Value.TypeCheck(state);
+        IndexValue.TypeCheck(state);
 
         if(!Value.TransformedType.IsPointer)
         {
-            generator.Diagnostics.Error($"Cannot index a non-pointer", Range);
+            state.Error($"Cannot index a non-pointer", Range);
         }
 
-        if(!generator.MakeMatch(LangtType.Int64, IndexValue))
+        if(!state.MakeMatch(LangtType.Int64, IndexValue))
         {
-            generator.Diagnostics.Error($"Cannot index with a non-integral index", Range);
+            state.Error($"Cannot index with a non-integral index", Range);
         }
 
         RawExpressionType = Value.TransformedType;

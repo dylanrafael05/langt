@@ -21,9 +21,9 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
     public override bool IsLValue => true;
 
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Left.TypeCheckSelf(generator);
+        Left.TypeCheck(state with {TryRead = false});
 
         HasResolution = Left.HasResolution && Left.Resolution is not LangtVariable;
 
@@ -31,18 +31,16 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         {
             if(Left.Resolution is not LangtNamespace ns) 
             {
-                generator.Diagnostics.Error($"Cannot access a static member of something that is not a namespace", Range);
+                state.Error($"Cannot access a static member of something that is not a namespace", Range);
                 return;
             }
 
-            Resolution = ns.Resolve(Right.ContentStr, Range, generator.Diagnostics);
-
-            return;
+            Resolution = ns.Resolve(Right.ContentStr, Range, state);
         }
 
         if(!Left.TransformedType.IsPointer || Left.TransformedType.PointeeType is not LangtStructureType structureType)
         {
-            generator.Diagnostics.Error($"Cannot use a '.' access on a non-structure type", Range);
+            state.Error($"Cannot use a '.' access on a non-structure type", Range);
             return;
 
             // TODO: modify this to include namespace getters! (how will that work?)
@@ -50,7 +48,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index, out _))
         {
-            generator.Diagnostics.Error($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range);
+            state.Error($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range);
             return;
         }
 

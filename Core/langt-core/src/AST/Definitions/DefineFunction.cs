@@ -42,27 +42,27 @@ public record DefineFunction(ASTToken Let,
     public LangtFunction? Function {get; private set;}
     public LangtFunctionType? FunctionType {get; private set;}
 
-    public override void DefineFunctions(CodeGenerator generator)
+    public override void DefineFunctions(ASTPassState state)
     {
-        var retType = Type.Resolve(generator);
+        var retType = Type.Resolve(state);
         if(retType is null) return;
 
         var argTypes = new LangtType[ArgSpec.Values.Count()];
         
         var argc = 0;
-        foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(generator)))
+        foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(state)))
         {
             if(a is null) return;
             argTypes[argc++] = a;
         }
 
         FunctionType = new LangtFunctionType(retType, VarargSpec is not null, argTypes);
-        var lftype = generator.LowerType(FunctionType);
+        var lftype = state.CG.LowerType(FunctionType);
 
-        var lf = generator.Module.AddFunction(
+        var lf = state.CG.Module.AddFunction(
             CodeGenerator.GetGeneratedFunctionName(
                 Let.Type is TokenType.Extern, 
-                generator.CurrentNamespace, 
+                state.CG.CurrentNamespace, 
                 Identifier.ContentStr,
                 FunctionType.IsVararg,
                 FunctionType.ParameterTypes
@@ -71,18 +71,17 @@ public record DefineFunction(ASTToken Let,
         );
 
         // TODO: redo this to use better functions
-        FunctionGroup = generator.ResolutionScope.ResolveFunctionGroup(
+        FunctionGroup = state.CG.ResolutionScope.ResolveFunctionGroup(
             Identifier.ContentStr, 
             Range, 
-            generator.Diagnostics,
-            err: false,
+            state,
             propogate: false
         );
 
         if(FunctionGroup is null)
         {
             FunctionGroup = new(Identifier.ContentStr);
-            generator.ResolutionScope.DefineFunctionGroup(FunctionGroup, Range, generator.Diagnostics); 
+            state.CG.ResolutionScope.DefineFunctionGroup(FunctionGroup, Range, state); 
         }
         
         Function = new(
@@ -91,26 +90,26 @@ public record DefineFunction(ASTToken Let,
             lf
         );
 
-        FunctionGroup.AddFunctionOverload(Function, Range, generator);
+        FunctionGroup.AddFunctionOverload(Function, this, state);
         
         RawExpressionType = LangtType.None;
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         if(Let.Type is TokenType.Extern) return; //TODO: precheck extern existence
 
         if(FunctionType is null) return; // Previous error occurred.
 
-        var previousFunction = generator.CurrentFunction;
+        var previousFunction = state.CG.CurrentFunction;
 
-        generator.CurrentFunction = Function;
-        Scope = generator.CreateUnnamedScope();
+        state.CG.CurrentFunction = Function;
+        Scope = state.CG.CreateUnnamedScope();
 
         var count = 0u;
         foreach(var argspec in ArgSpec.Values)
         {
-            var t = argspec.Type.Resolve(generator);
+            var t = argspec.Type.Resolve(state);
 
             if(t is null) continue;
 
@@ -122,13 +121,13 @@ public record DefineFunction(ASTToken Let,
             count++;
         }
 
-        Body!.TypeCheck(generator);
+        Body!.TypeCheck(state);
 
         if(Body is FunctionExpressionBody exp)
         {
-            if(!generator.MakeMatch(FunctionType!.ReturnType, exp.Expression))
+            if(!state.MakeMatch(FunctionType!.ReturnType, exp.Expression))
             {
-                generator.Diagnostics.Error($"Function must return {exp.Expression.TransformedType.Name}, but instead returns {exp.Expression.TransformedType.Name}", exp.Expression.Range);
+                state.Error($"Function must return {exp.Expression.TransformedType.Name}, but instead returns {exp.Expression.TransformedType.Name}", exp.Range);
             }
         }
         else if(Body is FunctionBlockBody blk)
@@ -137,17 +136,17 @@ public record DefineFunction(ASTToken Let,
             {
                 if(FunctionType!.ReturnType == LangtType.None)
                 {
-                    generator.Builder.BuildRetVoid();
+                    state.CG.Builder.BuildRetVoid();
                 }
                 else 
                 {
-                    generator.Diagnostics.Error($"Function must return a value of type {FunctionType!.ReturnType.Name}", Range);
+                    state.Error($"Function must return a value of type {FunctionType!.ReturnType.Name}", blk.Range);
                 }
             }
         }
 
-        generator.CloseScope();
-        generator.CurrentFunction = previousFunction;
+        state.CG.CloseScope();
+        state.CG.CurrentFunction = previousFunction;
     }
 
     public override void LowerSelf(CodeGenerator lowerer)

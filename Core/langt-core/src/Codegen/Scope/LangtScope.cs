@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using Langt.AST;
 using Langt.Codegen;
 
 namespace Langt.Codegen;
@@ -39,17 +40,15 @@ public class LangtScope : IScoped
 
     public INamedScoped? Resolve(string input,
                                  SourceRange range,
-                                 DiagnosticCollection diagnostics,
-                                 bool err = true,
+                                 ASTPassState state,
                                  bool entry = true,
                                  bool propogate = true)
-        => Resolve<INamedScoped>(input, "item", range, diagnostics, err, entry, propogate);
+        => Resolve<INamedScoped>(input, "item", range, state, entry, propogate);
 
     public virtual TOut? Resolve<TOut>(string input,
                                        string outputType,
                                        SourceRange range,
-                                       DiagnosticCollection diagnostics,
-                                       bool err = true,
+                                       ASTPassState state,
                                        bool entry = true,
                                        bool propogate = true) where TOut: class, INamedScoped
     {
@@ -61,7 +60,7 @@ public class LangtScope : IScoped
 
             // If the above condition failed,
             // produce a warning that an ambiguity was present but not fatal
-            diagnostics.Warning($"Possible reference candidate {r.FullName} found, but expected a {outputType}; try to disambiguate", range);
+            state.Warning($"Possible reference candidate {r.FullName} found, but expected a {outputType}; try to disambiguate", range);
         }
 
         TOut? result = null;
@@ -70,12 +69,12 @@ public class LangtScope : IScoped
         if(propogate)
         {
             // Check the upper scope if it exists
-            result = HoldingScope?.Resolve<TOut>(input, outputType, range, diagnostics, err, false);
+            result = HoldingScope?.Resolve<TOut>(input, outputType, range, state, false);
 
             // If allowed, produce a resolution error
-            if(entry && err && result is null)
+            if(entry && state.Noisy && result is null)
             {
-                diagnostics.Error($"Could not find {outputType} named {input}", range);
+                state.Error($"Could not find {outputType} named {input}", range);
             }
         }
 
@@ -83,23 +82,23 @@ public class LangtScope : IScoped
         return result;
     }
 
-    public LangtVariable? ResolveVariable(string name, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool propogate = true) 
-        => Resolve<LangtVariable>(name, "variable", range, diagnostics, err, propogate: propogate);
-    public LangtType? ResolveType(string name, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool propogate = true) 
-        => Resolve<LangtType>(name, "type", range, diagnostics, err, propogate: propogate);
-    public LangtFunctionGroup? ResolveFunctionGroup(string name, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool propogate = true) 
-        => Resolve<LangtFunctionGroup>(name, "function", range, diagnostics, err, propogate: propogate);
-    public LangtNamespace? ResolveNamespace(string name, SourceRange range, DiagnosticCollection diagnostics, bool err = true, bool propogate = true) 
-        => Resolve<LangtNamespace>(name, "namespace", range, diagnostics, err, propogate: propogate);
+    public LangtVariable? ResolveVariable(string name, SourceRange range, ASTPassState state, bool propogate = true) 
+        => Resolve<LangtVariable>(name, "variable", range, state, propogate: propogate);
+    public LangtType? ResolveType(string name, SourceRange range, ASTPassState state, bool propogate = true) 
+        => Resolve<LangtType>(name, "type", range, state, propogate: propogate);
+    public LangtFunctionGroup? ResolveFunctionGroup(string name, SourceRange range, ASTPassState state, bool propogate = true) 
+        => Resolve<LangtFunctionGroup>(name, "function", range, state, propogate: propogate);
+    public LangtNamespace? ResolveNamespace(string name, SourceRange range, ASTPassState state, bool propogate = true) 
+        => Resolve<LangtNamespace>(name, "namespace", range, state, propogate: propogate);
 
     public virtual bool Define(
         INamedScoped obj,
         SourceRange sourceRange, 
-        DiagnosticCollection collector)
+        ASTPassState state)
     {
         if(definedNames.Contains(obj.Name))
         {
-            collector.Error($"Attempting to redefine name {obj.Name}", sourceRange);
+            state.Error($"Attempting to redefine name {obj.Name}", sourceRange);
             return false;
         }
 
@@ -124,14 +123,14 @@ public class LangtScope : IScoped
         obj.HoldingScope = this;
     }
 
-    public bool DefineVariable(LangtVariable variable, SourceRange range, DiagnosticCollection collector)
-        => Define(variable, range, collector);
-    public bool DefineType(LangtType type, SourceRange range, DiagnosticCollection collector)
-        => Define(type, range, collector);
-    public bool DefineFunctionGroup(LangtFunctionGroup function, SourceRange range, DiagnosticCollection collector)
-        => Define(function, range, collector);
-    public bool DefineNamespace(LangtNamespace ns, SourceRange range, DiagnosticCollection collector)
-        => Define(ns, range, collector);
+    public bool DefineVariable(LangtVariable variable, SourceRange range, ASTPassState state)
+        => Define(variable, range, state);
+    public bool DefineType(LangtType type, SourceRange range, ASTPassState state)
+        => Define(type, range, state);
+    public bool DefineFunctionGroup(LangtFunctionGroup function, SourceRange range, ASTPassState state)
+        => Define(function, range, state);
+    public bool DefineNamespace(LangtNamespace ns, SourceRange range, ASTPassState state)
+        => Define(ns, range, state);
     
     public void ForceDefineVariable(LangtVariable variable)
         => ForceDefine(variable);

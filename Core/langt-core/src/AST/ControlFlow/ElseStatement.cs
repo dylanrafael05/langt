@@ -14,9 +14,9 @@ public record ElseStatement(ASTToken Else, ASTNode End) : ASTNode
         visitor.Visit(End);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        End.TypeCheck(generator);
+        End.TypeCheck(state);
         Returns = End.Returns;
         
         RawExpressionType = LangtType.None;

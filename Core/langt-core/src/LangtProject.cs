@@ -1,3 +1,4 @@
+using Langt.AST;
 using Langt.Optimization;
 using Langt.Structure.Visitors;
 using Langt.Utility;
@@ -47,35 +48,35 @@ public class LangtProject
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.Initialize(cg);
+            f.CompilationUnit.Initialize(GeneralPassState.Start(cg));
         }
 
         Logger.Note("Defining types . . . ");
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.DefineTypes(cg);
+            f.CompilationUnit.DefineTypes(GeneralPassState.Start(cg));
         }
 
         Logger.Note("Implementing types . . . ");
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.ImplementTypes(cg);
+            f.CompilationUnit.ImplementTypes(GeneralPassState.Start(cg));
         }
         
         Logger.Note("Defining functions . . . ");
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.DefineFunctions(cg);
+            f.CompilationUnit.DefineFunctions(GeneralPassState.Start(cg));
         }
         
         Logger.Note("Type checking . . . ");
         foreach(var f in Files)
         {  
             cg.Open(f);
-            f.CompilationUnit.TypeCheck(cg);
+            f.CompilationUnit.TypeCheck(TypeCheckState.Start(cg));  
         }
 
 

@@ -26,45 +26,45 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
         }
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         foreach(var s in Statements)
         {
-            s.TypeCheck(generator);
+            s.TryTypeCheck(state);
         }
 
         RawExpressionType = LangtType.None;
     }
 
-    public override void DefineFunctions(CodeGenerator generator)
+    public override void DefineFunctions(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.DefineFunctions(generator);
+            TryPass(s.DefineFunctions, state);
         }
     }
 
-    public override void ImplementTypes(CodeGenerator generator)
+    public override void ImplementTypes(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.ImplementTypes(generator);
+            TryPass(s.ImplementTypes, state);
         }
     }
     
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.DefineTypes(generator);
+            TryPass(s.DefineTypes, state);
         }
     }
 
-    public override void Initialize(CodeGenerator generator)
+    public override void Initialize(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.Initialize(generator);
+            TryPass(s.Initialize, state);
         }
     }
 }

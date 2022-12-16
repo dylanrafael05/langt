@@ -18,19 +18,19 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
         if(Else is not null) visitor.Visit(Else);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Condition.TypeCheck(generator);
-        Block.TypeCheck(generator);
+        Condition.TypeCheck(state);
+        Block.TypeCheck(state);
 
-        if(!generator.MakeMatch(Codegen.LangtType.Bool, Condition))
+        if(!state.MakeMatch(LangtType.Bool, Condition))
         {
-            generator.Project.Diagnostics.Error("If condition must be a boolean, but was instead " + Condition.TransformedType.Name, Condition.Range);
+            state.Error("If condition must be a boolean, but was instead " + Condition.TransformedType.Name, Condition.Range);
         }
 
         if(Else is not null)
         {
-            Else.TypeCheck(generator);
+            Else.TypeCheck(state);
 
             Returns = Block.Returns && Else.Returns;
         }

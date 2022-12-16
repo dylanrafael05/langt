@@ -6,12 +6,12 @@ public record NestedNamespace(ASTNamespace Namespace, ASTToken Dot, ASTToken Ide
 {
     public override ASTChildContainer ChildContainer => new() {Namespace, Dot, Identifier};
 
-    public override LangtNamespace? Resolve(CodeGenerator generator, bool allowDefinitions = false)
+    public override LangtNamespace? Resolve(ASTPassState state, bool allowDefinitions = false)
     {
-        var ns = Namespace.Resolve(generator, allowDefinitions);
+        var ns = Namespace.Resolve(state, allowDefinitions);
         if(ns is null) return null;
 
-        return ResolveFrom(ns, Identifier.ContentStr, generator, allowDefinitions);
+        return ResolveFrom(ns, Identifier.ContentStr, state, allowDefinitions);
     }
 
 }

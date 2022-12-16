@@ -14,7 +14,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
     public string? Value {get; private set;}
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         var source = Tok.Content;
         var s = "";
@@ -40,7 +40,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
                     '"' => '"',
                     '\\' => '\\',
 
-                    var u => Functional.Do(() => generator.Diagnostics.Error($"Unrecognized string escape sequence '\\{u}'", Range), '\0')
+                    var u => Functional.Do(() => state.Error($"Unrecognized string escape sequence '\\{u}'", Range), '\0')
                 };
                 i++;
             }

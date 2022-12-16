@@ -19,13 +19,13 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         visitor.PutString("}");
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         foreach(var s in Statements)
         {
             if(!Returns) 
             {
-                s.TypeCheck(generator);
+                s.TryTypeCheck(state);
             }
             else
             {
@@ -47,27 +47,27 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         }
     }
     
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.DefineTypes(generator);
+            TryPass(s.DefineTypes, state);
         }
     }
 
-    public override void ImplementTypes(CodeGenerator generator)
+    public override void ImplementTypes(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.ImplementTypes(generator);
+            TryPass(s.ImplementTypes, state);
         }
     }
 
-    public override void Initialize(CodeGenerator generator)
+    public override void Initialize(ASTPassState state)
     {
         foreach(var s in Statements)
         {
-            s.Initialize(generator);
+            TryPass(s.Initialize, state);
         }
     }
 }

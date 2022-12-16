@@ -15,19 +15,19 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         visitor.Visit(Right);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
-        Left.TypeCheckSelf(generator);
-        Right.TypeCheck(generator);
+        Left.TypeCheck(state with {TryRead = false});
+        Right.TypeCheck(state);
 
         if(!Left.TransformedType.IsPointer || !Left.IsLValue)
         {
-            generator.Diagnostics.Error($"Cannot assign to a non-assignable value", Range);
+            state.Error($"Cannot assign to a non-assignable value", Range);
         }
 
-        if(!generator.MakeMatch(Left.TransformedType.PointeeType!, Right))
+        if(!state.MakeMatch(Left.TransformedType.PointeeType!, Right))
         {
-            generator.Diagnostics.Error($"Cannot assign value of type {Right.TransformedType.Name} to variable of type {Left.TransformedType.Name}", Range);
+            state.Error($"Cannot assign value of type {Right.TransformedType.Name} to variable of type {Left.TransformedType.Name}", Range);
         }
         
         RawExpressionType = LangtType.None;

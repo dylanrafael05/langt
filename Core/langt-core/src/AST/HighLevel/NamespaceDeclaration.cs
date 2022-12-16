@@ -8,32 +8,32 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
 
     public LangtNamespace? LNamespace {get; set;}
 
-    public override void DefineTypes(CodeGenerator generator)
+    public override void DefineTypes(ASTPassState state)
     {
         if(LNamespace is null) return;
-        generator.SetCurrentNamespace(LNamespace!);
+        state.CG.SetCurrentNamespace(LNamespace!);
     }
-    public override void ImplementTypes(CodeGenerator generator)
+    public override void ImplementTypes(ASTPassState state)
     {
         if(LNamespace is null) return;
-        generator.SetCurrentNamespace(LNamespace!);
+        state.CG.SetCurrentNamespace(LNamespace!);
     }
-    public override void DefineFunctions(CodeGenerator generator)
+    public override void DefineFunctions(ASTPassState state)
     {
         if(LNamespace is null) return;
-        generator.SetCurrentNamespace(LNamespace!);
+        state.CG.SetCurrentNamespace(LNamespace!);
     }
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         if(LNamespace is null) return;
-        generator.SetCurrentNamespace(LNamespace!);
+        state.CG.SetCurrentNamespace(LNamespace!);
     }
     public override void LowerSelf(CodeGenerator generator)
     {}
 
-    public override void Initialize(CodeGenerator generator)
+    public override void Initialize(ASTPassState state)
     {
-        LNamespace = Identifier.Resolve(generator, true);
+        LNamespace = Identifier.Resolve(state, true);
         if(LNamespace is null) throw new Exception();
     }
 }

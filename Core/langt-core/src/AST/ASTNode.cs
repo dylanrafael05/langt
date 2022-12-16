@@ -50,13 +50,8 @@ public class ASTChildContainer : IEnumerable<ASTChildSpec>
     }
 }
 
-public record struct TypeCheckState(CodeGenerator CG, LangtType TargetType, bool TryRead, bool ProduceDiagnostics)
-{
-    public static TypeCheckState Start(CodeGenerator gen) => new(gen, LangtType.None, true, true);
-}
-
 [Serializable]
-public class TypeCheckException : Exception
+public class TypeCheckException : ASTPassException
 {}
 
 /// <summary>
@@ -111,22 +106,6 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     public virtual bool RequiresTypeDownflow => false;
 
     public string DebugSourceName {get; private init;}
-
-    protected virtual void ResetDownflowState(CodeGenerator generator) {}
-    protected virtual bool AcceptDownflowRaw(LangtType? type, CodeGenerator generator, bool err) => true;
-
-    /// <summary>
-    /// Updates this AST node so that it corresponds to the given target type.
-    /// Returns <see langword="true"/> of no errors were reported, 
-    /// and <see langword="false"/> otherwise.
-    /// Note that implementers should ensure this method can be called multiple
-    /// times, but can only produce a valid expression state if this returns <see langword="true"/>.
-    /// </summary>
-    public bool AcceptDownflow(LangtType? type, CodeGenerator generator, bool err = true) 
-    {
-        ResetDownflowState(generator);
-        return HasValidDownflow = AcceptDownflowRaw(type, generator, err);
-    }
 
     /// <summary>
     /// Whether or not the current AST node has an unknown type, since it has not been 
@@ -201,6 +180,7 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     public List<ITransformer> AppliedTransformers {get; private init;} = new();
 
     public bool PassedInitialTypeCheck {get; private set;} = false;
+    public bool FinalizedTypeChecking {get; private set;} = false;
 
     /// <summary>
     /// Apply the given transform to this AST node.
@@ -223,28 +203,14 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
 
     // TODO: Reimplement to allow for 'before all' / 'after all' hooks
 
-    public virtual void Initialize(CodeGenerator generator)
+    public virtual void Initialize(ASTPassState state)
     {}
-    public virtual void DefineTypes(CodeGenerator generator)
+    public virtual void DefineTypes(ASTPassState state)
     {}
-    public virtual void ImplementTypes(CodeGenerator generator)
+    public virtual void ImplementTypes(ASTPassState state)
     {}
-    public virtual void DefineFunctions(CodeGenerator generator)
+    public virtual void DefineFunctions(ASTPassState state)
     {}
-
-    public void Error(TypeCheckState state, string message)
-    {
-        if(state.ProduceDiagnostics) state.CG.Diagnostics.Error(message, Range);
-        throw new TypeCheckException();
-    }
-    public void Warning(TypeCheckState state, string message)
-    {
-        if(state.ProduceDiagnostics) state.CG.Diagnostics.Warning(message, Range);
-    }
-    public void Note(TypeCheckState state, string message)
-    {
-        if(state.ProduceDiagnostics) state.CG.Diagnostics.Note(message, Range);
-    }
 
     /// <summary>
     /// Perform the initial steps of type checking.
@@ -253,43 +219,60 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// </summary>
     protected virtual void InitialTypeCheckSelf(TypeCheckState state) 
     {
-        Error(state, "Cannot yet type-check node of type " + GetType().Name);
+        state.Error("Cannot yet type-check node of type " + GetType().Name, Range);
     }
+    
+    protected virtual void ResetTargetTypeData(TypeCheckState state) 
+    {}
     /// <summary>
     /// Perform the final steps of type checking.
     /// This method, under certain circumstances where multiple type-checks must occur 
     /// (function overload resolution namely).
     /// </summary>
-    protected virtual void TypeCheckSelf(TypeCheckState state)
+    protected virtual void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType)
+    {}
+    /// <summary>
+    /// Finalize the type check.
+    /// </summary>
+    protected virtual void FinalTypeCheckSelf(TypeCheckState state)
     {}
 
-    private void TypeCheckInternal(TypeCheckState state)
+    private void TypeCheckInternal(TypeCheckState state, LangtType? targetType)
     {
-        TypeCheckSelf(state);
-        if(state.TryRead) TryRead();
+        InitialTypeCheck(state);
+        TargetTypeCheck(state, targetType);
+        FinalTypeCheck(state);
     }
 
-    public void TypeCheck(TypeCheckState state) 
+    public void InitialTypeCheck(TypeCheckState state)
     {
-        state = state with {ProduceDiagnostics=true};
-
         InitialTypeCheckSelf(state);
-        TypeCheckInternal(state);
+    }
+    public void TargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
+    {
+        ResetTargetTypeData(state);
+        TargetTypeCheckSelf(state, targetType);
+    }
+    public void FinalTypeCheck(TypeCheckState state)
+    {
+        FinalTypeCheckSelf(state);
+        if(state.TryRead) TryRead();
+        FinalizedTypeChecking = true;
+    }
+    
+    public void TypeCheck(TypeCheckState state, LangtType? targetType = null) 
+    {
+        state = state with {Noisy=true};
+
+        TypeCheckInternal(state, targetType);
     }
 
-    public bool TryTypeCheck(TypeCheckState state)
+
+    public bool TryTargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
     {
-        state = state with {ProduceDiagnostics=false};
-
-        if(!BlockLike && ContainsInvalid)
-        {
-            return true; // TODO: is this valid?
-        }
-
         try 
         {
-            InitialTypeCheckSelf(state);
-            TypeCheckInternal(state);
+            TargetTypeCheck(state with {Noisy=false}, targetType);
         }
         catch(TypeCheckException)
         {
@@ -297,6 +280,30 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
         }
 
         return true;
+    }
+    public bool TryTypeCheck(TypeCheckState state, LangtType? targetType = null)
+    {
+        state = state with {Noisy=false};
+
+        if(!BlockLike && ContainsInvalid)
+        {
+            return true; // TODO: is this valid?
+        }
+
+        return TryPass(s => TypeCheckInternal(s, targetType), state);
+    }
+
+    public static bool TryPass<T>(Action<T> f, T state) where T: ASTPassState 
+    {
+        try 
+        {
+            f(state);
+            return true;
+        }
+        catch(ASTPassException)
+        {
+            return false;
+        }
     }
 
     public virtual void LowerSelf(CodeGenerator generator)

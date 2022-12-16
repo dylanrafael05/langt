@@ -14,15 +14,15 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
         visitor.Visit(Type);
     }
 
-    public override void TypeCheckSelf(CodeGenerator generator)
+    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {
         RawExpressionType = LangtType.None;
     }
 
     // TODO: move resolution logic to TypeCheckRaw?
-    public LangtStructureField? Field(CodeGenerator generator) 
+    public LangtStructureField? Field(ASTPassState state) 
     {
-        var t = Type.Resolve(generator);
+        var t = Type.Resolve(state);
         if(t is null) return null;
 
         return new(Name.ContentStr, t);
