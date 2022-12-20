@@ -5,6 +5,8 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.AST;
 
+// TODO: MAJOR: prevent "cascading" state assignment of pointer reading; reset non-err state variables automatically?
+
 public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 {
     public override ASTChildContainer ChildContainer => new() {Tok};
@@ -44,14 +46,9 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     }
     protected override void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType = null)
     {
-        if(!IsFunctionGroup)
+        if(!IsFunctionGroup || targetType is null)
         {
             return;
-        }
-
-        if(targetType is null)
-        {
-            state.Error("Function group references require a target type", Range);
         }
         
         if(!targetType.IsFunctionPtr)

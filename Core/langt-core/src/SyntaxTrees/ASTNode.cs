@@ -1,3 +1,5 @@
+global using CGError = System.ValueTuple<string, Langt.SourceRange>;
+
 using System.Text;
 using Langt.Structure;
 using Langt.Codegen;
@@ -5,6 +7,7 @@ using Langt.Structure.Visitors;
 using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
+using Langt.Utility;
 
 namespace Langt.AST;
 
@@ -54,40 +57,20 @@ public class ASTChildContainer : IEnumerable<ASTChildSpec>
 public class TypeCheckException : ASTPassException
 {}
 
-/// <summary>
-/// Represents any construct directly present in the AST.
-/// </summary>
-public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
+public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement<VisitDumper>
 {
-    /// <summary>
-    /// Get the child container which describes all children of this AST node.
-    /// </summary>
-    public abstract ASTChildContainer ChildContainer {get;}
+    public SourceRange Range => ASTSource.Range;
 
-    /// <summary>
-    /// Get the sequence of all children in order. These children may be null.
-    /// </summary>
-    public IEnumerable<ASTNode?> AllChildren {get; private init;}
-    /// <summary>
-    /// Get the sequence of all non-null children in order.
-    /// </summary>
-    public IEnumerable<ASTNode> Children {get; private init;}
-
-    public ASTNode()
+    public virtual void Dump(VisitDumper dumper)
     {
-        var cc = ChildContainer;
-
-        AllChildren = cc.AllChildren.ToArray();
-        Children    = cc.Children.ToArray();
-
-        Range = SourceRange.CombineFrom(Children);
-        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
+        dumper.PutString("bound-node");
+        dumper.Visit(ASTSource);
     }
+    
+    public string DebugSourceName => ASTSource.DebugSourceName;
 
-    /// <summary>
-    /// Get the source range that contains the entirety of this AST node.
-    /// </summary>
-    public virtual SourceRange Range {get; private init;}
+    void IElement<VisitDumper>.OnVisit(VisitDumper visitor)
+        => Dump(visitor);
     
     /// <summary>
     /// Is the current AST node representative of an expression which can automatically
@@ -95,17 +78,10 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// </summary>
     public virtual bool IsLValue => false;
     /// <summary>
-    /// Is the current AST node block-like; should the presence of an invalid child 
-    /// prevent type checking from taking place on this node?
-    /// </summary>
-    public virtual bool BlockLike => false;
-    /// <summary>
     /// Is the current AST node untypable; does this AST node require a provided valid
     /// target type in order to type check?
     /// </summary>
     public virtual bool RequiresTypeDownflow => false;
-
-    public string DebugSourceName {get; private init;}
 
     /// <summary>
     /// Whether or not the current AST node has an unknown type, since it has not been 
@@ -142,21 +118,6 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// a function or due to a degenerate condition.
     /// </summary>
     public bool Unreachable {get; set;} = false;
-
-    /// <summary>
-    /// Whether or not this AST node is invalid.
-    /// </summary>
-    /// <remarks>
-    /// This is exectly equal to the expression
-    /// <code>
-    /// node is ASTInvalid
-    /// </code>
-    /// </remarks>
-    public bool IsInvalid => this is ASTInvalid;
-    /// <summary>
-    /// Whether or not this AST node contains an invalid child node or is itself invalid.
-    /// </summary>
-    public bool ContainsInvalid => IsInvalid || Children.Any(c => c.ContainsInvalid);
     
     /// <summary>
     /// Whether or not this AST node represents an identifier for a statically resolveable
@@ -177,10 +138,10 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
     /// The list of transformers currently applied to this AST node, in reverse order 
     /// of their application.
     /// </summary>
-    public List<ITransformer> AppliedTransformers {get; private init;} = new();
+    public List<ITransformer> AppliedTransformers {get; init;} = new();
 
-    public bool PassedInitialTypeCheck {get; private set;} = false;
-    public bool FinalizedTypeChecking {get; private set;} = false;
+    public bool PassedInitialTypeCheck {get; set;} = false;
+    public bool FinalizedTypeChecking {get; set;} = false;
 
     /// <summary>
     /// Apply the given transform to this AST node.
@@ -201,16 +162,104 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
         ApplyTransform(LangtReadPointer.Transformer(TransformedType));
     }
 
+    public virtual void LowerSelf(CodeGenerator generator)
+        => generator.Logger.Note("Cannot yet lower AST Node of type " + GetType().Name);
+    public void Lower(CodeGenerator generator)
+    {   
+        generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
+
+        if(Unreachable)
+        {
+            generator.Project.Diagnostics.Warning("Unreachable code detected", Range);
+            return;
+        }
+
+        LowerSelf(generator);
+
+        if(AppliedTransformers.Count > 0)
+        {
+            var v = generator.PopValueNoDebug();
+            foreach(var trans in AppliedTransformers)
+            {
+                generator.Project.Logger.Debug("     Applying transformation " + trans.Name + " . . . ", "lowering");
+                v = new(trans.Output, trans.Perform(generator, v.LLVM));
+            }
+            generator.PushValueNoDebug(v);
+        }
+        
+        generator.LogStack(DebugSourceName);
+    }
+}
+
+public record BoundASTWrapper(ASTNode Source) : BoundASTNode(Source)
+{
+
+}
+
+/// <summary>
+/// Represents any construct directly present in the AST.
+/// </summary>
+public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
+{
+    /// <summary>
+    /// Is the current AST node block-like; should the presence of an invalid child 
+    /// prevent type checking from taking place on this node?
+    /// </summary>
+    public virtual bool BlockLike => false;
+
+    /// <summary>
+    /// Get the child container which describes all children of this AST node.
+    /// </summary>
+    public abstract ASTChildContainer ChildContainer {get;}
+
+    /// <summary>
+    /// Get the sequence of all children in order. These children may be null.
+    /// </summary>
+    public IEnumerable<ASTNode?> AllChildren {get; private init;}
+    /// <summary>
+    /// Get the sequence of all non-null children in order.
+    /// </summary>
+    public IEnumerable<ASTNode> Children {get; private init;}
+
+    public ASTNode()
+    {
+        var cc = ChildContainer;
+
+        AllChildren = cc.AllChildren.ToArray();
+        Children    = cc.Children.ToArray();
+
+        Range = SourceRange.CombineFrom(Children);
+        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
+    }
+
+    /// <summary>
+    /// Get the source range that contains the entirety of this AST node.
+    /// </summary>
+    public virtual SourceRange Range {get; private init;}
+
+    public string DebugSourceName {get; private init;}
+
+    /// <summary>
+    /// Whether or not this AST node is invalid.
+    /// </summary>
+    /// <remarks>
+    /// This is exectly equal to the expression
+    /// <code>
+    /// node is ASTInvalid
+    /// </code>
+    /// </remarks>
+    public bool IsInvalid => this is ASTInvalid;
+    /// <summary>
+    /// Whether or not this AST node contains an invalid child node or is itself invalid.
+    /// </summary>
+    public bool ContainsInvalid => IsInvalid || Children.Any(c => c.ContainsInvalid);
+
     // TODO: Reimplement to allow for 'before all' / 'after all' hooks
 
-    public virtual void Initialize(ASTPassState state)
-    {}
-    public virtual void DefineTypes(ASTPassState state)
-    {}
-    public virtual void ImplementTypes(ASTPassState state)
-    {}
-    public virtual void DefineFunctions(ASTPassState state)
-    {}
+    public virtual Resultor HandleEnvironment(ASTPassState state) => Resultor.Success;
+    public virtual Resultor HandleDefinitions(ASTPassState state) => Resultor.Success;
+    public virtual Resultor RefineDefinitions(ASTPassState state) => Resultor.Success;
+    public abstract Resultor<BoundASTNode> Bind(ASTPassState state);
 
     /// <summary>
     /// Perform the initial steps of type checking.
@@ -304,34 +353,6 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
         {
             return false;
         }
-    }
-
-    public virtual void LowerSelf(CodeGenerator generator)
-        => generator.Logger.Note("Cannot yet lower AST Node of type " + GetType().Name);
-    public void Lower(CodeGenerator generator)
-    {   
-        generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
-
-        if(Unreachable)
-        {
-            generator.Project.Diagnostics.Warning("Unreachable code detected", Range);
-            return;
-        }
-
-        LowerSelf(generator);
-
-        if(AppliedTransformers.Count > 0)
-        {
-            var v = generator.PopValueNoDebug();
-            foreach(var trans in AppliedTransformers)
-            {
-                generator.Project.Logger.Debug("     Applying transformation " + trans.Name + " . . . ", "lowering");
-                v = new(trans.Output, trans.Perform(generator, v.LLVM));
-            }
-            generator.PushValueNoDebug(v);
-        }
-        
-        generator.LogStack(DebugSourceName);
     }
 
     public virtual void Dump(VisitDumper visitor)

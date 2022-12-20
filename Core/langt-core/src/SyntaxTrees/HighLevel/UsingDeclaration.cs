@@ -1,4 +1,5 @@
 using Langt.Codegen;
+using Langt.Utility;
 
 namespace Langt.AST;
 
@@ -6,20 +7,20 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 {
     public override ASTChildContainer ChildContainer => new() {Using, Identifier};
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {}
-    public override void LowerSelf(CodeGenerator generator)
-    {}
+    public override Result<BoundASTNode> Bind(ASTPassState state)
+        => new BoundASTWrapper(this);
 
-    public override void DefineTypes(ASTPassState state)
+    public override Result HandleDefinitions(ASTPassState state)
     {
         var ns = Identifier.Resolve(state);
+
         if(ns is null)
         {
-            state.Error("Cannot have a 'using' declaration which uses a non-namespace", Range);
-            return; 
+            Result.Failure(("Cannot have a 'using' declaration which uses a non-namespace", Range));
         }
 
         state.CG.CurrentFile!.Scope.IncludedNamespaces.Add(ns);
+
+        return Result.Success;
     }
 }

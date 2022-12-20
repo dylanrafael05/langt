@@ -8,7 +8,7 @@ public record LangtConversion(TransformProvider TransformProvider)
 {
     public bool IsImplicit {get; init;}
 
-    public static List<LangtConversion> Builtin = new();
+    public static readonly List<LangtConversion> Builtin = new();
 
     static LangtConversion()
     {
