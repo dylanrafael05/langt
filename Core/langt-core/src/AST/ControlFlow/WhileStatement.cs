@@ -63,6 +63,6 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         // TODO: COMPLETE TypeChecking system and Conversion system in order to localize all errors to inside this program (no llvm errors)
         // TODO: Test all of this mightily when finished
 
-        //! PLEASE PUSH NEXT TIME YOU MAKE BRAKING CHANGES LIKE THIS YOU DUMBASS
+        //! PLEASE PUSH NEXT TIME YOU MAKE BRAKING CHANGES LIKE THIS YOU DUMMY
     }
 }
