@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, ASTToken Eq, ASTNode Value) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Let, Identifier, Type, Eq, Value};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Type, Eq, Value};
 
     public override void Dump(VisitDumper visitor)
     {

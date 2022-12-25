@@ -7,7 +7,7 @@ namespace Langt.AST;
 
 public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseStatement? Else) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {If, Condition, Block, Else};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {If, Condition, Block, Else};
 
     public override void Dump(VisitDumper visitor)
     {

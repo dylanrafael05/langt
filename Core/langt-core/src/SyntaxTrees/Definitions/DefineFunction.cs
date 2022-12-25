@@ -6,11 +6,11 @@ namespace Langt.AST;
 
 public record ArgumentSpec(ASTToken Name, ASTType Type) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Name, Type};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 }
 public record VarargSpec(ASTToken Ellipsis) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Ellipsis};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Ellipsis};
 }
 
 public record DefineFunction(ASTToken Let,
@@ -22,7 +22,7 @@ public record DefineFunction(ASTToken Let,
                              ASTType Type,
                              FunctionBody? Body) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Let, Identifier, Open, ArgSpec, VarargSpec, Close, Type, Body};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Open, ArgSpec, VarargSpec, Close, Type, Body};
 
     public override void Dump(VisitDumper visitor)
     {

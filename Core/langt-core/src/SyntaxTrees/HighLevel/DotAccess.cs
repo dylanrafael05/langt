@@ -1,12 +1,13 @@
 using Langt.Codegen;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
+using Langt.Utility;
 
 namespace Langt.AST;
 
 public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Left, Dot, Right};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -15,66 +16,57 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         visitor.Visit(Right);
     }
 
-    public LangtStructureField? Field {get; private set;}
-    public int? FieldIndex {get; private set;}
 
-    public override bool IsLValue => true;
-
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        Left.TypeCheck(state with {TryRead = false});
+        // Get all input results
+        var iptResult = Left.Bind(state, new TypeCheckOptions {AutoDeferenceLValue = false});
+        if(!iptResult) return iptResult;
 
-        HasResolution = Left.HasResolution && Left.Resolution is not LangtVariable;
+        // Create output result builder from input
+        var builder = ResultBuilder.Empty().WithData(iptResult);
 
-        if(HasResolution)
+        // Deconstruct and get values
+        var left = iptResult.Value;
+
+        var result = new BoundDotAccess(this, left)
         {
-            if(Left.Resolution is not LangtNamespace ns) 
+            HasResolution = left.HasResolution //&& left.Resolution is not LangtVariable //TODO: ?
+        };
+
+        if (result.HasResolution)
+        {
+            if(left.Resolution is not LangtNamespace ns) 
             {
-                state.Error($"Cannot access a static member of something that is not a namespace", Range);
-                return;
+                return builder.WithDgnError($"Cannot access a static member of something that is not a namespace", Range)
+                    .Build<BoundASTNode>();
             }
 
-            Resolution = ns.Resolve(Right.ContentStr, Range, state);
+            var resolutionResult = ns.Resolve(Right.ContentStr, Range);
+            builder.AddFrom(resolutionResult);
+            
+            result.Resolution = resolutionResult.OrDefault();
         }
 
-        if(!Left.TransformedType.IsPointer || Left.TransformedType.PointeeType is not LangtStructureType structureType)
+        if(!left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)
         {
-            state.Error($"Cannot use a '.' access on a non-structure type", Range);
-            return;
+            return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
+                .Build<BoundASTNode>();
 
             // TODO: modify this to include namespace getters! (how will that work?)
         }
 
         if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index, out _))
         {
-            state.Error($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range);
-            return;
+            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range)
+                .Build<BoundASTNode>();
         }
 
-        Field = field;
-        FieldIndex = index;
+        result.Field = field;
+        result.FieldIndex = index;
 
-        RawExpressionType = LangtType.PointerTo(Field!.Type);
-    }
+        result.RawExpressionType = LangtType.PointerTo(result.Field!.Type);
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(HasResolution) return;
-
-        Left.Lower(lowerer);
-
-        var s = lowerer.PopValue(DebugSourceName);
-
-        lowerer.PushValue( 
-            RawExpressionType,
-            lowerer.Builder.BuildStructGEP2(
-                lowerer.LowerType(s.Type.PointeeType!), 
-                s.LLVM,
-                (uint)FieldIndex!.Value,
-                s.Type.PointeeType!.Name + "." + Field!.Name
-            ),
-            DebugSourceName
-        );
+        return builder.Build<BoundASTNode>(result);
     }
 }

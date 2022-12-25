@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Name, Type};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 
     public override void Dump(VisitDumper visitor)
     {

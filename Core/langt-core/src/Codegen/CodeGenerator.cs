@@ -86,7 +86,7 @@ public class CodeGenerator : IProjectDependency
         // TYPES //
         foreach(var field in typeof(LangtType).GetFields().Where(f => Attribute.IsDefined(f, typeof(BuiltinTypeAttribute))))
         { 
-            Project.GlobalScope.ForceDefineType((LangtType)field.GetValue(null)!);
+            Project.GlobalScope.DefineType((LangtType)field.GetValue(null)!, SourceRange.Default).Expect();
         }
         
         foreach(var conv in LangtConversion.Builtin)

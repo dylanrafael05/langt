@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record ParentheticExpression(ASTToken Open, ASTNode Value, ASTToken End) : ASTNode(), IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {Open, Value, End};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Open, Value, End};
 
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Value);

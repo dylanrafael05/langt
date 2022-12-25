@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, ASTToken Close) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Value, Open, IndexValue, Close};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Value, Open, IndexValue, Close};
 
     public override bool IsLValue => true;
 

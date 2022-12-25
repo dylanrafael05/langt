@@ -1,4 +1,4 @@
-namespace Langt.Utility;
+namespace Langt.Utility.Functional;
 
 public static class Functional 
 {

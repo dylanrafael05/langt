@@ -4,24 +4,27 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundBooleanLiteral(BooleanLiteral Source) : BoundASTNode(Source)
+{
+    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        generator.PushValue( 
+            LangtType.Bool,
+            LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, Source.Tok.Type is TokenType.True ? 1ul : 0ul),
+            DebugSourceName
+        );
+    }
+}
+
 public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {Tok};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.PutString(Tok.ToString());
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        RawExpressionType = LangtType.Bool;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        lowerer.PushValue( 
-            LangtType.Bool,
-            LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, Tok.Type is TokenType.True ? 1ul : 0ul),
-            DebugSourceName
-        );
-    }
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+        => Result.Success<BoundASTNode>(new BoundBooleanLiteral(this) {RawExpressionType = LangtType.Bool});
 }

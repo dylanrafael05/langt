@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {PtrToKey, Var};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {PtrToKey, Var};
 
     public override void Dump(VisitDumper visitor)
     {

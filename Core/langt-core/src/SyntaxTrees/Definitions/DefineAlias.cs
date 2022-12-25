@@ -4,7 +4,7 @@ namespace Langt.AST;
 
 public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Type) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Alias, Name, Eq, Type};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Alias, Name, Eq, Type};
 
     public LangtAliasType? AliasType {get; private set;}
 

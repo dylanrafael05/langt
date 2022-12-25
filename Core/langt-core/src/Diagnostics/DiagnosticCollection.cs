@@ -31,6 +31,14 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     public void Fatal(string message, SourceRange range)
         => Add(new(MessageSeverity.Fatal, message, range));
 
+    public void AddResult(IResult r)
+    {
+        foreach(var d in (r.Errors.OfType<Diagnostic>()).Concat(r.Metadata.OfType<Diagnostic>()))
+        {
+            Add(d);
+        }
+    }
+
     public void Add(Diagnostic item)
     {
         items.Add(item);

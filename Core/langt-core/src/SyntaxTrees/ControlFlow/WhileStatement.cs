@@ -7,7 +7,7 @@ namespace Langt.AST;
 
 public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {While, Condition, Block};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {While, Condition, Block};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -62,7 +62,5 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         // TODO: CHANGE CodeGenerator to be Lowerer and Context
         // TODO: COMPLETE TypeChecking system and Conversion system in order to localize all errors to inside this program (no llvm errors)
         // TODO: Test all of this mightily when finished
-
-        //! PLEASE PUSH NEXT TIME YOU MAKE BRAKING CHANGES LIKE THIS YOU DUMBASS
     }
 }

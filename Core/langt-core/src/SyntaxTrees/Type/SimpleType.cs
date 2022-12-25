@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record SimpleType(ASTToken Name) : ASTType
 {
-    public override ASTChildContainer ChildContainer => new() {Name};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Name};
 
     public override void Dump(VisitDumper visitor)
     {

@@ -2,9 +2,11 @@ using Langt.Codegen;
 
 namespace Langt.AST;
 
+public record 
+
 public record CompilationUnit(StatementGroup Group) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Group};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Group};
 
     public override bool BlockLike => true;
 

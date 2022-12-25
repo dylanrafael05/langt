@@ -11,6 +11,8 @@ public class LangtProject
     {
         Logger = logger;
         LLVMModuleName = llvmModuleName;
+
+        logger.Init();
     }
 
     public LangtScope GlobalScope {get; private init;} = new();
@@ -27,7 +29,7 @@ public class LangtProject
     {
         if(Files.Any(f => f.Source.Name == name))
         {
-            Logger.Error($"Attempting to add source {name} twice!");
+            Logger.Fatal($"Attempting to add source {name} twice!");
         }
         
         Files.Add(new(this, new(content, name)));
@@ -42,41 +44,37 @@ public class LangtProject
         var cg = new CodeGenerator(this);
         LLVMUtil.PrimeLLVM();
 
+        var startState = GeneralPassState.Start(cg);
+
         Logger.Note("Building . . . ");
-        
-        Logger.Note("Initializing . . . ");
+
+        Logger.Note("Handling definitions . . . ");
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.Initialize(GeneralPassState.Start(cg));
+            cg.Diagnostics.AddResult(
+                f.AST.HandleDefinitions(startState)
+            );
         }
 
-        Logger.Note("Defining types . . . ");
+        Logger.Note("Refining definitions . . . ");
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.DefineTypes(GeneralPassState.Start(cg));
-        }
-
-        Logger.Note("Implementing types . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.ImplementTypes(GeneralPassState.Start(cg));
+            cg.Diagnostics.AddResult(
+                f.AST.RefineDefinitions(startState)
+            );
         }
         
-        Logger.Note("Defining functions . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.DefineFunctions(GeneralPassState.Start(cg));
-        }
-        
-        Logger.Note("Type checking . . . ");
+        Logger.Note("Performing binding and type checking . . . ");
         foreach(var f in Files)
         {  
             cg.Open(f);
-            f.CompilationUnit.TypeCheck(TypeCheckState.Start(cg));  
+            var r = f.AST.Bind(startState);  
+            cg.Diagnostics.AddResult(r);
+
+            if(!r) continue;
+            f.BoundAST = r.Value;
         }
 
 
@@ -91,7 +89,7 @@ public class LangtProject
         foreach(var f in Files)
         {
             cg.Open(f);
-            f.CompilationUnit.Lower(cg);
+            f.BoundAST!.Lower(cg);
         }
 
 #if DEBUG

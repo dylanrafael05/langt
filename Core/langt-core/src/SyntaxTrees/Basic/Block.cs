@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Open, Statements, Close};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Open, Statements, Close};
     public override bool BlockLike => true;
 
     public override void Dump(VisitDumper visitor)

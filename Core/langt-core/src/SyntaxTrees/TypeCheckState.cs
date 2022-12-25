@@ -1,61 +1,23 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.Codegen;
+using Langt.Utility;
 
 namespace Langt.AST;
 
 // TODO: is it safe to allow for "no fail" execution of passes?
 // TODO: in what circumstances would "no fail" execution be requried?
 // It appears that the main case for this is resolution; is there another way to report resolution failures?
-public abstract record ASTPassState(CodeGenerator CG, bool Noisy, bool CanFail)
-{
-    public abstract ASTPassException ProduceException();
 
-    public void Error(string message, SourceRange range)
-    {
-        if(Noisy)
-        {
-            CG.Diagnostics.Error(message, range);
-        }
+public record ASTPassState(CodeGenerator CG, bool Noisy, bool CanFail);
 
-        if(CanFail)
-        {
-            throw ProduceException();
-        }
-    }
-    public void Warning(string message, SourceRange range)
-    {
-        if(Noisy)
-        {
-            CG.Diagnostics.Warning(message, range);
-        }
-    }
-    public void Note(string message, SourceRange range)
-    {
-        if(Noisy)
-        {
-            CG.Diagnostics.Note(message, range);
-        }
-    }
-}
-
-public abstract record ASTPassState<TException>(CodeGenerator CG, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
-    where TException : ASTPassException, new()
-{
-    public override ASTPassException ProduceException() => new TException();
-}
-
-[Serializable]
-public class ASTPassException : Exception
-{
-    public ASTPassException() {}
-}
-
-public record GeneralPassState(CodeGenerator CG, bool Noisy, bool CanFail) : ASTPassState<ASTPassException>(CG, Noisy, CanFail)
+public record GeneralPassState(CodeGenerator CG, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
 {
     public static GeneralPassState Start(CodeGenerator gen) => new(gen, true, true);
 }
 
-public record TypeCheckState(CodeGenerator CG, bool TryRead, bool Noisy, bool CanFail) : ASTPassState<TypeCheckException>(CG, Noisy, CanFail)
+public record struct TypeCheckOptions(LangtType? TargetType, bool AutoDeferenceLValue);
+
+public record TypeCheckState(CodeGenerator CG, bool TryRead, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
 {
     public static TypeCheckState Start(CodeGenerator gen) => new(gen, true, true, true);
 
@@ -65,7 +27,7 @@ public record TypeCheckState(CodeGenerator CG, bool TryRead, bool Noisy, bool Ca
         
         if(from.RequiresTypeDownflow)
         {
-            if(!from.FinalizedTypeChecking && !from.TryTypeCheck(this with {Noisy = false}, to)) 
+            if(!Result.Try(from.Bind, this, new TypeCheckOptions {TargetType = to})) 
             {
                 return false;
             }

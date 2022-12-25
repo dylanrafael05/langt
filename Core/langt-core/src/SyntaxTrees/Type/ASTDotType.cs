@@ -4,7 +4,7 @@ namespace Langt.AST;
 
 public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier): ASTType
 {
-    public override ASTChildContainer ChildContainer => new() {Namespace, Dot, Identifier};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 
     public override LangtType? Resolve(ASTPassState state)
     {

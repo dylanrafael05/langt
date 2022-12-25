@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record PointerType(ASTToken Ptr, ASTType Type) : ASTType
 {
-    public override ASTChildContainer ChildContainer => new() {Ptr, Type};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Ptr, Type};
     public override void Dump(VisitDumper visitor)
     {
         visitor.PutString("pointer to");

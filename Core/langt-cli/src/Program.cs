@@ -86,7 +86,6 @@ public static class Program
             DebugFlags = debugFlags.ToHashSet()
         };
 
-        logger.Init();
         var proj = new LangtProject(logger, input);
 
         proj.LoadFromFileOrDirectory(input);

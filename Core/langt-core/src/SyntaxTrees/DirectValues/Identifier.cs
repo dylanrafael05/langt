@@ -9,7 +9,7 @@ namespace Langt.AST;
 
 public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {Tok};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Tok);

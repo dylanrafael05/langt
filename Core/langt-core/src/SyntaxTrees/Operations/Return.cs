@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {ReturnTok, Value};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {ReturnTok, Value};
 
     public override void Dump(VisitDumper visitor)
     {

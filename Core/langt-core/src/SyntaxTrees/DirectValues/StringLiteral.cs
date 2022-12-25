@@ -2,19 +2,34 @@ using Langt.Lexing;
 using Langt.Codegen;
 using Langt.Structure.Visitors;
 using Langt.Utility;
+using Langt.Utility.Functional;
 
 namespace Langt.AST;
 
+public record BoundStringLiteral(StringLiteral Source, string Value) : BoundASTNode(Source) 
+{
+    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        var res = generator.Builder.BuildGlobalStringPtr(Value, "str");
+
+        generator.PushValue( 
+            RawExpressionType,
+            res,
+            DebugSourceName
+        );
+    }
+}
+
 public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {Tok};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Tok);
 
-    public string? Value {get; private set;}
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var source = Tok.Content;
         var s = "";
@@ -29,36 +44,37 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
             }
             else
             {
-                s += source[i+1] switch 
+                (char nc, bool err) = source[i+1] switch 
                 {
-                    'n' => '\n',
-                    'r' => '\r',
-                    't' => '\t',
+                    'n' => ('\n', false),
+                    'r' => ('\r', false),
+                    't' => ('\t', false),
 
-                    '0' => '0',
+                    '0' => ('\0', false),
 
-                    '"' => '"',
-                    '\\' => '\\',
+                    '\"' => ('\"', false),
+                    '\\' => ('\\', false),
 
-                    var u => Functional.Do(() => state.Error($"Unrecognized string escape sequence '\\{u}'", Range), '\0')
+                    _ => ('\0', true)
                 };
+
+                if(!err)
+                {
+                    return ResultBuilder.Empty().WithDgnError($"Unrecognized string escape sequence '\\{source[i+1]}'", Range).Build<BoundASTNode>();
+                }
+
+                s += nc;
+
                 i++;
             }
         }
 
-        Value = s;
-
-        RawExpressionType = LangtType.PointerTo(LangtType.Int8);
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        var res = lowerer.Builder.BuildGlobalStringPtr(Value!, "str");
-
-        lowerer.PushValue( 
-            RawExpressionType,
-            res,
-            DebugSourceName
+        return Result.Success<BoundASTNode>
+        (
+            new BoundStringLiteral(this, s) 
+            {
+                RawExpressionType = LangtType.PointerTo(LangtType.Int8)
+            }
         );
     }
 }

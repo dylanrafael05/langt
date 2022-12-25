@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Value, As, Type};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Value, As, Type};
 
     public override void Dump(VisitDumper visitor)
     {

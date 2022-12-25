@@ -5,22 +5,16 @@ namespace Langt.AST;
 
 public record FunctionBlockBody(Block Block) : FunctionBody
 {
-    public override ASTChildContainer ChildContainer => new() {Block};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Block};
 
     public override void Dump(VisitDumper visitor)
     {
         visitor.Visit(Block);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        Block.TypeCheck(state);
-        Returns = Block.Returns;
-        RawExpressionType = LangtType.None;
-    }
+    public override Result SetupBindings(ASTPassState state)
+        => Block.SetupBindings(state);
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        Block.Lower(lowerer);
-    }
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+        => Block.Bind(state);
 }

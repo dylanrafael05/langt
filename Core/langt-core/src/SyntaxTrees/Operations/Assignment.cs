@@ -4,9 +4,10 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record 
 public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new() {Left, Assign, Right};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Left, Assign, Right};
 
     public override void Dump(VisitDumper visitor)
     {

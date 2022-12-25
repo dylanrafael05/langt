@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : FunctionBody
 {
-    public override ASTChildContainer ChildContainer => new() {Eq, Expression};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Eq, Expression};
     public override void Dump(VisitDumper visitor)
     {
         visitor.PutString("returns...");

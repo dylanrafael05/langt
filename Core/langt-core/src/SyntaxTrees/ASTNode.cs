@@ -8,41 +8,42 @@ using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using Langt.Utility;
+using Results;
 
 namespace Langt.AST;
 
-public class ASTChildSpec
+public class RecordItemSpecification<T>
 {
     public string ChildName {get; private init;}
-    public IEnumerable<ASTNode?> ChildValues {get; private init;}
+    public IEnumerable<T?> ChildValues {get; private init;}
 
-    public ASTChildSpec(ASTNode? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
+    public RecordItemSpecification(T? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
     {
         ChildName = expr;
         ChildValues = new[] {node};
     }
-    public ASTChildSpec(IEnumerable<ASTNode?> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
+    public RecordItemSpecification(IEnumerable<T?> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
     {
         ChildName = expr;
         ChildValues = nodes;
     }
 }
 
-public class ASTChildContainer : IEnumerable<ASTChildSpec>
+public class RecordItemContainer<T> : IEnumerable<RecordItemSpecification<T>>
 {
-    private readonly IList<ASTChildSpec> childSpecs = new List<ASTChildSpec>();
+    private readonly IList<RecordItemSpecification<T>> childSpecs = new List<RecordItemSpecification<T>>();
 
-    public IEnumerable<ASTChildSpec> ChildrenSpecs => childSpecs;
-    public IEnumerable<ASTNode?> AllChildren => ChildrenSpecs.SelectMany(c => c.ChildValues);
-    public IEnumerable<ASTNode> Children => AllChildren.Where(c => c is not null).Cast<ASTNode>();
+    public IEnumerable<RecordItemSpecification<T>> ChildrenSpecs => childSpecs;
+    public IEnumerable<T?> AllChildren => ChildrenSpecs.SelectMany(c => c.ChildValues);
+    public IEnumerable<T> Children => AllChildren.Where(c => c is not null).Cast<T>();
 
-    public void Add(ASTNode? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
+    public void Add(T? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
         => childSpecs.Add(new(node, expr));
-    public void Add(IEnumerable<ASTNode> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
+    public void Add(IEnumerable<T?> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
         => childSpecs.Add(new(nodes, expr));
     
 
-    public IEnumerator<ASTChildSpec> GetEnumerator()
+    public IEnumerator<RecordItemSpecification<T>> GetEnumerator()
     {
         return childSpecs.GetEnumerator();
     }
@@ -53,21 +54,39 @@ public class ASTChildContainer : IEnumerable<ASTChildSpec>
     }
 }
 
-[Serializable]
-public class TypeCheckException : ASTPassException
-{}
-
-public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement<VisitDumper>
+public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : ISourceRanged
 {
-    public SourceRange Range => ASTSource.Range;
+    public abstract RecordItemContainer<TChild> ChildContainer {get;}
+
+    public IEnumerable<TChild?> AllChildren {get; init;}
+    public IEnumerable<TChild> Children {get; init;}
+
+
+    public virtual SourceRange Range {get; init;}
+    public string DebugSourceName {get; init;}
+
+
+    public SourcedTreeNode()
+    {
+        var cc = ChildContainer;
+
+        AllChildren = cc.AllChildren.ToArray();
+        Children    = cc.Children.ToArray();
+
+        Range = SourceRange.CombineFrom(Children.Select(x => (ISourceRanged)x));
+        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
+    }
+}
+
+public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>, IElement<VisitDumper>
+{
+    public override SourceRange Range => ASTSource.Range;
 
     public virtual void Dump(VisitDumper dumper)
     {
         dumper.PutString("bound-node");
         dumper.Visit(ASTSource);
     }
-    
-    public string DebugSourceName => ASTSource.DebugSourceName;
 
     void IElement<VisitDumper>.OnVisit(VisitDumper visitor)
         => Dump(visitor);
@@ -93,14 +112,14 @@ public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement
     /// What is the direct type (unaffected by transformers) of this AST node. Should be
     /// equal to <see cref="LangtType.Error"/> if this node is not an expression.
     /// </summary>
-    protected LangtType RawExpressionType {get; set;} = LangtType.Error;
+    public LangtType RawExpressionType {get; set;} = LangtType.Error;
     /// <summary>
     /// What is the inferabble type of this AST node; what type should be used for type
     /// inference of this expression if it is distinct from <see cref="RawExpressionType"/>.
     /// Should be equal to <see langword="null"/> if this node is not an expression, or
     /// there is no distinction between the type to be inferred or the expression type itself. 
     /// </summary>
-    public LangtType? NaturalType {get; protected set;} = null;
+    public LangtType? NaturalType {get; set;} = null;
     /// <summary>
     /// What is the final, or fully transformed, type of this node.
     /// Found using all the <see cref="ITransformer"/> instances which have been applied to
@@ -140,9 +159,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement
     /// </summary>
     public List<ITransformer> AppliedTransformers {get; init;} = new();
 
-    public bool PassedInitialTypeCheck {get; set;} = false;
-    public bool FinalizedTypeChecking {get; set;} = false;
-
     /// <summary>
     /// Apply the given transform to this AST node.
     /// </summary>
@@ -156,7 +172,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement
     /// </summary>
     /// <seealso cref="IsLValue"/>
     /// <seealso cref="LangtType.IsPointer"/>
-    public void TryRead()
+    public void TryDeferenceLValue()
     {
         if(!IsLValue || !TransformedType.IsPointer) return;
         ApplyTransform(LangtReadPointer.Transformer(TransformedType));
@@ -189,55 +205,25 @@ public abstract record BoundASTNode(ASTNode ASTSource) : ISourceRanged, IElement
         
         generator.LogStack(DebugSourceName);
     }
+
+    public virtual Result Bind(ASTPassState state, TypeCheckOptions options) => Result.Success();
 }
 
 public record BoundASTWrapper(ASTNode Source) : BoundASTNode(Source)
 {
-
+    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
 }
 
 /// <summary>
 /// Represents any construct directly present in the AST.
 /// </summary>
-public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
+public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 {
     /// <summary>
     /// Is the current AST node block-like; should the presence of an invalid child 
     /// prevent type checking from taking place on this node?
     /// </summary>
     public virtual bool BlockLike => false;
-
-    /// <summary>
-    /// Get the child container which describes all children of this AST node.
-    /// </summary>
-    public abstract ASTChildContainer ChildContainer {get;}
-
-    /// <summary>
-    /// Get the sequence of all children in order. These children may be null.
-    /// </summary>
-    public IEnumerable<ASTNode?> AllChildren {get; private init;}
-    /// <summary>
-    /// Get the sequence of all non-null children in order.
-    /// </summary>
-    public IEnumerable<ASTNode> Children {get; private init;}
-
-    public ASTNode()
-    {
-        var cc = ChildContainer;
-
-        AllChildren = cc.AllChildren.ToArray();
-        Children    = cc.Children.ToArray();
-
-        Range = SourceRange.CombineFrom(Children);
-        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
-    }
-
-    /// <summary>
-    /// Get the source range that contains the entirety of this AST node.
-    /// </summary>
-    public virtual SourceRange Range {get; private init;}
-
-    public string DebugSourceName {get; private init;}
 
     /// <summary>
     /// Whether or not this AST node is invalid.
@@ -256,104 +242,133 @@ public abstract record ASTNode : ISourceRanged, IElement<VisitDumper>
 
     // TODO: Reimplement to allow for 'before all' / 'after all' hooks
 
-    public virtual Resultor HandleEnvironment(ASTPassState state) => Resultor.Success;
-    public virtual Resultor HandleDefinitions(ASTPassState state) => Resultor.Success;
-    public virtual Resultor RefineDefinitions(ASTPassState state) => Resultor.Success;
-    public abstract Resultor<BoundASTNode> Bind(ASTPassState state);
+    public virtual Result HandleDefinitions(ASTPassState state) => Result.Success();
+    public virtual Result RefineDefinitions(ASTPassState state) => Result.Success();
 
-    /// <summary>
-    /// Perform the initial steps of type checking.
-    /// Errors in this step should generally be considered fatal or unavoidable.
-    /// The given "target type" from the state may be null.
-    /// </summary>
-    protected virtual void InitialTypeCheckSelf(TypeCheckState state) 
+    protected virtual Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options) 
+        => Result.Success(new BoundASTWrapper(this) as BoundASTNode);
+
+    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions options) 
     {
-        state.Error("Cannot yet type-check node of type " + GetType().Name, Range);
+        var result = BindSelf(state, options);
+        if(!result) return result;
+
+        var bast = result.Value;
+
+        if(options.AutoDeferenceLValue) bast.TryDeferenceLValue();
+
+        return result;
     }
+    public Result<BoundASTNode> Bind(ASTPassState state)
+    {
+        var options = new TypeCheckOptions 
+        {
+            TargetType = null, 
+            AutoDeferenceLValue = true
+        };
+
+        return Bind(state, options);
+    }
+
+    // /// <summary>
+    // /// Perform the initial steps of type checking.
+    // /// Errors in this step should generally be considered fatal or unavoidable.
+    // /// The given "target type" from the state may be null.
+    // /// </summary>
+    // protected virtual void InitialTypeCheckSelf(TypeCheckState state) 
+    // {
+    //     state.Error("Cannot yet type-check node of type " + GetType().Name, Range);
+    // }
     
-    protected virtual void ResetTargetTypeData(TypeCheckState state) 
-    {}
-    /// <summary>
-    /// Perform the final steps of type checking.
-    /// This method, under certain circumstances where multiple type-checks must occur 
-    /// (function overload resolution namely).
-    /// </summary>
-    protected virtual void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType)
-    {}
-    /// <summary>
-    /// Finalize the type check.
-    /// </summary>
-    protected virtual void FinalTypeCheckSelf(TypeCheckState state)
-    {}
+    // protected virtual void ResetTargetTypeData(TypeCheckState state) 
+    // {}
+    // /// <summary>
+    // /// Perform the final steps of type checking.
+    // /// This method, under certain circumstances where multiple type-checks must occur 
+    // /// (function overload resolution namely).
+    // /// </summary>
+    // protected virtual void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType)
+    // {}
+    // /// <summary>
+    // /// Finalize the type check.
+    // /// </summary>
+    // protected virtual void FinalTypeCheckSelf(TypeCheckState state)
+    // {}
 
-    private void TypeCheckInternal(TypeCheckState state, LangtType? targetType)
-    {
-        InitialTypeCheck(state);
-        TargetTypeCheck(state, targetType);
-        FinalTypeCheck(state);
-    }
+    // private void TypeCheckInternal(TypeCheckState state, LangtType? targetType)
+    // {
+    //     InitialTypeCheck(state);
+    //     TargetTypeCheck(state, targetType);
+    //     FinalTypeCheck(state);
+    // }
 
-    public void InitialTypeCheck(TypeCheckState state)
-    {
-        InitialTypeCheckSelf(state);
-    }
-    public void TargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    {
-        ResetTargetTypeData(state);
-        TargetTypeCheckSelf(state, targetType);
-    }
-    public void FinalTypeCheck(TypeCheckState state)
-    {
-        FinalTypeCheckSelf(state);
-        if(state.TryRead) TryRead();
-        FinalizedTypeChecking = true;
-    }
+    // public void InitialTypeCheck(TypeCheckState state)
+    // {
+    //     InitialTypeCheckSelf(state);
+    // }
+    // public void TargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
+    // {
+    //     ResetTargetTypeData(state);
+    //     TargetTypeCheckSelf(state, targetType);
+    // }
+    // public void FinalTypeCheck(TypeCheckState state)
+    // {
+    //     FinalTypeCheckSelf(state);
+    //     if(state.TryRead) TryRead();
+    //     FinalizedTypeChecking = true;
+    // }
     
-    public void TypeCheck(TypeCheckState state, LangtType? targetType = null) 
+    // public void TypeCheck(TypeCheckState state, LangtType? targetType = null) 
+    // {
+    //     state = state with {Noisy=true};
+
+    //     TypeCheckInternal(state, targetType);
+    // }
+    // 
+    // 
+    // public bool TryTargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
+    // {
+    //     try 
+    //     {
+    //         TargetTypeCheck(state with {Noisy=false}, targetType);
+    //     }
+    //     catch(TypeCheckException)
+    //     {
+    //         return false;
+    //     }
+
+    //     return true;
+    // }
+    // public bool TryTypeCheck(TypeCheckState state, LangtType? targetType = null)
+    // {
+    //     state = state with {Noisy=false};
+
+    //     if(!BlockLike && ContainsInvalid)
+    //     {
+    //         return true; // TODO: is this valid?
+    //     }
+
+    //     return TryPass(s => TypeCheckInternal(s, targetType), state);
+    // }
+
+    // public static bool TryPass<T>(Action<T> f, T state) where T: ASTPassState 
+    // {
+    //     try 
+    //     {
+    //         f(state);
+    //         return true;
+    //     }
+    //     catch(ASTPassException)
+    //     {
+    //         return false;
+    //     }
+    // }
+
+    /*public static void HandleError(ResultException exc, ASTPassState state) //TODO: how will non-errors be handled?
     {
-        state = state with {Noisy=true};
-
-        TypeCheckInternal(state, targetType);
-    }
-
-
-    public bool TryTargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    {
-        try 
-        {
-            TargetTypeCheck(state with {Noisy=false}, targetType);
-        }
-        catch(TypeCheckException)
-        {
-            return false;
-        }
-
-        return true;
-    }
-    public bool TryTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    {
-        state = state with {Noisy=false};
-
-        if(!BlockLike && ContainsInvalid)
-        {
-            return true; // TODO: is this valid?
-        }
-
-        return TryPass(s => TypeCheckInternal(s, targetType), state);
-    }
-
-    public static bool TryPass<T>(Action<T> f, T state) where T: ASTPassState 
-    {
-        try 
-        {
-            f(state);
-            return true;
-        }
-        catch(ASTPassException)
-        {
-            return false;
-        }
-    }
+        var (msg, range) = ((string, SourceRange))exc.Error;
+        state.CG.Diagnostics.Error(msg, range);
+    }*/
 
     public virtual void Dump(VisitDumper visitor)
     {

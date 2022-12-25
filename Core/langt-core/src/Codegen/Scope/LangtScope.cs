@@ -38,68 +38,66 @@ public class LangtScope : IScoped
         return scope;
     }
 
-    public INamedScoped? Resolve(string input,
+    // TODO: replace 'null' returns with Result.Error
+    public Result<INamedScoped> Resolve(string input,
                                  SourceRange range,
-                                 ASTPassState state,
                                  bool entry = true,
                                  bool propogate = true)
-        => Resolve<INamedScoped>(input, "item", range, state, entry, propogate);
+        => Resolve<INamedScoped>(input, "item", range, entry, propogate);
 
-    public virtual TOut? Resolve<TOut>(string input,
-                                       string outputType,
-                                       SourceRange range,
-                                       ASTPassState state,
-                                       bool entry = true,
-                                       bool propogate = true) where TOut: class, INamedScoped
+    public virtual Result<TOut> Resolve<TOut>(string input,
+                                              string outputType,
+                                              SourceRange range,
+                                              bool entry = true,
+                                              bool propogate = true) where TOut: class, INamedScoped
     {
+        var builder = ResultBuilder.Empty();
+
         // Check if the item exists in the named items stored by this scope
         if(namedItems.TryGetValue(input, out var r))
         {
             // If the item is found and is of the expected type, return it
-            if(r is TOut t) return t;
+            if(r is TOut t) return builder.Build(t);
 
             // If the above condition failed,
             // produce a warning that an ambiguity was present but not fatal
-            state.Warning($"Possible reference candidate {r.FullName} found, but expected a {outputType}; try to disambiguate", range);
+            builder.AddWarning($"Possible reference candidate {r.FullName} found, but expected a {outputType}; try to disambiguate", range);
         }
 
-        TOut? result = null;
+        Result<TOut>? result = null;
 
         // Attempt to propogate values if permitted
         if(propogate)
         {
             // Check the upper scope if it exists
-            result = HoldingScope?.Resolve<TOut>(input, outputType, range, state, false);
-
-            // If allowed, produce a resolution error
-            if(entry && state.Noisy && result is null)
-            {
-                state.Error($"Could not find {outputType} named {input}", range);
-            }
+            result = HoldingScope?.Resolve<TOut>(input, outputType, range, false);
+        }
+        
+        if(entry && result is null)
+        {
+            builder.AddDgnError($"Could not find {outputType} named {input}", range);
         }
 
         // Return the result, null or not
-        return result;
+        return result is null ? builder.Build<TOut>() : builder.Build(result.Value.Value);
     }
 
-    public LangtVariable? ResolveVariable(string name, SourceRange range, ASTPassState state, bool propogate = true) 
-        => Resolve<LangtVariable>(name, "variable", range, state, propogate: propogate);
-    public LangtType? ResolveType(string name, SourceRange range, ASTPassState state, bool propogate = true) 
-        => Resolve<LangtType>(name, "type", range, state, propogate: propogate);
-    public LangtFunctionGroup? ResolveFunctionGroup(string name, SourceRange range, ASTPassState state, bool propogate = true) 
-        => Resolve<LangtFunctionGroup>(name, "function", range, state, propogate: propogate);
-    public LangtNamespace? ResolveNamespace(string name, SourceRange range, ASTPassState state, bool propogate = true) 
-        => Resolve<LangtNamespace>(name, "namespace", range, state, propogate: propogate);
+    public Result<LangtVariable> ResolveVariable(string name, SourceRange range, bool propogate = true) 
+        => Resolve<LangtVariable>(name, "variable", range, propogate: propogate);
+    public Result<LangtType> ResolveType(string name, SourceRange range, bool propogate = true) 
+        => Resolve<LangtType>(name, "type", range, propogate: propogate);
+    public Result<LangtFunctionGroup> ResolveFunctionGroup(string name, SourceRange range, bool propogate = true) 
+        => Resolve<LangtFunctionGroup>(name, "function", range, propogate: propogate);
+    public Result<LangtNamespace> ResolveNamespace(string name, SourceRange range, bool propogate = true) 
+        => Resolve<LangtNamespace>(name, "namespace", range, propogate: propogate);
 
-    public virtual bool Define(
+    public virtual Result Define(
         INamedScoped obj,
-        SourceRange sourceRange, 
-        ASTPassState state)
+        SourceRange sourceRange)
     {
         if(definedNames.Contains(obj.Name))
         {
-            state.Error($"Attempting to redefine name {obj.Name}", sourceRange);
-            return false;
+            return ResultBuilder.Empty().WithDgnError($"Attempting to redefine name {obj.Name}", sourceRange).Build();
         }
 
         namedItems.Add(obj.Name, obj);
@@ -107,37 +105,15 @@ public class LangtScope : IScoped
 
         obj.HoldingScope = this;
         
-        return true;
+        return Result.Success();
     }
 
-    public virtual void ForceDefine(INamedScoped obj)
-    {
-        if(definedNames.Contains(obj.Name))
-        {
-            throw new Exception();
-        }
-
-        namedItems.Add(obj.Name, obj);
-        definedNames.Add(obj.Name);
-        
-        obj.HoldingScope = this;
-    }
-
-    public bool DefineVariable(LangtVariable variable, SourceRange range, ASTPassState state)
-        => Define(variable, range, state);
-    public bool DefineType(LangtType type, SourceRange range, ASTPassState state)
-        => Define(type, range, state);
-    public bool DefineFunctionGroup(LangtFunctionGroup function, SourceRange range, ASTPassState state)
-        => Define(function, range, state);
-    public bool DefineNamespace(LangtNamespace ns, SourceRange range, ASTPassState state)
-        => Define(ns, range, state);
-    
-    public void ForceDefineVariable(LangtVariable variable)
-        => ForceDefine(variable);
-    public void ForceDefineType(LangtType type)
-        => ForceDefine(type);
-    public void ForceDefineFunctionGroup(LangtFunctionGroup function)
-        => ForceDefine(function);
-    public void ForceDefineNamespace(LangtNamespace ns)
-        => ForceDefine(ns);
+    public Result DefineVariable(LangtVariable variable, SourceRange range)
+        => Define(variable, range);
+    public Result DefineType(LangtType type, SourceRange range)
+        => Define(type, range);
+    public Result DefineFunctionGroup(LangtFunctionGroup function, SourceRange range)
+        => Define(function, range);
+    public Result DefineNamespace(LangtNamespace ns, SourceRange range)
+        => Define(ns, range);
 }

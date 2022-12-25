@@ -6,11 +6,9 @@ namespace Langt.AST;
 
 public record ASTInvalid(SourceRange ErrRange) : ASTNode
 {
-    public override ASTChildContainer ChildContainer => new();
+    public override RecordItemContainer<ASTNode> ChildContainer => new();
     public override SourceRange Range => ErrRange;
 
     public override void Dump(VisitDumper visitor)
-    {}
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
     {}
 }

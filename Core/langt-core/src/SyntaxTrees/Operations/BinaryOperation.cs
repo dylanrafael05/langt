@@ -8,7 +8,7 @@ namespace Langt.AST;
 
 public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : ASTNode(), IDirectValue
 {
-    public override ASTChildContainer ChildContainer => new() {Left, Operator, Right};
+    public override RecordItemContainer<ASTNode> ChildContainer => new() {Left, Operator, Right};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -17,7 +17,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         visitor.Visit(Right);
     }
 
-    private LangtType? Dominate(TypeCheckState state, ASTNode l, ASTNode r, SourceRange range)
+    private LangtType? Dominate(TypeCheckState state, BoundASTNode l, BoundASTNode r, SourceRange range)
     {
         if(!state.MakeMatch(l.TransformedType, r))
         {
