@@ -5,6 +5,8 @@ namespace Langt.Codegen;
 
 public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[] ParameterTypes) : LangtType(GetName(ReturnType, ParameterTypes, IsVararg))
 {
+    public record struct ResolutionResult(ResultGroup<BoundASTNode> OutResult, SignatureMatchLevel Level);
+
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
         return "(" + string.Join(",", param.Select(p => p.GetFullName())) + (varg ? " ..." : "") + ")" + ret.GetFullName();
@@ -29,42 +31,47 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
             IsVararg
         );
 
-    public bool SignatureMatches(ASTNode[] parameters, TypeCheckState state, out ASTTypeMatchCreator[] matchers, out SignatureMatchLevel level)
+    public ResolutionResult MatchSignature(ASTPassState state, SourceRange range, ASTNode[] parameters)
     {
-        matchers = new ASTTypeMatchCreator[ParameterTypes.Length];
-        level = SignatureMatchLevel.None;
+        var level = SignatureMatchLevel.None;
 
-        if(parameters.Length < ParameterTypes.Length) return false;
-        if(!IsVararg && parameters.Length != ParameterTypes.Length) return false;
+        // less params given than required           || more params given than specified if not vararg
+        if(parameters.Length < ParameterTypes.Length || (!IsVararg && parameters.Length > ParameterTypes.Length)) 
+        {
+            return new
+            (
+                ResultGroup.From
+                (
+                    Result.Error<BoundASTNode>
+                    (
+                        Diagnostic.Error("Incorrect number of parameters", range)
+                    )
+                ),
+                SignatureMatchLevel.None
+            );
+        }
 
         level = SignatureMatchLevel.Exact;
 
-        for(var i = 0; i < ParameterTypes.Length; i++)
-        {
-            if(!state.CanMatch(ParameterTypes[i], parameters[i], out var t))
-            {
-                return false;
-            }
+        return new
+        (
+            ResultGroup.Foreach
+            (
+                parameters.Indexed(),
+                p => 
+                {
+                    var op = p.Value.BindMatching(state, ParameterTypes[p.Index], out var coerced);
+                    var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
 
-            if(t.Transformer is not null) level = SignatureMatchLevel.Coerced;
+                    if(level < clevel)
+                    {
+                        level = clevel;
+                    }
 
-            matchers[i] = t;
-        }
-
-        return true;
-    }
-
-    public bool MakeSignatureMatch(ASTNode[] parameters, TypeCheckState state)
-    {
-        var m = SignatureMatches(parameters, state, out var matchers, out _);
-
-        if(!m) return m;
-
-        for(int i = 0; i < parameters.Length; i++)
-        {
-            matchers[i].ApplyTo(parameters[i], state);
-        }
-
-        return true;
+                    return op;
+                }
+            ),
+            level
+        );
     }
 }

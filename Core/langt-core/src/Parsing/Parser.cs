@@ -234,7 +234,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             var eq = Require(TT.EqualsSign);
             var val = Expression(state);
 
-            return new DefineVariable(let, iden, type, eq, val);
+            return new VariableDefinition(let, iden, type, eq, val);
         }
         else
         {
@@ -261,7 +261,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
                 else throw ParserException.Error("Expected start of function body but got " + CurrentTypeName);
             }
 
-            return new DefineFunction(let, iden, open, args, vargs, close, type, body);
+            return new FunctionDefinition(let, iden, open, args, vargs, close, type, body);
         }
     }
 

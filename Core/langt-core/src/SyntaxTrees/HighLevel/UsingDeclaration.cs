@@ -5,7 +5,7 @@ namespace Langt.AST;
 
 public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Using, Identifier};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Using, Identifier};
 
     public override Result HandleDefinitions(ASTPassState state)
     {

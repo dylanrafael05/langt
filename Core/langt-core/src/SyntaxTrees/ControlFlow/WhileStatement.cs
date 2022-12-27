@@ -5,30 +5,9 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : ASTNode
+public record BoundWhileStatement(WhileStatement Source, BoundASTNode Condition, BoundASTNode Block) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {While, Condition, Block};
-
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("While");
-        visitor.Visit(Condition);
-        visitor.PutString("... then ...");
-        visitor.Visit(Block);
-    }
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        Condition.TypeCheck(state);
-        Block.TypeCheck(state);
-
-        if(!state.MakeMatch(LangtType.Bool, Condition))
-        {
-            state.Error("While condition must be a boolean, but was instead " + Condition.TransformedType.Name, Range);
-        }
-        
-        RawExpressionType = LangtType.None;
-    }
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Condition, Block};
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
@@ -38,9 +17,9 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
             throw new Exception();
         }
 
-        var condBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, While.Range.CharStart+".while.cond" );
-        var trueBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, While.Range.CharStart+".while.true" ); 
-        var breakBB = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, While.Range.CharStart+".while.break");
+        var condBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.cond" );
+        var trueBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.true" ); 
+        var breakBB = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.break");
 
         lowerer.Builder.BuildBr(condBB);
         lowerer.Builder.PositionAtEnd(condBB);
@@ -57,10 +36,39 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         lowerer.CloseScope();
 
         lowerer.Builder.PositionAtEnd(breakBB);
+    }
+}
 
-        // TODO: CREATE NEW VISITORS FOR EACH SUB-TASK (typing, lowering, definitions), 
-        // TODO: CHANGE CodeGenerator to be Lowerer and Context
-        // TODO: COMPLETE TypeChecking system and Conversion system in order to localize all errors to inside this program (no llvm errors)
-        // TODO: Test all of this mightily when finished
+public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : ASTNode
+{
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {While, Condition, Block};
+
+    public override void Dump(VisitDumper visitor)
+    {
+        visitor.PutString("While");
+        visitor.Visit(Condition);
+        visitor.PutString("... then ...");
+        visitor.Visit(Block);
+    }
+
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    {
+        var results = Result.All
+        (
+            Condition.BindMatching(state, LangtType.Bool),
+            Block.Bind(state)
+        );
+
+        if(!results) return results.Cast<BoundASTNode>();
+
+        var (cond, blk) = results.Value;
+        
+        return ResultBuilder.From(results).Build<BoundASTNode>
+        (
+            new BoundWhileStatement(this, cond, blk)
+            {
+                RawExpressionType = LangtType.None
+            }
+        );
     }
 }

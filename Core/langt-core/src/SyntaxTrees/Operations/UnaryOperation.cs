@@ -8,7 +8,7 @@ namespace Langt.AST;
 
 public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Operator, Operand};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Operator, Operand};
 
     public override void Dump(VisitDumper visitor)
     {

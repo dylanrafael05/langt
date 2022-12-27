@@ -6,14 +6,60 @@ namespace Langt.AST;
 
 public record ArgumentSpec(ASTToken Name, ASTType Type) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Name, Type};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 }
 public record VarargSpec(ASTToken Ellipsis) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Ellipsis};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Ellipsis};
 }
 
-public record DefineFunction(ASTToken Let,
+public record BoundFunctionDefinition(FunctionDefinition Source,
+                                      LangtScope Scope,
+                                      LangtFunctionGroup FunctionGroup,
+                                      LangtFunction Function,
+                                      bool SourceWasBlock,
+                                      BoundASTNode Body) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
+
+    public override void LowerSelf(CodeGenerator lowerer)
+    {
+        if(Source.Let.Type is TokenType.Extern) return; //work is already done for us when creating the prototypes!
+        
+        var bb = lowerer.LLVMContext.AppendBasicBlock(Function.LLVMFunction, "entry");
+        lowerer.Builder.PositionAtEnd(bb);
+
+        lowerer.CurrentFunction = Function;
+
+        foreach(var variable in Scope.NamedItems.Values.OfType<LangtVariable>())
+        {
+            var v = lowerer.Builder.BuildAlloca(lowerer.LowerType(variable.Type), "var."+variable.Name);
+            
+            if(variable.IsParameter)
+            {
+                lowerer.Builder.BuildStore(Function.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v);
+            }
+
+            variable.Attach(v);
+        }
+
+        if(SourceWasBlock)
+        {
+            Body.Lower(lowerer);
+            lowerer.Builder.BuildRet(lowerer.PopValue(DebugSourceName).LLVM);
+        }
+        else
+        {
+            Body.Lower(lowerer);
+            if(Function.Type.ReturnType == LangtType.None)
+            {
+                lowerer.Builder.BuildRetVoid();
+            }
+        }
+    }
+}
+
+public record FunctionDefinition(ASTToken Let,
                              ASTToken Identifier,
                              ASTToken Open,
                              SeparatedCollection<ArgumentSpec> ArgSpec,
@@ -22,7 +68,7 @@ public record DefineFunction(ASTToken Let,
                              ASTType Type,
                              FunctionBody? Body) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Open, ArgSpec, VarargSpec, Close, Type, Body};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Open, ArgSpec, VarargSpec, Close, Type, Body};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -37,152 +83,143 @@ public record DefineFunction(ASTToken Let,
         if(Body is not null) visitor.Visit(Body);
     }
 
-    public LangtScope? Scope {get; private set;}
-    public LangtFunctionGroup? FunctionGroup {get; private set;}
-    public LangtFunction? Function {get; private set;}
-    public LangtFunctionType? FunctionType {get; private set;}
+    private LangtFunctionGroup? FunctionGroup {get; set;}
+    private LangtFunction? Function {get; set;}
+    private LangtType?[]? ArgTypes {get; set;}
 
-    public override void DefineFunctions(ASTPassState state)
+    public override Result HandleDefinitions(ASTPassState state)
     {
-        var retType = Type.Resolve(state);
-        if(retType is null) return;
+        var fgr = state.CG.ResolutionScope.ResolveFunctionGroup
+        (
+            Identifier.ContentStr, 
+            Range,
+            propogate: false
+        );
 
-        var argTypes = new LangtType[ArgSpec.Values.Count()];
+        FunctionGroup = fgr.Or(null);
+
+        if(FunctionGroup is null)
+        {
+            FunctionGroup = new(Identifier.ContentStr);
+            return state.CG.ResolutionScope.DefineFunctionGroup(FunctionGroup, Range)
+                .WithDataFrom(fgr); 
+        }
+        else
+        {
+            return Result.Success()
+                .WithDataFrom(fgr);
+        }
+    }
+
+    public override Result RefineDefinitions(ASTPassState state)
+    {
+        var builder = ResultBuilder.Empty();
+
+        var rtr = Type.Resolve(state);
+        builder.AddData(rtr);
+
+        if(!rtr) return builder.Build();
+
+        var retType = rtr.Value;
+
+        ArgTypes = new LangtType[ArgSpec.Values.Count()];
         
         var argc = 0;
         foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(state)))
         {
-            if(a is null) return;
-            argTypes[argc++] = a;
+            builder.AddData(a);
+
+            if(!a) return builder.Build();
+
+            ArgTypes[argc++] = a.Value;
         }
 
-        FunctionType = new LangtFunctionType(retType, VarargSpec is not null, argTypes);
-        var lftype = state.CG.LowerType(FunctionType);
+        var fnType = new LangtFunctionType(retType, VarargSpec is not null, ArgTypes!);
+        var lftype = state.CG.LowerType(fnType);
 
         var lf = state.CG.Module.AddFunction(
             CodeGenerator.GetGeneratedFunctionName(
                 Let.Type is TokenType.Extern, 
                 state.CG.CurrentNamespace, 
                 Identifier.ContentStr,
-                FunctionType.IsVararg,
-                FunctionType.ParameterTypes
+                fnType.IsVararg,
+                fnType.ParameterTypes
             ), 
             lftype
         );
-
-        // TODO: redo this to use better functions
-        FunctionGroup = state.CG.ResolutionScope.ResolveFunctionGroup(
-            Identifier.ContentStr, 
-            Range, 
-            state,
-            propogate: false
-        );
-
-        if(FunctionGroup is null)
-        {
-            FunctionGroup = new(Identifier.ContentStr);
-            state.CG.ResolutionScope.DefineFunctionGroup(FunctionGroup, Range, state); 
-        }
         
-        Function = new(
-            FunctionType, 
+        Function = new LangtFunction
+        (
+            fnType, 
             ArgSpec.Values.Select(v => v.Name.ContentStr).ToArray(), 
             lf
         );
 
-        FunctionGroup.AddFunctionOverload(Function, this, state);
-        
-        RawExpressionType = LangtType.None;
+        var afr = FunctionGroup!.AddFunctionOverload(Function, this);
+        builder.AddData(afr);
+
+        if(!afr) return builder.Build();
+        return builder.Build();
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        if(Let.Type is TokenType.Extern) return; //TODO: precheck extern existence
+        var builder = ResultBuilder.Empty();
 
-        if(FunctionType is null) return; // Previous error occurred.
+        if(Let.Type is TokenType.Extern || Function is null)
+        {
+            // TODO: prechcek extern existence
+            return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
+        }
 
         var previousFunction = state.CG.CurrentFunction;
 
         state.CG.CurrentFunction = Function;
-        Scope = state.CG.CreateUnnamedScope();
+        var scope = state.CG.CreateUnnamedScope();
 
         var count = 0u;
         foreach(var argspec in ArgSpec.Values)
         {
-            var t = argspec.Type.Resolve(state);
+            var t = ArgTypes![count];
 
             if(t is null) continue;
 
-            Scope.ForceDefineVariable(new(argspec.Name.ContentStr, t)
-            {
-                ParameterNumber = count
-            });
+            builder.AddData
+            (
+                scope.DefineVariable
+                (
+                    new(argspec.Name.ContentStr, t)
+                    {
+                        ParameterNumber = count
+                    }, 
+                    Range
+                )
+                .Forgive()
+            );
 
             count++;
         }
 
-        Body!.TypeCheck(state);
+        Result<BoundASTNode> br;
 
-        if(Body is FunctionExpressionBody exp)
+        if(Function.Type.ReturnType == LangtType.None)
         {
-            if(!state.MakeMatch(FunctionType!.ReturnType, exp.Expression))
-            {
-                state.Error($"Function must return {exp.Expression.TransformedType.Name}, but instead returns {exp.Expression.TransformedType.Name}", exp.Range);
-            }
+            br = Body!.Bind(state);
         }
-        else if(Body is FunctionBlockBody blk)
+        else 
         {
-            if(!blk.Returns)
-            {
-                if(FunctionType!.ReturnType == LangtType.None)
-                {
-                    state.CG.Builder.BuildRetVoid();
-                }
-                else 
-                {
-                    state.Error($"Function must return a value of type {FunctionType!.ReturnType.Name}", blk.Range);
-                }
-            }
+            br = Body!.BindMatching(state, Function.Type.ReturnType);
         }
+
+        builder.AddData(br);
+        if(!br) return builder.Build<BoundASTNode>();
 
         state.CG.CloseScope();
         state.CG.CurrentFunction = previousFunction;
-    }
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(Let.Type is TokenType.Extern) return; //work is already done for us when creating the prototypes!
-        
-        var bb = lowerer.LLVMContext.AppendBasicBlock(Function!.LLVMFunction, "entry");
-        lowerer.Builder.PositionAtEnd(bb);
-
-        lowerer.CurrentFunction = Function;
-
-        foreach(var variable in Scope!.NamedItems.Values.Where(t => t is LangtVariable).Cast<LangtVariable>())
-        {
-            var v = lowerer.Builder.BuildAlloca(lowerer.LowerType(variable.Type), "var."+variable.Name);
-            
-            if(variable.IsParameter)
-            {
-                lowerer.Builder.BuildStore(Function.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v);
-            }
-
-            variable.Attach(v);
-        }
-
-        if(Body is FunctionExpressionBody exp)
-        {
-            exp.Lower(lowerer);
-            lowerer.Builder.BuildRet(lowerer.PopValue(DebugSourceName).LLVM);
-        }
-        else if(Body is FunctionBlockBody blk)
-        {
-            blk.Lower(lowerer);
-            if(FunctionType!.ReturnType == LangtType.None)
-            {
-                lowerer.Builder.BuildRetVoid();
-            }
-        }
-        else throw new Exception("Unknown function body type " + Body!.GetType().Name);
+        return builder.Build<BoundASTNode>
+        (
+            new BoundFunctionDefinition(this, scope, FunctionGroup!, Function, Body is FunctionBlockBody, br.Value)  
+        );
     }
 }

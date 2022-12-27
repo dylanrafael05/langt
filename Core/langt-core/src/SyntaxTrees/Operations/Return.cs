@@ -4,9 +4,27 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundReturn(Return Source, BoundASTNode? Value) : BoundASTNode(Source) 
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        if(Value is null)
+        {
+            generator.Builder.BuildRetVoid();
+        }
+        else
+        {
+            Value.Lower(generator);
+            generator.Builder.BuildRet(generator.PopValue(DebugSourceName).LLVM);
+        }
+    }
+}
+
 public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {ReturnTok, Value};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {ReturnTok, Value};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -17,32 +35,24 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
         }
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        if(Value is null) return;
+        if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true, RawExpressionType = LangtType.None});
 
-        Value.TypeCheck(state);
+        var rtype = state.CG.CurrentFunction!.Type.ReturnType;
 
-        if(!state.MakeMatch(state.CG.CurrentFunction!.Type.ReturnType, Value))
-        {
-            state.Error($"Return type {Value.TransformedType.Name} does not match function return type {state.CG.CurrentFunction!.Type.ReturnType.Name}", Range);
-        }
+        var vr = Value.BindMatching(state, rtype);
+        if(!vr) return vr;
 
-        Returns = true;
-        
-        RawExpressionType = LangtType.None;
-    }
+        var builder = ResultBuilder.From(vr);
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(Value is null)
-        {
-            lowerer.Builder.BuildRetVoid();
-        }
-        else
-        {
-            Value.Lower(lowerer);
-            lowerer.Builder.BuildRet(lowerer.PopValue(DebugSourceName).LLVM);
-        }
+        return builder.Build<BoundASTNode>
+        (
+            new BoundReturn(this, vr.Value)
+            {
+                Returns = true,
+                RawExpressionType = LangtType.None
+            }
+        );
     }
 }

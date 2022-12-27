@@ -10,22 +10,32 @@ namespace Langt.AST;
 /// </summary>
 public abstract record ASTType() : ASTNode //TODO: implement distinction between type definition and implementation
 {
-    public abstract LangtType? Resolve(ASTPassState state);
+    public abstract Result<LangtType> Resolve(ASTPassState state);
 }
 
 public record FunctionPtrType(ASTToken Star, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Star, Open, Arguments, Ellipsis, Close, ReturnType};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Star, Open, Arguments, Ellipsis, Close, ReturnType};
 
-    public override LangtType? Resolve(ASTPassState state)
+    public override Result<LangtType> Resolve(ASTPassState state)
     {
-        var fType = new LangtFunctionType
+        var retResult = ReturnType.Resolve(state);
+        var argsResult = Result.GreedyForeach
         (
-            ReturnType.Resolve(state) ?? LangtType.Error, 
-            Ellipsis is not null, 
-            Arguments.Values.Select(t => t.Resolve(state) ?? LangtType.Error).ToArray()
+            Arguments.Values,
+            t => t.Resolve(state)
         );
 
-        return new LangtPointerType(fType);
+        var fType = new LangtFunctionType
+        (
+            retResult.Or(LangtType.Error)!, 
+            Ellipsis is not null, 
+            argsResult.Or(Arguments.Values.Select(_ => LangtType.Error).ToArray())!
+        );
+
+        return Result.Success<LangtType>(new LangtPointerType(fType))
+            .WithDataFrom(retResult)
+            .WithDataFrom(argsResult)
+        ;
     }
 }

@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection<ASTNode> Args, ASTToken Close) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Type, Open, Args, Close};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, Open, Args, Close};
 
     public override void Dump(VisitDumper visitor)
     {

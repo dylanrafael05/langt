@@ -3,7 +3,7 @@ namespace Results;
 public class ResultBuilder 
 {
     public static ResultBuilder Empty() => new();
-    public static ResultBuilder FromData(IResult result) => Empty().WithData(result);
+    public static ResultBuilder From(IResult first, params IResult[] rest) => Empty().WithData(first).WithData(rest);
 
     private readonly List<IResultError> errors = new();
     private readonly List<IResultMetadata> metadata = new();
@@ -23,6 +23,14 @@ public class ResultBuilder
     {
         AddErrors(result.Errors);
         AddMetadata(result.Metadata);
+    }
+    public void AddData(IEnumerable<IResult> results) 
+    {
+        foreach(var r in results)
+        {
+            AddErrors(r.Errors);
+            AddMetadata(r.Metadata);
+        }
     }
 
     public ResultBuilder WithError(IResultError error) 
@@ -55,7 +63,12 @@ public class ResultBuilder
         AddMetadata(meta);
         return this;
     }
-    public ResultBuilder WithData(in IResult result)
+    public ResultBuilder WithData(IResult result)
+    {
+        AddData(result);
+        return this;
+    }
+    public ResultBuilder WithData(IEnumerable<IResult> result)
     {
         AddData(result);
         return this;

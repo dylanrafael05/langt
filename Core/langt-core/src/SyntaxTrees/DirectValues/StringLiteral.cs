@@ -8,7 +8,7 @@ namespace Langt.AST;
 
 public record BoundStringLiteral(StringLiteral Source, string Value) : BoundASTNode(Source) 
 {
-    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
 
     public override void LowerSelf(CodeGenerator generator)
     {
@@ -24,7 +24,7 @@ public record BoundStringLiteral(StringLiteral Source, string Value) : BoundASTN
 
 public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Tok);

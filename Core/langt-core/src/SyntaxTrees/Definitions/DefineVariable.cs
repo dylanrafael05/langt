@@ -4,9 +4,24 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, ASTToken Eq, ASTNode Value) : ASTNode
+// TODO: some types should only be bound once (like this one
+public record BoundVariableDefinition(VariableDefinition Source, LangtVariable Variable, BoundASTNode Value) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Type, Eq, Value};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        if(Variable.UseCount > 0)
+        {
+            Value.Lower(generator);
+            generator.Builder.BuildStore(generator.PopValue(DebugSourceName).LLVM, Variable.UnderlyingValue!.LLVM);
+        }
+    }
+}
+
+public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Type, ASTToken Eq, ASTNode Value) : ASTNode
+{
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Type, Eq, Value};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -14,55 +29,52 @@ public record DefineVariable(ASTToken Let, ASTToken Identifier, ASTType? Type, A
         visitor.Visit(Value);
     }
 
-    public LangtVariable Variable {get; private set;} = null!;
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        LangtType t;
+        LangtType varT;
+        BoundASTNode boundValue;
+
+        var builder = ResultBuilder.Empty();
 
         if(Type is not null)
         {
             var tn = Type.Resolve(state);
-            if(tn is null) return;
+            builder.AddData(tn);
+            if(!tn) return builder.Build<BoundASTNode>();
 
-            t = tn;
+            varT = tn.Value;
             
-            Value.TypeCheck(state, t);
+            var bn = Value.BindMatching(state, varT);
+            builder.AddData(bn);
+            if(!bn) return builder.Build<BoundASTNode>();
+
+            boundValue = bn.Value;
         }
         else
         {
-            if(!Value.TryTypeCheck(state))
+            var bn = Value.Bind(state);
+            builder.AddData(bn);
+
+            if(!bn) return builder.Build<BoundASTNode>();
+
+            boundValue = bn.Value;
+
+            varT = boundValue.NaturalType ?? boundValue.TransformedType;
+        }
+        
+        var variable = new LangtVariable(Identifier.ContentStr, varT);
+
+        var couldDef = state.CG.ResolutionScope.DefineVariable(variable, Range);
+        builder.AddData(couldDef);
+
+        if(!couldDef) return builder.Build<BoundASTNode>();
+        
+        return builder.Build<BoundASTNode>
+        (
+            new BoundVariableDefinition(this, variable, boundValue)
             {
-                state.Error("Cannot use both an inferred type and a target typed expression", Range);
-                return;
+                RawExpressionType = LangtType.None
             }
-
-            t = Value.NaturalType ?? Value.TransformedType;
-        }
-        
-        Variable = new LangtVariable(Identifier.ContentStr, t);
-        var couldDef = state.CG.ResolutionScope.DefineVariable(Variable, Range, state);
-
-        if(!couldDef) return;
-
-        if(!state.MakeMatch(t, Value))
-        {
-            state.Error($"Cannot assign a variable of type {t.Name} to a value of type {Value.TransformedType.Name}", Range);
-        }
-        
-        RawExpressionType = LangtType.None;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(Variable.UseCount > 0)
-        {
-            Value.Lower(lowerer);
-            lowerer.Builder.BuildStore(lowerer.PopValue(DebugSourceName).LLVM, Variable.UnderlyingValue!.LLVM);
-        }
-        else
-        {
-            lowerer.Diagnostics.Warning($"Unused variable", Range);
-        }
+        );
     }
 }

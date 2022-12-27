@@ -179,14 +179,22 @@ public class CodeGenerator : IProjectDependency
             ? res 
             : loweredTypes[type] = type.Lower(this);
 
-    public LangtConversion? ResolveConversion(LangtType to, LangtType from) 
+    public Result<LangtConversion> ResolveConversion(LangtType to, LangtType from, SourceRange range) 
     {
         if(!directConversions.TryGetValue((to, from), out var conv))
         {
-            return conversions.FirstOrDefault(c => c.TransformProvider.CanPerform(from, to));
+            conv = conversions.FirstOrDefault(c => c.TransformProvider.CanPerform(from, to));
+
+            if(conv is null)
+            {
+                return ResultBuilder.Empty()
+                    .WithDgnError($"Could not find a conversion from {from.GetFullName()} to {to.GetFullName()}", range)
+                    .Build<LangtConversion>()
+                ;
+            }
         }
         
-        return conv;
+        return Result.Success(conv);
     }
 
     public LLVMValueRef GetIntrinsic(string name, LangtFunctionType functionType)

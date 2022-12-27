@@ -12,6 +12,8 @@ public record BoundFunctionCall(ASTNode Source,
     LangtFunctionType FunctionType
 ) : BoundASTNode(Source)
 {
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Function, Arguments};
+
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Function.Lower(lowerer);
@@ -50,7 +52,7 @@ public record BoundFunctionCall(ASTNode Source,
 
 public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollection<ASTNode> Arguments, ASTToken End) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {FunctionAST, Open, Arguments, End};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {FunctionAST, Open, Arguments, End};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -69,7 +71,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         if(!iptResult) return iptResult;
 
         // Create output result builder from input
-        var builder = ResultBuilder.FromData(iptResult);
+        var builder = ResultBuilder.From(iptResult);
 
         // Deconstruct and get values
         var fn = iptResult.Value;
@@ -80,19 +82,24 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         bool hasDirectFunction;
         LLVMValueRef? directFunction = null;
         LangtType resultType;
-        BoundASTNode[] boundArgs;
+        BoundASTNode?[] boundArgs;
 
         if(fn.HasResolution && fn.Resolution is LangtFunctionGroup functionGroup)
         {
-            var function = functionGroup.MatchOverload(givenArgs, this, state);
+            var resolveResult = functionGroup.ResolveOverload(givenArgs, this, state);
+            builder.AddData(resolveResult);
 
-            if(function is null) return;
+            if(!resolveResult) return builder.Build<BoundASTNode>();
 
-            funcType = function.Type;
+            var resolution = resolveResult.Value;
+
+            funcType = resolution.Function.Type;
             resultType = funcType.ReturnType;
 
             hasDirectFunction = true;
-            directFunction = function.LLVMFunction;
+            directFunction = resolution.Function.LLVMFunction;
+
+            boundArgs = resolution.OutputParameters.Value.ToArray();
         }
         else if(fn.TransformedType.IsFunctionPtr)
         {
@@ -101,20 +108,16 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             funcType = (LangtFunctionType)fn.TransformedType.PointeeType!;
             resultType = funcType!.ReturnType;
 
-            // Perform a 'foreach' over the arguments and collect the results
-            var argResult = Result.GreedyForeach(givenArgs, a => a.Bind(state));
-            builder.AddFrom(argResult);
+            var smatch = funcType.MatchSignature(state, Range, givenArgs);
+            builder.AddData(smatch.OutResult);
 
-            // Bail early if there are any problems
-            if(!builder) return builder.Build<BoundASTNode>();
+            boundArgs = smatch.OutResult.WithDefault().ToArray();
 
-            boundArgs = argResult.Value;
-
-            if(!funcType.MakeSignatureMatch(givenArgs, state))
+            if(!builder)
             {
                 return builder.WithDgnError(
                     $"Could not call a function pointer of type {funcType.Name} " +
-                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => a.TransformedType.GetFullName()))}",
+                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.TransformedType ?? LangtType.Error).GetFullName()))}",
                     Range
                 ).Build<BoundASTNode>();
             }
@@ -123,5 +126,10 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         {
             return builder.WithDgnError("Cannot call a non-functional expression", Range).Build<BoundASTNode>();
         }
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundFunctionCall(this, fn, boundArgs!, hasDirectFunction, directFunction, funcType)
+        );
     }
 }

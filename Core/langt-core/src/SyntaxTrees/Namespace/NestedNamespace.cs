@@ -4,7 +4,7 @@ namespace Langt.AST;
 
 public record NestedNamespace(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier) : ASTNamespace
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 
     public override Result<LangtNamespace> Resolve(ASTPassState state, bool allowDefinitions = false)
     {

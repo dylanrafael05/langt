@@ -4,119 +4,88 @@ namespace Langt.Codegen;
 
 public record LangtFunctionGroup(string Name) : INamedScoped
 {
+    public record struct Resolution(LangtFunction Function, ResultGroup<BoundASTNode> OutputParameters, SignatureMatchLevel MatchLevel);
+
     public LangtScope? HoldingScope { get; set; }
 
     private readonly List<LangtFunction> overloads = new();
     public IReadOnlyList<LangtFunction> Overloads => overloads;
 
-    public void AddFunctionOverload(LangtFunction overload, ASTNode node, ASTPassState state)
+    public Result AddFunctionOverload(LangtFunction overload, SourceRange range)
     {
-        if(ResolveExactOverload(overload.Type.ParameterTypes, overload.Type.IsVararg, node, state, err: false) is not null)
-        {
-            state.Error($"Cannot define an overload which has the same parameter types as another", node.Range);
-        }
+        var r = ResolveExactOverload(overload.Type.ParameterTypes, overload.Type.IsVararg, range);
+
+        if(r) return Result.Error
+        (
+            Diagnostic.Error($"Cannot redefine overload of function {Name} with signature {overload.Type.SignatureString}", range)
+        );
 
         overloads.Add(overload);
+        return Result.Success();
     }
 
-    public LangtFunction? MatchOverload(ASTNode[] parameters, ASTNode node, TypeCheckState state)
+    private Result<Resolution> HandleOverload(Resolution[] resolves, SourceRange range) 
     {
-        var o = ResolveOverload(parameters, node, state, out var matchers);
+        var builder = ResultBuilder.Empty();
 
-        if(o is null) return null;
-
-        for(int i = 0; i < matchers!.Length; i++)
-        {
-            matchers[i].ApplyTo(parameters[i], state);
-        }
-
-        return o;
-    }
-
-    private (LangtFunction? value, ASTTypeMatchCreator[]? matchers) HandleOverload(
-        (LangtFunction value, ASTTypeMatchCreator[] matchers, SignatureMatchLevel level)[] resolves, 
-        IEnumerable<LangtType> parameterTypes,
-        ASTNode node,
-        ASTPassState state,
-        bool err = true) 
-    {
         if(resolves.Length == 0) 
         {
-            if(err) state.Error(
-                $"Could not resolve any matching overloads for call to {this.GetFullName()} with types {string.Join(", ", parameterTypes.Select(p => p.Name))}",
-                node.Range
-            );
-            
-            return (null, null);
+            return builder.WithDgnError(
+                $"Could not resolve any matching overloads for call to {this.GetFullName()}",
+                range
+            ).Build<Resolution>();
         }
 
         if(resolves.Length == 1)
         {
-            return (resolves[0].value, resolves[0].matchers);
+            return builder.Build(resolves[0]);
         }
 
         for(var lvl = SignatureMatchLevel.Exact; lvl != SignatureMatchLevel.None; lvl++)
         {
-            var byLevel = resolves.Where(o => o.level == lvl).ToArray();
+            var byLevel = resolves.Where(o => o.MatchLevel == lvl).ToArray();
+
+            if(byLevel.Length == 0) continue;
 
             if(byLevel.Length != 1)
             {
-                if(err) state.Error(
-                    $"Could not resolve any one matching overload for call to {this.GetFullName()} with parameter types {string.Join(", ", parameterTypes.Select(p => p.Name))}, multiple overloads are valid",
-                    node.Range
-                );
+                return builder.WithDgnError(
+                    $"Could not resolve any one matching overload for call to {this.GetFullName()}, multiple overloads are valid",
+                    range
+                ).Build<Resolution>();
             }
             else
             {
-                return (byLevel[0].value, byLevel[0].matchers);
+                return builder.Build(byLevel[0]);
             }
         }
 
-        return (null, null);
+        throw new UnreachableException("This point should never be reached.");
     }
 
-    public LangtFunction? ResolveOverload(ASTNode[] parameters, ASTNode node, TypeCheckState state, out ASTTypeMatchCreator[]? matchers, bool err = true) 
+    public Result<Resolution> ResolveOverload(ASTNode[] parameters, SourceRange range, ASTPassState state) 
     {
         var resolves = overloads
-            .Select(o => (value: o, matches: o.Type.SignatureMatches(parameters, state, out var ts, out var lvl), matchers: ts, level: lvl))
-            .Where(o => o.matches)
-            .Select(o => (o.value, o.matchers, o.level))
+            .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, parameters)})
+            .Where(r => !r.Resolution.OutResult.HasErrors)
+            .Select(r => new Resolution(r.Value, r.Resolution.OutResult, r.Resolution.Level))
             .ToArray();
-        
-        (var v, matchers) = HandleOverload(
-            resolves, 
-            parameters.Select(p => p.TransformedType), 
-            node, 
-            state, 
-            err
+
+        return HandleOverload(
+            resolves,
+            range
         );
-
-        if(v is not null) 
-        {
-            state.CG.Logger.Debug($"Found overload match ({string.Join(",", v.Type.ParameterTypes.Select(p => p.GetFullName()))}) for {this.GetFullName()}@line {node.Range.LineStart}", "lowering");
-        }
-        else 
-        {
-            state.CG.Logger.Debug($"No found overload for {this.GetFullName()}@line {node.Range.LineStart}", "lowering");
-        }
-
-        return v;
     }
-    public LangtFunction? ResolveExactOverload(LangtType[] parameterTypes, bool isVararg, ASTNode node, ASTPassState state, bool err = true) 
+    public Result<Resolution> ResolveExactOverload(LangtType[] parameterTypes, bool isVararg, SourceRange range) 
     {
         var resolves = overloads
             .Where(o => o.Type.ParameterTypes.SequenceEqual(parameterTypes) && o.Type.IsVararg == isVararg)
-            .Select(o => (o, new ASTTypeMatchCreator[o.Type.ParameterTypes.Length], SignatureMatchLevel.Exact))
+            .Select(o => new Resolution(o, ResultGroup.From<BoundASTNode>(), SignatureMatchLevel.Exact))
             .ToArray();
         
-        (var v, _) = HandleOverload(
+        return HandleOverload(
             resolves, 
-            parameterTypes, 
-            node, 
-            state, 
-            err
+            range
         );
-
-        return v;
     }
 }

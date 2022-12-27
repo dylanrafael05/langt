@@ -41,14 +41,12 @@ public class LangtScope : IScoped
     // TODO: replace 'null' returns with Result.Error
     public Result<INamedScoped> Resolve(string input,
                                  SourceRange range,
-                                 bool entry = true,
                                  bool propogate = true)
-        => Resolve<INamedScoped>(input, "item", range, entry, propogate);
+        => Resolve<INamedScoped>(input, "item", range, propogate);
 
     public virtual Result<TOut> Resolve<TOut>(string input,
                                               string outputType,
                                               SourceRange range,
-                                              bool entry = true,
                                               bool propogate = true) where TOut: class, INamedScoped
     {
         var builder = ResultBuilder.Empty();
@@ -70,10 +68,10 @@ public class LangtScope : IScoped
         if(propogate)
         {
             // Check the upper scope if it exists
-            result = HoldingScope?.Resolve<TOut>(input, outputType, range, false);
+            result = HoldingScope?.Resolve<TOut>(input, outputType, range);
         }
         
-        if(entry && result is null)
+        if(result is null)
         {
             builder.AddDgnError($"Could not find {outputType} named {input}", range);
         }

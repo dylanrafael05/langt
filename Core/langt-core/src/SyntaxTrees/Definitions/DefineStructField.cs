@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Name, Type};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -14,17 +14,12 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
         visitor.Visit(Type);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        RawExpressionType = LangtType.None;
-    }
-
     // TODO: move resolution logic to TypeCheckRaw?
-    public LangtStructureField? Field(ASTPassState state) 
+    public Result<LangtStructureField> Field(ASTPassState state) 
     {
         var t = Type.Resolve(state);
-        if(t is null) return null;
+        if(!t) return t.Cast<LangtStructureField>();
 
-        return new(Name.ContentStr, t);
+        return Result.Success(new LangtStructureField(Name.ContentStr, t.Value)).WithDataFrom(t);
     }
 }

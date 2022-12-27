@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, SeparatedCollection<DefineStructField> Fields, ASTToken Close) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Struct, Name, Open, Fields, Close};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Struct, Name, Open, Fields, Close};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -19,35 +19,39 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
     public LangtStructureType? StructureType {get; private set;}
 
-    public override void DefineTypes(ASTPassState state)
+    public override Result HandleDefinitions(ASTPassState state)
     {
         var t = new LangtStructureType(Name.ContentStr);
-        state.CG.ResolutionScope.DefineType(t, Range, state);
+        var dt = state.CG.ResolutionScope.DefineType(t, Range);
+
+        if(!dt) return dt;
 
         StructureType = t;
-        
-        RawExpressionType = LangtType.None;
+
+        return Result.Success();
     }
 
-    public override void ImplementTypes(ASTPassState state)
+    public override Result RefineDefinitions(ASTPassState state)
     {
+        var builder = ResultBuilder.Empty();
+
         foreach(var f in Fields.Values) 
         {
-            var sf = f.Field(state);
-            if(sf is null) continue;
+            var sfr = f.Field(state);
+            builder.AddData(sfr);
+
+            if(!sfr) return builder.Build();
+
+            var sf = sfr.Value;
 
             if(StructureType!.HasField(sf.Name))
             {
-                state.Error($"Cannot redefine field {sf.Name}", Range);
+                return ResultBuilder.Empty().WithDgnError($"Cannot redefine field {sf.Name}", Range).Build();
             }
 
             StructureType.Fields.Add(sf);
         }
+
+        return builder.Build();
     }
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {}
-
-    public override void LowerSelf(CodeGenerator generator)
-    {}
 }

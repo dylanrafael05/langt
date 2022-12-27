@@ -4,7 +4,7 @@ namespace Langt.AST;
 
 public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Namespace, Identifier};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Identifier};
 
     public LangtNamespace? LNamespace {get; set;}
 

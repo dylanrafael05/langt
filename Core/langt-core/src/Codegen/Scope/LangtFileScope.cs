@@ -12,55 +12,39 @@ public class LangtFileScope : LangtScope
     // A list of namespaces included by the source code with 'using blah.blah.blah' directives
     public List<LangtNamespace> IncludedNamespaces {get; init;} = new();
 
-    public override TOut? Resolve<TOut>(string input, string outputType, SourceRange range, ASTPassState state, bool entry = true, bool propogate = true) where TOut : class
+    public override Result<TOut> Resolve<TOut>(string input, string outputType, SourceRange range, bool propogate = true) where TOut : class
     {
         // Get basic result, allowing errors if propogation is absent
-        var baseResult = HoldingScope?.Resolve<TOut>(input, outputType, range, state with {Noisy = state.Noisy && !propogate}, false, propogate);
+        var baseResult = HoldingScope!.Resolve<TOut>(input, outputType, range, propogate);
 
         // End propogation here if necessary
-        if(!propogate) return baseResult;
+        if(propogate && !baseResult) return baseResult;
 
         // Accumulate all non-null results into this list
-        var allResults = new HashSet<TOut>();
-        if(baseResult is not null) allResults.Add(baseResult);
+        var includedResults = Result.SkipForeach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, propogate));
 
-        foreach(var n in IncludedNamespaces)
-        {
-            // Include the given namespaces in the search, 
-            // but do not produce for resolution errors (note the 'false')
-            var nResult = n.Resolve<TOut>(input, outputType, range, state with {Noisy = false}, false, propogate);
-            if(nResult is not null && !allResults.Contains(nResult)) allResults.Add(nResult);
-        }
+        var allResults = includedResults
+            .Value
+            .Append(baseResult.Value)
+            .ToArray();
+
+        var builder = ResultBuilder
+            .From(includedResults)
+            .WithData(baseResult);
 
         // Return normal circumstances
-        if(allResults.Count == 0) 
-        {
-            if(entry) 
-            {
-                state.Error($"Could not find {outputType} named {input}", range);
-            }
-            return null;
-        }
+        if(allResults.Length == 0) return builder.WithDgnError($"Could not find {outputType} named {input}", range).Build<TOut>();
 
-        if(allResults.Count == 1) return allResults.First();
+        if(allResults.Length == 1) return builder.Build(allResults.First());
 
         // If allowed, produce an ambiguous resolution error
-        if(entry)
-        {
-            state.Error(
-                "Ambiguity between " + 
-                string.Join(", ", allResults.Select(t => t.FullName)) +
-                "; either disambiguate, remove includes, or use explicit '.' accesses"
-            , range);
-        }
-
-        // Return null to signify a failed resolution
-        return null;
+        return builder.WithDgnError(
+            "Ambiguity between " + 
+            string.Join(", ", allResults.Select(t => t.FullName)) +
+            "; either disambiguate, remove includes, or use explicit '.' accesses"
+        , range).Build<TOut>();
     }
 
-    public override bool Define(INamedScoped obj, SourceRange sourceRange, ASTPassState state)
-        => HoldingScope!.Define(obj, sourceRange, state);
-
-    public override void ForceDefine(INamedScoped obj)
-        => HoldingScope!.ForceDefine(obj);
+    public override Result Define(INamedScoped obj, SourceRange sourceRange)
+        => HoldingScope!.Define(obj, sourceRange);
 }

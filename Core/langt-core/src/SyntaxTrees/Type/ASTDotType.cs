@@ -4,14 +4,13 @@ namespace Langt.AST;
 
 public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier): ASTType
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 
-    public override LangtType? Resolve(ASTPassState state)
+    public override Result<LangtType> Resolve(ASTPassState state)
     {
         var ns = Namespace.Resolve(state);
-
-        if(ns is null) return null;
-
-        return ns.ResolveType(Identifier.ContentStr, Range, state);
+        
+        if(!ns) return ns.Cast<LangtType>();
+        else    return ns.Value.ResolveType(Identifier.ContentStr, Range);
     }
 }   

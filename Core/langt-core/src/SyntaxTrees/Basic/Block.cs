@@ -4,9 +4,54 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundNodes};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        foreach(var s in BoundNodes)
+        {
+            s.Lower(generator);
+            generator.DiscardValues(DebugSourceName);
+        }
+    }
+
+    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state)
+    {
+        var builder = ResultBuilder.Empty();
+        var returns = false;
+
+        var boundNotes = new List<BoundASTNode>();
+
+        foreach(var n in nodes)
+        {
+            var res = n.Bind(state).Forgive((BoundASTNode)null!);
+            builder.AddData(res);
+            
+            var bast = res.Value;
+
+            if(returns)
+            {
+                bast.Unreachable = true;
+            }
+
+            returns |= bast.Returns;
+        }
+        
+        return builder.Build<BoundASTNode>
+        (
+            new BoundGroup(source, boundNotes)
+            {
+                RawExpressionType = LangtType.None
+            }
+        );
+    }
+}
+
 public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Open, Statements, Close};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Open, Statements, Close};
     public override bool BlockLike => true;
 
     public override void Dump(VisitDumper visitor)
@@ -19,55 +64,6 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         visitor.PutString("}");
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        foreach(var s in Statements)
-        {
-            if(!Returns) 
-            {
-                s.TryTypeCheck(state);
-            }
-            else
-            {
-                s.Unreachable = true;
-            }
-
-            Returns |= s.Returns;
-        }
-        
-        RawExpressionType = LangtType.None;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        foreach(var s in Statements)
-        {
-            s.Lower(lowerer);
-            lowerer.DiscardValues(DebugSourceName);
-        }
-    }
-    
-    public override void DefineTypes(ASTPassState state)
-    {
-        foreach(var s in Statements)
-        {
-            TryPass(s.DefineTypes, state);
-        }
-    }
-
-    public override void ImplementTypes(ASTPassState state)
-    {
-        foreach(var s in Statements)
-        {
-            TryPass(s.ImplementTypes, state);
-        }
-    }
-
-    public override void Initialize(ASTPassState state)
-    {
-        foreach(var s in Statements)
-        {
-            TryPass(s.Initialize, state);
-        }
-    }
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+        => BoundGroup.BindFromNodes(this, Statements, state);
 }

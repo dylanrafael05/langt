@@ -4,20 +4,9 @@ using Langt.Utility;
 
 namespace Langt.AST;
 
-public record BoundGroup(ASTNode Source, IList<BoundASTNode> Items) : BoundASTNode(Source)
-{
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        foreach(var i in Items) 
-        {
-            i.Lower(generator);
-        }
-    }
-}
-
 public record StatementGroup(IList<ASTNode> Statements) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Statements};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Statements};
     public override bool BlockLike => true;
 
     public override void Dump(VisitDumper visitor)
@@ -28,4 +17,7 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
             visitor.Visit(s);
         }
     }
+
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+        => BoundGroup.BindFromNodes(this, Statements, state);
 }

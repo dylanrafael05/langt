@@ -5,6 +5,8 @@ namespace Langt;
 
 public sealed class CLILogger : ILogger
 {
+    // TODO; implement more complex debug flags
+    // 'flag:N' for verbosities 0..N provided to Debug diagnostic, '_:N' all for given verbosities, '_:_' all
     public IReadOnlySet<string> DebugFlags {get; set;} = new HashSet<string>();
 
     private readonly IDictionary<string, StringBuilder> flagFileBuilders 

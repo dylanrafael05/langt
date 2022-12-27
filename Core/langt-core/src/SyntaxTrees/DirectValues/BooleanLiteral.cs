@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record BoundBooleanLiteral(BooleanLiteral Source) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
 
     public override void LowerSelf(CodeGenerator generator)
     {
@@ -20,7 +20,7 @@ public record BoundBooleanLiteral(BooleanLiteral Source) : BoundASTNode(Source)
 
 public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.PutString(Tok.ToString());

@@ -1,6 +1,6 @@
 namespace Results;
 
-public struct Result : IResult<Result>
+public struct Result : IPrimitiveResult<Result>
 {
     bool IResult.HasValue => !HasErrors;
 
@@ -63,15 +63,18 @@ public struct Result : IResult<Result>
         HasMetadata = meta;
     }
 
+    public static Result Blank() => new();
     public static Result Success() => new();
     public static Result Error(IEnumerable<IResultError> errors) => Success().WithErrors(errors);
     public static Result Error(IResultError first, params IResultError[] rest) => Error(Enumerable.Empty<IResultError>().Append(first).Concat(rest));
     
+    public static Result<T> Blank<T>() => new();
     public static Result<T> Success<T>(T value) => new(value);
     public static Result<T> Error<T>(IEnumerable<IResultError> errors) => Success<T>(default!).WithErrors(errors);
     public static Result<T> Error<T>(IResultError first, params IResultError[] rest) => Error<T>(Enumerable.Empty<IResultError>().Append(first).Concat(rest));
 
     public static Result Wrap(IResult r) => new(r.Errors, r.HasErrors, r.Metadata, r.HasMetadata);
+    public static Result<T> Wrap<T>(T value, IResult r) => Success(value).WithDataFrom(r);
 
     public static Result<(T1, T2)> GreedyAll<T1, T2>(Result<T1> a, Result<T2> b)
         => a.GreedyAnd(b);
@@ -95,89 +98,6 @@ public struct Result : IResult<Result>
     public static Result<(T1, T2, T3, T4, T5, T6)> All<T1, T2, T3, T4, T5, T6>(Result<T1> a, Result<T2> b, Result<T3> c, Result<T4> d, Result<T5> e, Result<T6> f)
         => a.And(b).And(c).And(d).And(e).And(f);
 
-    /// <summary>
-    /// Applies a Result-returning function to every item in an array and returns the 
-    /// resulting array of objects, stopping early and returning an Error if
-    /// any of the function calls produce one.
-    /// </summary>
-    /// <param name="input">The array to manipulate</param>
-    /// <param name="resultor">The function to apply; can return a success or error</param>
-    /// <typeparam name="TIn">The input type</typeparam>
-    /// <typeparam name="TOut">The output type</typeparam>
-    /// <returns>
-    /// A result which tells if any results during array manipulation were errors.
-    /// Its encapsulated array is not guaranteed to be the same size as the input array
-    /// if any errors occured.
-    /// </returns>
-    public static Result<TOut[]> Foreach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, Result<TOut>> resultor)
-    {
-        var builder = ResultBuilder.Empty();
-        var result = new List<TOut>();
-
-        foreach(var v in input)
-        {
-            var r = resultor(v);
-            builder.AddData(r);
-
-            if(!r) break;
-
-            result.Add(r.Value);
-        }
-
-        return builder.Build(result.ToArray());
-    }
-    public static Result Foreach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
-        => All(input.Select(resultor));
-
-    /// <summary>
-    /// Applies a Result-returning function to every item in an array and returns the 
-    /// resulting array of objects, accumulating Errors as they occur.
-    /// </summary>
-    /// <param name="input">The array to manipulate</param>
-    /// <param name="resultor">The function to apply; can return a success or error</param>
-    /// <typeparam name="TIn">The input type</typeparam>
-    /// <typeparam name="TOut">The output type</typeparam>
-    /// <returns>
-    /// A result which tells if any results during array manipulation were errors. 
-    /// Its encapsulated array is guaranteed to be the same size as the input array always,
-    /// but will contain invalid or null instances if an error occured.
-    /// </returns>
-    public static Result<TOut[]> GreedyForeach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, Result<TOut>> resultor)
-    {
-        var builder = ResultBuilder.Empty();
-        var result = new List<TOut>();
-
-        foreach(var v in input)
-        {
-            var r = resultor(v);
-
-            result.Add(r.OrDefault()!);
-            builder.AddData(r);
-        }
-
-        return builder.Build(result.ToArray());
-    }
-    public static Result GreedyForeach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
-        => GreedyAll(input.Select(resultor));
-
-    public static Result<TOut[]> ForgiveForeach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, Result<TOut>> resultor, TOut defaultValue)
-    {
-        var builder = ResultBuilder.Empty();
-        var result = new List<TOut>();
-
-        foreach(var v in input)
-        {
-            var r = resultor(v).Forgive(defaultValue);
-
-            result.Add(r.Value);
-            builder.AddData(r);
-        }
-
-        return builder.Build(result.ToArray());
-    }
-    public static Result ForgiveForeach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
-        => ForgiveAll(input.Select(resultor));
-
     public static Result All(IEnumerable<Result> results)
         => results.Aggregate((r, n) => r.And(n));
     public static Result All(params Result[] results)
@@ -192,6 +112,11 @@ public struct Result : IResult<Result>
         => results.Aggregate((r, n) => r.Forgive().And(n)).Forgive();
     public static Result ForgiveAll(params Result[] results)
         => ForgiveAll(results);
+
+    public static Result SkipAll(IEnumerable<Result> results)
+        => results.Aggregate((r, n) => n ? r.GreedyAnd(n) : r);
+    public static Result SkipAll(params Result[] results)
+        => SkipAll(results);
 
     public static Result<T> Try<T>(Func<T> resultor)
     {

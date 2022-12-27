@@ -4,7 +4,7 @@ namespace Langt.AST;
 
 public record SeparatedCollection<T>(List<ASTNode> All) : ASTNode where T : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {All};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {All};
 
     public IEnumerable<T> Values 
     {

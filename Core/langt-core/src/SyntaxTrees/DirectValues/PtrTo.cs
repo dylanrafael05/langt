@@ -4,33 +4,40 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundPtrTo(PtrTo Source, LangtVariable Variable) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        var f = Variable!.UnderlyingValue!;
+        generator.PushValue( 
+            f.Type, 
+            f.LLVM,
+            DebugSourceName
+        );
+    }
+}
+
 public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {PtrToKey, Var};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {PtrToKey, Var};
 
     public override void Dump(VisitDumper visitor)
     {
         visitor.PutString("Pointer to " + Var.ContentStr);
     }
 
-    public LangtVariable? Variable {get; private set;}
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        Variable = state.CG.ResolutionScope.ResolveVariable(
+        var vResult = state.CG.ResolutionScope.ResolveVariable
+        (
             Var.ContentStr, 
-            Range, 
-            state
+            Range
         );
-    }
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        var f = Variable!.UnderlyingValue!;
-        lowerer.PushValue( 
-            f.Type, 
-            f.LLVM,
-            DebugSourceName
-        );
+        if(!vResult) return vResult.Cast<BoundASTNode>();
+
+        return Result.Success<BoundASTNode>(new BoundPtrTo(this, vResult.Value));
     }
 }

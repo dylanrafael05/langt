@@ -9,13 +9,12 @@ namespace Langt.AST;
 
 public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Tok);
 
     public override bool IsLValue => IsVariable;
-    public override bool RequiresTypeDownflow => IsFunctionGroup;
 
     public bool IsVariable => Resolution is (not null) and LangtVariable;
     public bool IsFunctionGroup => Resolution is (not null) and LangtFunctionGroup;
@@ -76,13 +75,6 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
         {
             lowerer.PushValue( 
                 RawExpressionType, Variable!.UnderlyingValue!.LLVM,
-                DebugSourceName
-            );
-        }
-        else if(IsFunction)
-        {
-            lowerer.PushValue( 
-                RawExpressionType, Function!.LLVMFunction,
                 DebugSourceName
             );
         }

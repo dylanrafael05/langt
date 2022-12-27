@@ -4,38 +4,9 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
+public record BoundCastExpression(CastExpression Source, BoundASTNode Value, ITransformer Transformer) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Value, As, Type};
-
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Cast");
-        visitor.Visit(Value);
-        visitor.Visit(Type);
-    }
-
-    public ITransformer? Transformer {get; private set;}
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        Value.TypeCheck(state);
-
-        var type = Type.Resolve(state);
-        if(type is null) return;
-
-        var conversion = state.CG.ResolveConversion(type, Value.TransformedType);
-
-        if(conversion is null)
-        {
-            state.Error($"Could not find a conversion from {Value.TransformedType.Name} to {type.Name}", Range);
-            return;
-        }
-
-        Transformer = conversion.TransformProvider.TransformerFor(Value.TransformedType, type);
-        RawExpressionType = type;
-    }
-
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Value.Lower(lowerer);
@@ -46,6 +17,43 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
             Transformer!.Output,
             Transformer.Perform(lowerer, v.LLVM),
             DebugSourceName
+        );
+    }
+}
+
+public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
+{
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, As, Type};
+
+    public override void Dump(VisitDumper visitor)
+    {
+        visitor.PutString("Cast");
+        visitor.Visit(Value);
+        visitor.Visit(Type);
+    }
+
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    {
+        var results = Result.All
+        (
+            Value.Bind(state),
+            Type.Resolve(state) 
+        );
+        var builder = ResultBuilder.From(results);
+
+        if(!results) return builder.Build<BoundASTNode>();
+
+        var (val, type) = results.Value;
+
+        var cv = state.CG.ResolveConversion(type, val.TransformedType, Range);
+        builder.AddData(cv);
+
+        if(!cv) return builder.Build<BoundASTNode>();
+        var conversion = cv.Value;
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundCastExpression(this, val, conversion.TransformProvider.TransformerFor(val.TransformedType, type))
         );
     }
 }

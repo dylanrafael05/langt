@@ -6,7 +6,7 @@ namespace Langt.AST;
 
 public record ElseStatement(ASTToken Else, ASTNode End) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Else, End};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Else, End};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -14,16 +14,6 @@ public record ElseStatement(ASTToken Else, ASTNode End) : ASTNode
         visitor.Visit(End);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        End.TypeCheck(state);
-        Returns = End.Returns;
-        
-        RawExpressionType = LangtType.None;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        End.Lower(lowerer);
-    }
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+        => End.Bind(state, options);
 }

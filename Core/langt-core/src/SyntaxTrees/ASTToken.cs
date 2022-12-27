@@ -5,7 +5,7 @@ namespace Langt.AST;
 
 public record ASTToken(Token Inner) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new();
+    public override TreeItemContainer<ASTNode> ChildContainer => new();
     public override SourceRange Range => Inner.Range;
 
     public TokenType Type => Inner.Type;

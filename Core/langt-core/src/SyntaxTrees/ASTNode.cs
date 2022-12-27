@@ -12,28 +12,28 @@ using Results;
 
 namespace Langt.AST;
 
-public class RecordItemSpecification<T>
+public class TreeItemSpec<T>
 {
     public string ChildName {get; private init;}
     public IEnumerable<T?> ChildValues {get; private init;}
 
-    public RecordItemSpecification(T? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
+    public TreeItemSpec(T? node, [CallerArgumentExpression(nameof(node))] string expr = "!")
     {
         ChildName = expr;
         ChildValues = new[] {node};
     }
-    public RecordItemSpecification(IEnumerable<T?> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
+    public TreeItemSpec(IEnumerable<T?> nodes, [CallerArgumentExpression(nameof(nodes))] string expr = "!")
     {
         ChildName = expr;
         ChildValues = nodes;
     }
 }
 
-public class RecordItemContainer<T> : IEnumerable<RecordItemSpecification<T>>
+public class TreeItemContainer<T> : IEnumerable<TreeItemSpec<T>>
 {
-    private readonly IList<RecordItemSpecification<T>> childSpecs = new List<RecordItemSpecification<T>>();
+    private readonly IList<TreeItemSpec<T>> childSpecs = new List<TreeItemSpec<T>>();
 
-    public IEnumerable<RecordItemSpecification<T>> ChildrenSpecs => childSpecs;
+    public IEnumerable<TreeItemSpec<T>> ChildrenSpecs => childSpecs;
     public IEnumerable<T?> AllChildren => ChildrenSpecs.SelectMany(c => c.ChildValues);
     public IEnumerable<T> Children => AllChildren.Where(c => c is not null).Cast<T>();
 
@@ -43,7 +43,7 @@ public class RecordItemContainer<T> : IEnumerable<RecordItemSpecification<T>>
         => childSpecs.Add(new(nodes, expr));
     
 
-    public IEnumerator<RecordItemSpecification<T>> GetEnumerator()
+    public IEnumerator<TreeItemSpec<T>> GetEnumerator()
     {
         return childSpecs.GetEnumerator();
     }
@@ -56,7 +56,7 @@ public class RecordItemContainer<T> : IEnumerable<RecordItemSpecification<T>>
 
 public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : ISourceRanged
 {
-    public abstract RecordItemContainer<TChild> ChildContainer {get;}
+    public abstract TreeItemContainer<TChild> ChildContainer {get;}
 
     public IEnumerable<TChild?> AllChildren {get; init;}
     public IEnumerable<TChild> Children {get; init;}
@@ -78,6 +78,20 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : IS
     }
 }
 
+public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function) : BoundASTNode(Source.ASTSource)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Source};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        generator.PushValue( 
+            Function!.Type, 
+            Function!.LLVMFunction,
+            DebugSourceName
+        );
+    }
+}
+
 public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>, IElement<VisitDumper>
 {
     public override SourceRange Range => ASTSource.Range;
@@ -96,11 +110,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// be dereferenced or be assigned to if it constitutes a pointer?
     /// </summary>
     public virtual bool IsLValue => false;
-    /// <summary>
-    /// Is the current AST node untypable; does this AST node require a provided valid
-    /// target type in order to type check?
-    /// </summary>
-    public virtual bool RequiresTypeDownflow => false;
 
     /// <summary>
     /// Whether or not the current AST node has an unknown type, since it has not been 
@@ -205,13 +214,11 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         
         generator.LogStack(DebugSourceName);
     }
-
-    public virtual Result Bind(ASTPassState state, TypeCheckOptions options) => Result.Success();
 }
 
 public record BoundASTWrapper(ASTNode Source) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
 }
 
 /// <summary>
@@ -224,6 +231,11 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     /// prevent type checking from taking place on this node?
     /// </summary>
     public virtual bool BlockLike => false;
+    /// <summary>
+    /// Is the current AST node untypable; does this AST node require a provided valid
+    /// target type in order to type check?
+    /// </summary>
+    public virtual bool BindingRequiresTargetType => false;
 
     /// <summary>
     /// Whether or not this AST node is invalid.
@@ -248,7 +260,7 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     protected virtual Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options) 
         => Result.Success(new BoundASTWrapper(this) as BoundASTNode);
 
-    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions options) 
+    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions options = default) 
     {
         var result = BindSelf(state, options);
         if(!result) return result;
@@ -259,16 +271,65 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         return result;
     }
-    public Result<BoundASTNode> Bind(ASTPassState state)
-    {
-        var options = new TypeCheckOptions 
-        {
-            TargetType = null, 
-            AutoDeferenceLValue = true
-        };
 
-        return Bind(state, options);
+    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions options = default)
+    {
+        coerced = false;
+        // TODO: implement custom messages for failure cases
+
+        var binding = Bind(state, options with 
+        {
+            TargetType = type // TODO: should this always be passed this way?
+        });
+
+        if(!binding) return binding;
+        var builder = ResultBuilder.From(binding);
+
+        var bast = binding.Value;
+        
+        var ftype = bast.TransformedType;
+
+        if(type.IsFunction && bast.HasResolution && bast.Resolution is LangtFunctionGroup fg)
+        {
+            var funcType = (LangtFunctionType)type;
+
+            var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
+            builder.AddData(fr);
+
+            if(!fr) return builder.Build<BoundASTNode>();
+
+            return builder.Build<BoundASTNode>
+            (
+                new BoundFunctionReference(bast, fr.Value.Function)  
+            );
+        }
+
+        if(type == ftype) return builder.Build(bast);
+        coerced = true;
+
+        if(bast.IsLValue && ftype.PointeeType == type)
+        {
+            bast.ApplyTransform(LangtReadPointer.Transformer(ftype));
+            return builder.Build(bast);
+        }
+
+        var convResult = state.CG.ResolveConversion(type, ftype, Range);
+        if(!convResult) return builder.WithData(convResult).Build<BoundASTNode>();
+
+        var conv = convResult.Value;
+        if(!conv.IsImplicit)
+        {
+            return builder
+                .WithDgnError($"Could not find conversion from {ftype.GetFullName()} to {type.GetFullName()} (an explicit conversion exists)", Range)
+                .Build<BoundASTNode>()
+            ;
+        }
+
+        bast.ApplyTransform(conv.TransformProvider.TransformerFor(ftype, type));
+        return builder.Build(bast);
     }
+    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, TypeCheckOptions options = default)
+        => BindMatching(state, type, out _, options);
 
     // /// <summary>
     // /// Perform the initial steps of type checking.

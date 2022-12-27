@@ -7,7 +7,7 @@ namespace Langt.AST;
 
 public record BoundNumericLiteral(NumericLiteral Source, ulong? IntegerValue, double? DoubleValue) : BoundASTNode(Source)
 {
-    public override RecordItemContainer<BoundASTNode> ChildContainer => new() {};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
@@ -32,7 +32,7 @@ public record BoundNumericLiteral(NumericLiteral Source, ulong? IntegerValue, do
 
 public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Tok};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
     public override void Dump(VisitDumper visitor)
         => visitor.PutString(Tok.ToString());

@@ -4,10 +4,24 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record 
+public record BoundAssignment(Assignment Source, BoundASTNode Left, BoundASTNode Right) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Left.Lower(generator);
+        Right.Lower(generator);
+
+        var (right, left) = (generator.PopValue(DebugSourceName), generator.PopValue(DebugSourceName));
+
+        generator.Builder.BuildStore(right.LLVM, left.LLVM);
+    }
+}
+
 public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Left, Assign, Right};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Assign, Right};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -16,33 +30,30 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         visitor.Visit(Right);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        Left.TypeCheck(state with {TryRead = false});
-        Right.TypeCheck(state);
+        var leftResult = Left.Bind(state, new TypeCheckOptions {AutoDeferenceLValue = false});
+        if(!leftResult) return leftResult;
 
-        if(!Left.TransformedType.IsPointer || !Left.IsLValue)
-        {
-            state.Error($"Cannot assign to a non-assignable value", Range);
-        }
+        var left = leftResult.Value;
 
-        if(!state.MakeMatch(Left.TransformedType.PointeeType!, Right))
+        var rightResult = Right.BindMatching(state, left.TransformedType.PointeeType!);
+        if(!rightResult) return rightResult;
+        var right = rightResult.Value;
+
+        var builder = ResultBuilder.From(leftResult, rightResult);
+
+        if(!left.TransformedType.IsPointer || !left.IsLValue)
         {
-            state.Error($"Cannot assign value of type {Right.TransformedType.Name} to variable of type {Left.TransformedType.Name}", Range);
+            return builder.WithDgnError($"Cannot assign to a non-assignable value", Range).Build<BoundASTNode>();
         }
         
-        RawExpressionType = LangtType.None;
-
-        // TODO: make reading pointers the default, have a special case (stored in codeGenerator), for when values should be UNREAD
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        Left.Lower(lowerer);
-        Right.Lower(lowerer);
-
-        var (right, left) = (lowerer.PopValue(DebugSourceName), lowerer.PopValue(DebugSourceName));
-
-        lowerer.Builder.BuildStore(right.LLVM, left.LLVM);
+        return builder.Build<BoundASTNode>
+        (
+            new BoundAssignment(this, left, right)
+            {
+                RawExpressionType = LangtType.None
+            }
+        );
     }
 }

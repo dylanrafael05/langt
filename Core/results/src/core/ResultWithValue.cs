@@ -1,8 +1,8 @@
 namespace Results;
 
-public struct Result<T> : IResult<Result<T>>
+public struct Result<T> : IPrimitiveResult<Result<T>>
 {
-    private T valueStorage;
+    private T? valueStorage;
 
     public bool HasValue {get; private init;} = false;
     public bool HasErrors {get; private init;} = false;
@@ -13,7 +13,7 @@ public struct Result<T> : IResult<Result<T>>
     public T Value 
     {
         get => HasValue
-            ? valueStorage
+            ? valueStorage!
             : throw new InvalidOperationException($"Cannot get .{nameof(IResult.Value)} if .{nameof(IResult.HasValue)} returns false!")
             ;
         
@@ -38,10 +38,10 @@ public struct Result<T> : IResult<Result<T>>
         => ((IResult)self).HasErrors;
 
     public Result<T> WithError(IResultError error) => new(Value, HasValue, Errors.Append(error), true, Metadata, HasMetadata);
-    public Result<T> WithErrors(params IResultError[] errors) => WithErrors((IEnumerable<IResultError>)errors);
+    public Result<T> WithErrors(IResultError first, params IResultError[] rest) => WithError(first).WithErrors(rest);
     public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(Value, HasValue, Errors.Concat(errors), HasErrors || errors.Any(), Metadata, HasMetadata);
     public Result<T> WithMetadata(IResultMetadata metadata) => new(Value, HasValue, Errors, HasErrors, Metadata.Append(metadata), true);
-    public Result<T> WithMetadata(params IResultMetadata[] metadata) => WithMetadata((IEnumerable<IResultMetadata>)metadata);
+    public Result<T> WithMetadata(IResultMetadata first, params IResultMetadata[] rest) => WithMetadata(first).WithMetadata(rest);
     public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Value, HasValue, Errors, HasErrors, Metadata.Concat(metadata), HasMetadata || metadata.Any());
 
     public Result<T> WithDataFrom(IResult other)
@@ -59,8 +59,18 @@ public struct Result<T> : IResult<Result<T>>
     public Result<T> Forgive(Func<T> defaultValueProvider)
     {
         var nmeta = from e in Errors let t = e.TryDemote() where t is not null select t;
-        return Result.Success(Or(defaultValueProvider)!).WithMetadata(Metadata).WithMetadata(nmeta);
+        return Result.Success(OrFrom(defaultValueProvider)!).WithMetadata(Metadata).WithMetadata(nmeta);
     }
+
+    public Result<TOther> Cast<TOther>()
+    {
+        if(!HasErrors) throw new InvalidOperationException($".{nameof(Cast)} received a non-error result");
+
+        return Result.Blank<TOther>().WithDataFrom(this);
+    }
+
+    public Result Drop()
+        => Result.Blank().WithDataFrom(this);
 
     public T Expect(string reason = "expected valid result", Func<string, Exception>? exceptionBuilder = null)
     {
@@ -72,9 +82,11 @@ public struct Result<T> : IResult<Result<T>>
         return Value;
     }
 
+    public Result() : this(default, false, Array.Empty<IResultError>(), false, Array.Empty<IResultMetadata>(), false)
+    {}
     public Result(T value) : this(value, true, Array.Empty<IResultError>(), false, Array.Empty<IResultMetadata>(), false)
     {}
-    private Result(T value, bool val, IEnumerable<IResultError> errors, bool err, IEnumerable<IResultMetadata> metadata, bool meta)
+    private Result(T? value, bool val, IEnumerable<IResultError> errors, bool err, IEnumerable<IResultMetadata> metadata, bool meta)
     {
         valueStorage = value;
         HasValue = val && !err; // ensure that errors dominate values
@@ -100,12 +112,12 @@ public struct Result<T> : IResult<Result<T>>
         if(HasErrors) return def;
         return Value;
     }
-    public T? Or(Func<T?> def) 
+    public T? OrFrom(Func<T?> def) 
     {
         if(HasErrors) return def();
         return Value;
     }
-    public T? Or(Func<Result<T>, T?> def) 
+    public T? OrFrom(Func<Result<T>, T?> def) 
     {
         if(HasErrors) return def(this);
         return Value;

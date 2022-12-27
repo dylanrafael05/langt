@@ -7,7 +7,7 @@ namespace Langt.AST;
 
 public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 {
-    public override RecordItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
 
     public override void Dump(VisitDumper visitor)
     {
@@ -43,7 +43,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
             }
 
             var resolutionResult = ns.Resolve(Right.ContentStr, Range);
-            builder.AddFrom(resolutionResult);
+            builder.AddData(resolutionResult);
             
             result.Resolution = resolutionResult.OrDefault();
         }

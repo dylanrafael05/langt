@@ -15,53 +15,11 @@ public record GeneralPassState(CodeGenerator CG, bool Noisy, bool CanFail) : AST
     public static GeneralPassState Start(CodeGenerator gen) => new(gen, true, true);
 }
 
-public record struct TypeCheckOptions(LangtType? TargetType, bool AutoDeferenceLValue);
-
-public record TypeCheckState(CodeGenerator CG, bool TryRead, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
+public struct TypeCheckOptions
 {
-    public static TypeCheckState Start(CodeGenerator gen) => new(gen, true, true, true);
+    public LangtType? TargetType {get; init;} = null;
+    public bool AutoDeferenceLValue {get; init;} = true;
 
-    private bool MatchInternal(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher) 
-    {
-        matcher = new();
-        
-        if(from.RequiresTypeDownflow)
-        {
-            if(!Result.Try(from.Bind, this, new TypeCheckOptions {TargetType = to})) 
-            {
-                return false;
-            }
-
-            matcher = matcher with {DownflowType = to};
-        }
-        
-        var ftype = from.TransformedType;
-
-        if(to == ftype) return true;
-
-        if(from.IsLValue && ftype.PointeeType == to)
-        {
-            matcher = matcher with {Transformer = LangtReadPointer.Transformer(ftype)};
-            return true;
-        }
-
-        var conv = CG.ResolveConversion(to, ftype);
-        if(conv is null) return false;
-
-        matcher = matcher with {Transformer = conv.TransformProvider.TransformerFor(ftype, to)};
-        return conv.IsImplicit;
-    }
-
-    public bool CanMatch(LangtType to, ASTNode from, out ASTTypeMatchCreator matcher)
-        => MatchInternal(to, from, out matcher);
-    public bool MakeMatch(LangtType to, ASTNode from) 
-    {
-        if(!MatchInternal(to, from, out var matcher))
-        {
-            return false;
-        }
-        
-        matcher.ApplyTo(from, this);
-        return true;
-    }
+    public TypeCheckOptions()
+    {}
 }
