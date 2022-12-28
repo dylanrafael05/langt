@@ -9,12 +9,12 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
-        return "(" + string.Join(",", param.Select(p => p.GetFullName())) + (varg ? " ..." : "") + ")" + ret.GetFullName();
+        return GetSignatureString(varg, param) + ret.GetFullName();
     }
 
     public static string GetSignatureString(bool isVararg, params LangtType[] paramTypes)
     {
-        return string.Join(",", paramTypes.Select(p => p.GetFullName())) + (isVararg ? ",..." : "");
+        return "("+string.Join(",", paramTypes.Select(p => p.GetFullName())) + (isVararg ? ",..." : "")+")";
     }
     public static string GetSignatureString(params LangtType[] paramTypes)
         => GetSignatureString(false, paramTypes);

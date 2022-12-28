@@ -52,7 +52,7 @@ public class LangtProject
         foreach(var f in Files)
         {
             cg.Open(f);
-            cg.Diagnostics.AddResult(
+            Diagnostics.AddResult(
                 f.AST.HandleDefinitions(startState)
             );
         }
@@ -61,17 +61,17 @@ public class LangtProject
         foreach(var f in Files)
         {
             cg.Open(f);
-            cg.Diagnostics.AddResult(
+            Diagnostics.AddResult(
                 f.AST.RefineDefinitions(startState)
             );
         }
         
-        Logger.Note("Performing binding and type checking . . . ");
+        Logger.Note("Performing binding . . . ");
         foreach(var f in Files)
         {  
             cg.Open(f);
             var r = f.AST.Bind(startState);  
-            cg.Diagnostics.AddResult(r);
+            Diagnostics.AddResult(r);
 
             if(!r) continue;
             f.BoundAST = r.Value;

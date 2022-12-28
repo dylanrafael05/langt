@@ -4,49 +4,37 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record BoundFunctionCall(ASTNode Source, 
-    BoundASTNode Function, 
-    BoundASTNode[] Arguments, 
-    bool HasDirectFunction,
-    LLVMValueRef? FunctionValue,
-    LangtFunctionType FunctionType
-) : BoundASTNode(Source)
+public record BoundFunctionPointerCall(ASTNode Source, BoundASTNode Function, BoundASTNode[] Arguments, LangtFunctionType FunctionType) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Function, Arguments};
 
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Function.Lower(generator);
+
+        generator.BuildFunctionCall
+        (
+            generator.PopValue(DebugSourceName).LLVM,
+            Arguments,
+            FunctionType,
+            DebugSourceName
+        );
+    }
+}
+
+public record BoundFunctionCall(ASTNode Source, LangtFunction Function, BoundASTNode[] Arguments) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Arguments};
+
     public override void LowerSelf(CodeGenerator lowerer)
     {
-        Function.Lower(lowerer);
-
-        LLVMValueRef usedFnValue;
-
-        if(!HasDirectFunction)
-        {
-            usedFnValue = lowerer.PopValue(DebugSourceName).LLVM;
-        }
-        else
-        {
-            usedFnValue = FunctionValue!.Value;
-        }
-
-        var llvmArgs = new LLVMValueRef[Arguments.Length];
-
-        for(var i = 0; i < Arguments.Length; i++)
-        {
-            Arguments[i].Lower(lowerer);
-            llvmArgs[i] = lowerer.PopValue(DebugSourceName).LLVM;
-        }
-
-        var r = lowerer.Builder.BuildCall2(
-            lowerer.LowerType(FunctionType!),
-            usedFnValue, 
-            llvmArgs
+        lowerer.BuildFunctionCall
+        (
+            Function.LLVMFunction,
+            Arguments,
+            Function.Type,
+            DebugSourceName
         );
-
-        if(FunctionType!.ReturnType != LangtType.None)
-        {
-            lowerer.PushValue(FunctionType!.ReturnType, r, DebugSourceName);
-        }
     }
 }
 
@@ -78,40 +66,35 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         var givenArgs = Arguments.Values.ToArray();
 
         // Create resultant variables
-        LangtFunctionType funcType;
-        bool hasDirectFunction;
-        LLVMValueRef? directFunction = null;
-        LangtType resultType;
-        BoundASTNode?[] boundArgs;
+        BoundASTNode[] boundArgs;
 
         if(fn.HasResolution && fn.Resolution is LangtFunctionGroup functionGroup)
         {
-            var resolveResult = functionGroup.ResolveOverload(givenArgs, this, state);
+            var resolveResult = functionGroup.ResolveOverload(givenArgs, Range, state);
             builder.AddData(resolveResult);
 
             if(!resolveResult) return builder.Build<BoundASTNode>();
 
             var resolution = resolveResult.Value;
 
-            funcType = resolution.Function.Type;
-            resultType = funcType.ReturnType;
-
-            hasDirectFunction = true;
-            directFunction = resolution.Function.LLVMFunction;
-
             boundArgs = resolution.OutputParameters.Value.ToArray();
+
+            return builder.Build<BoundASTNode>
+            (
+                new BoundFunctionCall(this, resolution.Function, boundArgs)
+                {
+                    RawExpressionType = resolution.Function.Type.ReturnType
+                }
+            );
         }
         else if(fn.TransformedType.IsFunctionPtr)
         {
-            hasDirectFunction = false;
-
-            funcType = (LangtFunctionType)fn.TransformedType.PointeeType!;
-            resultType = funcType!.ReturnType;
+            var funcType = (LangtFunctionType)fn.TransformedType.PointeeType!;
 
             var smatch = funcType.MatchSignature(state, Range, givenArgs);
             builder.AddData(smatch.OutResult);
 
-            boundArgs = smatch.OutResult.WithDefault().ToArray();
+            boundArgs = smatch.OutResult.WithDefault().ToArray()!;
 
             if(!builder)
             {
@@ -121,15 +104,18 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
                     Range
                 ).Build<BoundASTNode>();
             }
+
+            return builder.Build<BoundASTNode>
+            (
+                new BoundFunctionPointerCall(this, fn, boundArgs, funcType)
+                {
+                    RawExpressionType = funcType.ReturnType
+                }
+            );
         }
         else 
         {
             return builder.WithDgnError("Cannot call a non-functional expression", Range).Build<BoundASTNode>();
         }
-
-        return builder.Build<BoundASTNode>
-        (
-            new BoundFunctionCall(this, fn, boundArgs!, hasDirectFunction, directFunction, funcType)
-        );
     }
 }

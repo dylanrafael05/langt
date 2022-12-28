@@ -1,12 +1,38 @@
 using Langt.AST;
 using Langt.Codegen;
+using Langt.Lexing;
+using Langt.Parsing;
 using Langt.Structure.Visitors;
 
 namespace Langt.Codegen;
 
+
+
 public class CodeGenerator : IProjectDependency
 {
     public const string LangtIdentifierPrepend = "<langt>::";
+    public static Dictionary<OperatorSpec, string> MagicNames {get;} = new() 
+    {
+        {new(OperatorType.Binary, TokenType.Plus),    "op_add"},
+        {new(OperatorType.Binary, TokenType.Minus),   "op_sub"},
+        {new(OperatorType.Binary, TokenType.Star),    "op_mul"},
+        {new(OperatorType.Binary, TokenType.Slash),   "op_div"},
+        {new(OperatorType.Binary, TokenType.Percent), "op_mod"},
+        
+        {new(OperatorType.Binary, TokenType.DoubleEquals), "op_equal"},
+        {new(OperatorType.Binary, TokenType.NotEquals),    "op_not_equal"},
+        {new(OperatorType.Binary, TokenType.LessThan),     "op_less"},
+        {new(OperatorType.Binary, TokenType.LessEqual),    "op_less_equal"},
+        {new(OperatorType.Binary, TokenType.GreaterThan),  "op_greater"},
+        {new(OperatorType.Binary, TokenType.GreaterEqual), "op_greater_equal"},
+
+        {new(OperatorType.Unary, TokenType.Minus), "op_neg"},
+        {new(OperatorType.Unary, TokenType.Not),   "op_not"}
+    };
+
+    public delegate LLVMValueRef BinaryOpDefiner(LLVMBuilderRef builder, LLVMValueRef a, LLVMValueRef b);
+    public delegate LLVMValueRef UnaryOpDefiner(LLVMBuilderRef builder, LLVMValueRef x);
+
 
     public LangtProject Project {get; init;}
 
@@ -93,6 +119,124 @@ public class CodeGenerator : IProjectDependency
         {
             DefineConversion(conv);
         }
+
+        foreach(var op in MagicNames.Values)
+        {
+            Project.GlobalScope.DefineFunctionGroup(new LangtFunctionGroup(op), SourceRange.Default).Expect();
+        }
+
+        //BuiltinOperators.Initialize(this);
+    }
+
+    public LangtFunctionGroup GetOperator(OperatorSpec op)
+    {
+        if(!MagicNames.TryGetValue(op, out var name))
+        {
+            throw new InvalidOperationException($"Unknown operator passed to .{nameof(GetOperator)}");
+        }
+
+        return Project.GlobalScope.ResolveFunctionGroup(name, SourceRange.Default, false).Expect("Operators that are known must exist in the global scope.");
+    }
+
+    public void DefineUnaryOperator(TokenType op, LangtType x, LangtType r, UnaryOpDefiner definer)
+    {
+        var opfn = GetOperator(new(OperatorType.Unary, op));
+
+        var ftype = new LangtFunctionType(r, false, new[] {x});
+
+        var lfn = CreateNewFunction(opfn.Name, false, ftype);
+        var fn = new LangtFunction(ftype, new[] {"__x"}, lfn);
+
+        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
+
+        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        Builder.PositionAtEnd(bb);
+
+        Builder.BuildRet
+        (
+            definer(Builder, lfn.GetParam(0))
+        );
+    }
+    public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r, BinaryOpDefiner definer)
+    {
+        // Logger.Note($"Defining op {a.GetFullName()} {op} {b.GetFullName()}");
+        
+        var opfn = GetOperator(new(OperatorType.Binary, op));
+
+        var ftype = new LangtFunctionType(r, false, new[] {a, b});
+
+        var lfn = CreateNewFunction(opfn.Name, false, ftype);
+        var fn = new LangtFunction(ftype, new[] {"__a", "__b"}, lfn);
+
+        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
+
+        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        Builder.PositionAtEnd(bb);
+
+        Builder.BuildRet
+        (
+            definer(Builder, lfn.GetParam(0), lfn.GetParam(1))
+        );
+    }
+
+    public void BuildFunction(LangtFunction fn, IEnumerable<LangtVariable> locals, BoundASTNode body)
+    {
+        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        Builder.PositionAtEnd(bb);
+
+        CurrentFunction = fn;
+
+        foreach(var variable in locals)
+        {
+            var v = Builder.BuildAlloca(LowerType(variable.Type), "var."+variable.Name);
+            
+            if(variable.IsParameter)
+            {
+                Builder.BuildStore(fn.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v);
+            }
+
+            variable.Attach(v);
+        }
+
+        body.Lower(this);
+    }
+
+    public void BuildFunctionCall(LLVMValueRef fn, BoundASTNode[] arguments, LangtFunctionType fntype, string sourceName)
+    {
+        var llvmArgs = new LLVMValueRef[arguments.Length];
+
+        for(var i = 0; i < arguments.Length; i++)
+        {
+            arguments[i].Lower(this);
+            llvmArgs[i] = PopValue(sourceName).LLVM;
+        }
+
+        var r = Builder.BuildCall2(
+            LowerType(fntype!),
+            fn, 
+            llvmArgs
+        );
+
+        if(fntype!.ReturnType != LangtType.None)
+        {
+            PushValue(fntype!.ReturnType, r, sourceName);
+        }
+    }
+
+    public LLVMValueRef CreateNewFunction(string name, bool isExtern, LangtFunctionType type) 
+    {
+        return Module.AddFunction
+        (
+            GetGeneratedFunctionName
+            (
+                isExtern, 
+                CurrentNamespace, 
+                name,
+                type.IsVararg,
+                type.ParameterTypes
+            ), 
+            LowerType(type)
+        );
     }
 
     public void SetCurrentNamespace(LangtNamespace ns)
@@ -219,6 +363,6 @@ public class CodeGenerator : IProjectDependency
         return LangtIdentifierPrepend 
             + (currentNamespace is null ? "" : currentNamespace.GetFullName() + "::") 
             + name 
-            + $"({LangtFunctionType.GetSignatureString(isVararg, paramTypes)})";
+            + LangtFunctionType.GetSignatureString(isVararg, paramTypes);
     }
 }

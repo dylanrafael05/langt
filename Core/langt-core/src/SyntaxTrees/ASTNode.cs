@@ -267,9 +267,14 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         var bast = result.Value;
 
+        if(bast.HasResolution && bast.Resolution is LangtVariable v) 
+        {
+            bast = new BoundVariableReference(bast, v);
+        }
+
         if(options.AutoDeferenceLValue) bast.TryDeferenceLValue();
 
-        return result;
+        return result.Map(_ => bast);
     }
 
     public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions options = default)
@@ -289,19 +294,22 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         
         var ftype = bast.TransformedType;
 
-        if(type.IsFunction && bast.HasResolution && bast.Resolution is LangtFunctionGroup fg)
+        if(bast.HasResolution)
         {
-            var funcType = (LangtFunctionType)type;
+            if(type.IsFunction && bast.Resolution is LangtFunctionGroup fg)
+            {
+                var funcType = (LangtFunctionType)type;
 
-            var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
-            builder.AddData(fr);
+                var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
+                builder.AddData(fr);
 
-            if(!fr) return builder.Build<BoundASTNode>();
+                if(!fr) return builder.Build<BoundASTNode>();
 
-            return builder.Build<BoundASTNode>
-            (
-                new BoundFunctionReference(bast, fr.Value.Function)  
-            );
+                return builder.Build<BoundASTNode>
+                (
+                    new BoundFunctionReference(bast, fr.Value.Function)  
+                );
+            }
         }
 
         if(type == ftype) return builder.Build(bast);

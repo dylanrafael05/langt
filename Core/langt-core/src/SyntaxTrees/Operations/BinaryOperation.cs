@@ -6,6 +6,83 @@ using TT = Langt.Lexing.TokenType;
 
 namespace Langt.AST;
 
+public record BoundAndExpression(BinaryOperation Source, BoundASTNode Left, BoundASTNode Right) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Left.Lower(generator);
+        var l = generator.PopValue(DebugSourceName);
+
+        var start  = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.start");
+        var onTrue = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.true");
+        var end    = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.end");
+
+        generator.Builder.PositionAtEnd(start);
+
+            generator.Builder.BuildSelect(l.LLVM, onTrue.AsValue(), end.AsValue());
+
+        generator.Builder.PositionAtEnd(onTrue);
+
+            Right.Lower(generator);
+            var r = generator.PopValue(DebugSourceName);
+            
+            var real = generator.Builder.BuildAnd(l.LLVM, r.LLVM, "and");
+
+        generator.Builder.PositionAtEnd(end);
+            
+            var phi = generator.Builder.BuildPhi(generator.LowerType(LangtType.Bool));
+            phi.AddIncoming(new[] {l.LLVM}, new[] {start},  1);
+            phi.AddIncoming(new[] {real},   new[] {onTrue}, 1);
+
+            generator.PushValue
+            (
+                LangtType.Bool,
+                phi,
+                DebugSourceName
+            );
+    }
+}
+public record BoundOrExpression(BinaryOperation Source, BoundASTNode Left, BoundASTNode Right) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Left.Lower(generator);
+        var l = generator.PopValue(DebugSourceName);
+
+        var start   = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.start");
+        var onFalse = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.false");
+        var end     = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.end");
+
+        generator.Builder.PositionAtEnd(start);
+
+            generator.Builder.BuildSelect(l.LLVM, end.AsValue(), onFalse.AsValue());
+
+        generator.Builder.PositionAtEnd(onFalse);
+
+            Right.Lower(generator);
+            var r = generator.PopValue(DebugSourceName);
+            
+            var real = generator.Builder.BuildOr(l.LLVM, r.LLVM, "or");
+
+        generator.Builder.PositionAtEnd(end);
+            
+            var phi = generator.Builder.BuildPhi(generator.LowerType(LangtType.Bool));
+            phi.AddIncoming(new[] {l.LLVM}, new[] {start},   1);
+            phi.AddIncoming(new[] {real},   new[] {onFalse}, 1);
+
+            generator.PushValue
+            (
+                LangtType.Bool,
+                phi,
+                DebugSourceName
+            );
+    }
+}
+
 public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : ASTNode(), IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Operator, Right};
@@ -17,129 +94,47 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         visitor.Visit(Right);
     }
 
-    private LangtType? Dominate(TypeCheckState state, BoundASTNode l, BoundASTNode r, SourceRange range)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        if(!state.MakeMatch(l.TransformedType, r))
+        var builder = ResultBuilder.Empty();
+
+        if(Operator.Type is TT.And or TT.Or)
         {
-            if(!state.MakeMatch(r.TransformedType, l))
+            var results = Result.GreedyAll
+            (
+                Left.BindMatching(state, LangtType.Bool),
+                Right.BindMatching(state, LangtType.Bool)
+            );
+            builder.AddData(results);
+
+            if(!results) return builder.Build<BoundASTNode>();
+
+            var (l, r) = results.Value;
+
+            return builder.Build<BoundASTNode>
+            (
+                Operator.Type is TT.And 
+                    ? new BoundAndExpression(this, l, r)
+                    : new BoundOrExpression (this, l, r)
+            );
+        }
+
+        var fn = state.CG.GetOperator(new(Parsing.OperatorType.Binary, Operator.Type));
+        var fr = fn.ResolveOverload(new[] {Left, Right}, Range, state);
+
+        builder.AddData(fr);
+
+        if(!fr) return builder.Build<BoundASTNode>();
+
+        var fo = fr.Value;
+        var fp = fo.OutputParameters.Value.ToArray();
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundFunctionCall(this, fo.Function, fp)
             {
-                state.Error($"Cannot perform any binary operations on values of types {l.TransformedType.Name} and {r.TransformedType.Name}", Range);
-                return null;
+                RawExpressionType = fo.Function.Type.ReturnType
             }
-            else
-            {
-                return l.TransformedType;
-            }
-        }
-        else
-        {
-            return r.TransformedType;
-        }
-    }
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        Left.TypeCheck(state);
-        Right.TypeCheck(state);
-
-        DominantType = Dominate(state, Left, Right, Range);
-
-        if(DominantType is null) return;
-
-        if(!DominantType.IsInteger && !DominantType.IsReal && DominantType != LangtType.Bool)
-        {
-            state.Error($"Operation {Operator.ContentStr} is unsupported for values of type {DominantType.Name}", Range);
-        }
-
-        static LangtType Dummy(Action action)
-        {
-            action();
-            return LangtType.None;
-        }
-
-        RawExpressionType = Operator.Type switch
-        {
-            TT.Plus or TT.Minus or TT.Star or TT.Slash or TT.Percent 
-                => DominantType,
-            TT.DoubleEquals or TT.NotEquals or TT.GreaterThan or TT.LessThan or TT.GreaterEqual or TT.LessEqual or TT.And or TT.Or 
-                => LangtType.Bool,
-            _ => Dummy(() => state.Error($"Unknown operation {Operator.ContentStr}", Range))
-        };
-    }
-
-    public LangtType? DominantType {get; private set;}
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        Right.Lower(lowerer);
-        Left.Lower(lowerer);
-
-        var (l, r) = (lowerer.PopValue(DebugSourceName), lowerer.PopValue(DebugSourceName));
-
-        LLVMValueRef Dummy(Action action)
-        {
-            action();
-            return default;
-        }
-
-        LLVMValueRef v;
-
-        if(l.Type.IsReal)
-        {
-            // TODO: MOVE CHECKING TO TYPE CHECKER
-            v = Operator.Type switch 
-            {
-                TT.Plus    => lowerer.Builder.BuildFAdd(l.LLVM, r.LLVM, "radd"),
-                TT.Minus   => lowerer.Builder.BuildFSub(l.LLVM, r.LLVM, "rsub"),
-                TT.Star    => lowerer.Builder.BuildFMul(l.LLVM, r.LLVM, "rmul"),
-                TT.Slash   => lowerer.Builder.BuildFDiv(l.LLVM, r.LLVM, "rdiv"),
-                TT.Percent => lowerer.Builder.BuildFRem(l.LLVM, r.LLVM, "rmod"),
-
-                TT.DoubleEquals => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealUEQ, l.LLVM, r.LLVM, "rcmp"),
-                TT.NotEquals    => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealUNE, l.LLVM, r.LLVM, "rcmp"),
-                TT.GreaterThan  => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealUGT, l.LLVM, r.LLVM, "rcmp"),
-                TT.GreaterEqual => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealUGE, l.LLVM, r.LLVM, "rcmp"),
-                TT.LessThan     => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealULT, l.LLVM, r.LLVM, "rcmp"),
-                TT.LessEqual    => lowerer.Builder.BuildFCmp(LLVMRealPredicate.LLVMRealULE, l.LLVM, r.LLVM, "rcmp"),
-
-                _ => Dummy(() => lowerer.Diagnostics.Error($"Cannot perform operation {Operator.ContentStr} on integers", Range))
-            };
-        }
-        else if(l.Type.IsInteger)
-        {
-            v = Operator.Type switch 
-            {
-                TT.Plus    => lowerer.Builder.BuildAdd (l.LLVM, r.LLVM, "siadd"),
-                TT.Minus   => lowerer.Builder.BuildSub (l.LLVM, r.LLVM, "sisub"),
-                TT.Star    => lowerer.Builder.BuildMul (l.LLVM, r.LLVM, "simul"),
-                TT.Slash   => lowerer.Builder.BuildSDiv(l.LLVM, r.LLVM, "sidiv"),
-                TT.Percent => lowerer.Builder.BuildSRem(l.LLVM, r.LLVM, "simod"),
-
-                TT.DoubleEquals => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntEQ, l.LLVM, r.LLVM, "sicmp"),
-                TT.NotEquals    => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntNE, l.LLVM, r.LLVM, "sicmp"),
-                TT.GreaterThan  => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntSGT, l.LLVM, r.LLVM, "sicmp"),
-                TT.GreaterEqual => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntSGE, l.LLVM, r.LLVM, "sicmp"),
-                TT.LessThan     => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntSLT, l.LLVM, r.LLVM, "sicmp"),
-                TT.LessEqual    => lowerer.Builder.BuildICmp(LLVMIntPredicate.LLVMIntSLE, l.LLVM, r.LLVM, "sicmp"),
-
-                _ => Dummy(() => lowerer.Diagnostics.Error($"Cannot perform operation {Operator.ContentStr} on reals", Range))
-            };
-        }
-        else if(l.Type == LangtType.Bool)
-        {
-            v = Operator.Type switch 
-            {
-                TT.And => lowerer.Builder.BuildAnd(l.LLVM, r.LLVM, "booland"),
-                TT.Or  => lowerer.Builder.BuildOr (l.LLVM, r.LLVM, "boolor"),
-
-                _ => Dummy(() => lowerer.Diagnostics.Error($"Cannot perform operation {Operator.ContentStr} on booleans", Range))
-            };
-        }
-        else
-        {
-            throw new Exception("this should theoretically be unreachable!");
-        }
-
-        lowerer.PushValue(RawExpressionType, v, DebugSourceName);
+        );
     }
 }

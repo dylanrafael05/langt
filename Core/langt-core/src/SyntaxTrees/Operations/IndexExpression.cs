@@ -4,11 +4,32 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, BoundASTNode Index) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value, Index};
+    public override bool IsLValue => true;
+
+    public override void LowerSelf(CodeGenerator lowerer)
+    {
+        Value.Lower(lowerer);
+        var val = lowerer.PopValue(DebugSourceName);
+
+        Index.Lower(lowerer);
+        var index = lowerer.PopValue(DebugSourceName);
+
+        var pointeeType = lowerer.LowerType(Value.TransformedType.PointeeType!);
+
+        lowerer.PushValue( 
+            val.Type,
+            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
+            DebugSourceName
+        );
+    }
+}
+
 public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, ASTToken Close) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, Open, IndexValue, Close};
-
-    public override bool IsLValue => true;
 
     public override void Dump(VisitDumper visitor)
     {
@@ -18,39 +39,32 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         visitor.Visit(IndexValue);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        // TODO: should this be raw or not vvvvvv
-        Value.TypeCheck(state);
-        IndexValue.TypeCheck(state);
+        var builder = ResultBuilder.Empty();
 
-        if(!Value.TransformedType.IsPointer)
+        var results = Result.All
+        (
+            Value.Bind(state),
+            IndexValue.BindMatching(state, LangtType.Int64)
+        );
+        builder.AddData(results);
+
+        if(!results) return builder.Build<BoundASTNode>();
+
+        var (val, index) = results.Value;
+
+        if(!val.TransformedType.IsPointer)
         {
-            state.Error($"Cannot index a non-pointer", Range);
+            return builder.WithDgnError("Cannot index a non-pointer", Range).Build<BoundASTNode>();
         }
 
-        if(!state.MakeMatch(LangtType.Int64, IndexValue))
-        {
-            state.Error($"Cannot index with a non-integral index", Range);
-        }
-
-        RawExpressionType = Value.TransformedType;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        Value.Lower(lowerer);
-        var val = lowerer.PopValue(DebugSourceName);
-
-        IndexValue.Lower(lowerer);
-        var index = lowerer.PopValue(DebugSourceName);
-
-        var pointeeType = lowerer.LowerType(Value.TransformedType.PointeeType!);
-
-        lowerer.PushValue( 
-            val.Type,
-            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
-            DebugSourceName
+        return builder.Build<BoundASTNode>
+        (
+            new BoundIndexExpression(this, val, index) 
+            {
+                RawExpressionType = val.TransformedType
+            }
         );
     }
 }

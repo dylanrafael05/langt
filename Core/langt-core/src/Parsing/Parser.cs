@@ -17,15 +17,15 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public LangtProject Project {get; init;}
     public string CurrentTypeName => CurrentType?.GetReadableName() ?? "null token";
 
-    public static readonly OperatorSpec[] Operators = new OperatorSpec[] 
+    public static readonly ParseOperatorSpec[] Operators = new ParseOperatorSpec[] 
     {
-        new(OperatorType.UnaryPrefix    , TT.Not),
-        new(OperatorType.LeftRecursive  , TT.Or),
-        new(OperatorType.LeftRecursive  , TT.And),
-        new(OperatorType.LeftRecursive  , TT.DoubleEquals, TT.GreaterThan, TT.GreaterEqual, TT.LessEqual, TT.LessThan, TT.NotEquals),
-        new(OperatorType.LeftRecursive  , TT.Plus, TT.Minus),
-        new(OperatorType.RightRecursive , TT.Star, TT.Slash),
-        new(OperatorType.RightRecursive , TT.Percent),
+        new(ParseOperatorType.UnaryPrefix    , TT.Not),
+        new(ParseOperatorType.LeftRecursive  , TT.Or),
+        new(ParseOperatorType.LeftRecursive  , TT.And),
+        new(ParseOperatorType.LeftRecursive  , TT.DoubleEquals, TT.GreaterThan, TT.GreaterEqual, TT.LessEqual, TT.LessThan, TT.NotEquals),
+        new(ParseOperatorType.LeftRecursive  , TT.Plus, TT.Minus),
+        new(ParseOperatorType.RightRecursive , TT.Star, TT.Slash),
+        new(ParseOperatorType.RightRecursive , TT.Percent),
     };
     public TT? CurrentType
         => Current.Nullable()?.Type;
@@ -370,17 +370,17 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         return pass(state);
     });
 
-    public ParsePass OperatorPass(OperatorSpec spec, ParsePass nextPass)
+    public ParsePass OperatorPass(ParseOperatorSpec spec, ParsePass nextPass)
         => s => Operator(s, spec, nextPass);
 
-    public ASTNode Operator(ParserState state, OperatorSpec spec, ParsePass nextPass)
+    public ASTNode Operator(ParserState state, ParseOperatorSpec spec, ParsePass nextPass)
         => spec.Type switch 
         {
-            OperatorType.LeftRecursive => BinaryOperatorLeft(state, spec.TokenTypes, nextPass),
-            OperatorType.RightRecursive => BinaryOperatorRight(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.LeftRecursive => BinaryOperatorLeft(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.RightRecursive => BinaryOperatorRight(state, spec.TokenTypes, nextPass),
 
-            OperatorType.UnaryPrefix => UnaryPrefix(state, spec.TokenTypes, nextPass),
-            OperatorType.UnaryPostfix => UnaryPostfix(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.UnaryPrefix => UnaryPrefix(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.UnaryPostfix => UnaryPostfix(state, spec.TokenTypes, nextPass),
 
             var t => throw new Exception("Unrecognized operator type " + t)
         };

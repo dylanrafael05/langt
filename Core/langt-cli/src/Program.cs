@@ -8,13 +8,16 @@ using Langt.Parsing;
 using Langt.Structure.Visitors;
 using Langt;
 using System.CommandLine;
+using System.Text.RegularExpressions;
 
 namespace Langt.CLI;
 
-public static class Program
+public static partial class Program
 {
     public static bool Noisy {get; private set;}
     public static bool Debug {get; private set;}
+
+    public static RootCommand? Root {get; private set;}
 
     public static async Task Main(string[] args)
     {
@@ -23,13 +26,13 @@ public static class Program
             args = Console.ReadLine()!.Split(" ");
 #endif
 
-        var root = new RootCommand("The compiler for the *Langt* language, a language created by [Dylan Rafael] in his spare time!");
+        Root = new RootCommand("The compiler for the *Langt* language, a language created by [Dylan Rafael] in his spare time!");
 
             var noisy = new Option<bool>("--noisy", "Whether or not to log information while building");
 
                 noisy.AddAlias("-n");
             
-            root.AddGlobalOption(noisy);
+            Root.AddGlobalOption(noisy);
 
             var debugFlags = new Option<string[]>("--debug", "The flags to set debug for")
             {
@@ -38,7 +41,7 @@ public static class Program
                 AllowMultipleArgumentsPerToken = true
             };
             debugFlags.AddAlias("-d");
-            root.AddGlobalOption(debugFlags);
+            Root.AddGlobalOption(debugFlags);
 
             var run = new Command("run", """Runs the provided Langt file or directory through by means of its "main" function""");
 
@@ -64,15 +67,38 @@ public static class Program
                 run.Add(runinput);
 
             run.SetHandler(OnRun, runinput, noisy, debugFlags);
-            root.Add(run);
+            Root.Add(run);
 
-        root.TreatUnmatchedTokensAsErrors = true;
-        await root.InvokeAsync(args);
+            var defer = new Command("defer", """Defers command execution to read arguments from the console input. Ignores all options.""");
+            defer.SetHandler(DeferAsync);
+            Root.Add(defer);
+
+        Root.TreatUnmatchedTokensAsErrors = true;
+        await Root.InvokeAsync(args);
     }
 
     public static void SetFlags(bool noisy)
     {
         Noisy = noisy;
+    }
+
+    public async static Task DeferAsync() 
+    {
+        Console.WriteLine();
+        Console.WriteLine("Welcome to . . .");
+        Console.WriteLine(".-----------------------.");
+        Console.WriteLine("|     DEFFERED JAIL     |");
+        Console.WriteLine("'-----------------------'");
+        Console.WriteLine();
+        Console.WriteLine("Enter arguments (omitting the call to langt):");
+
+        var line = Console.ReadLine()!;
+        Console.WriteLine();
+
+        await Root!.InvokeAsync
+        (
+            Whitespace().Split(line)
+        );
     }
 
     public static void OnRun(string input, bool noisy, string[] debugFlags)
@@ -125,4 +151,7 @@ public static class Program
         logger.Note("Finished running!");
         Console.WriteLine();
     }
+
+    [GeneratedRegex(@"[ \t]+")]
+    private static partial Regex Whitespace();
 }

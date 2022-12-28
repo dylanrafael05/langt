@@ -29,12 +29,12 @@ public sealed class CLILogger : ILogger
     
     public void Dispose()
     {
-        #if DEBUG
+        //#if DEBUG
         foreach(var (n, b) in flagFileBuilders)
         {
             File.WriteAllText(GetLogFile(n), b.ToString());
         }
-        #endif
+        //#endif
     }
 
     public void Log(MessageSeverity severity, string message)

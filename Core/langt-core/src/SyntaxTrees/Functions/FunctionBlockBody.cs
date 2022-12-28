@@ -3,6 +3,21 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record BoundFunctionBlockBody(FunctionBlockBody Source, BoundASTNode Body) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Body.Lower(generator);
+
+        if(generator.CurrentFunction!.Type.ReturnType == LangtType.None && !Body.Returns)
+        {
+            generator.Builder.BuildRetVoid();
+        }
+    }
+}
+
 public record FunctionBlockBody(Block Block) : FunctionBody
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Block};
@@ -13,5 +28,10 @@ public record FunctionBlockBody(Block Block) : FunctionBody
     }
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
-        => Block.Bind(state);
+    {
+        var b = Block.Bind(state);
+        if(!b) return b;
+
+        return Result.Success<BoundASTNode>(new BoundFunctionBlockBody(this, b.Value));
+    }
 }

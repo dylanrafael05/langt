@@ -8,32 +8,29 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
 
     public LangtNamespace? LNamespace {get; set;}
 
-    public override void DefineTypes(ASTPassState state)
+    public override Result HandleDefinitions(ASTPassState state)
     {
-        if(LNamespace is null) return;
-        state.CG.SetCurrentNamespace(LNamespace!);
-    }
-    public override void ImplementTypes(ASTPassState state)
-    {
-        if(LNamespace is null) return;
-        state.CG.SetCurrentNamespace(LNamespace!);
-    }
-    public override void DefineFunctions(ASTPassState state)
-    {
-        if(LNamespace is null) return;
-        state.CG.SetCurrentNamespace(LNamespace!);
-    }
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
-    {
-        if(LNamespace is null) return;
-        state.CG.SetCurrentNamespace(LNamespace!);
-    }
-    public override void LowerSelf(CodeGenerator generator)
-    {}
+        var n = Identifier.Resolve(state, true);
+        if(!n) return n.Drop();
 
-    public override void Initialize(ASTPassState state)
+        LNamespace = n.Value;
+
+        state.CG.SetCurrentNamespace(LNamespace);
+
+        return Result.Success();
+    }
+
+    public override Result RefineDefinitions(ASTPassState state)
     {
-        LNamespace = Identifier.Resolve(state, true);
-        if(LNamespace is null) throw new Exception();
+        state.CG.SetCurrentNamespace(LNamespace!);
+
+        return Result.Success();
+    }
+
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    {
+        state.CG.SetCurrentNamespace(LNamespace!);
+
+        return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
     }
 }

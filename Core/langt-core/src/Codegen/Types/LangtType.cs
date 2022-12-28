@@ -35,6 +35,7 @@ public abstract record LangtType(string Name) : INamedScoped
 
     [BuiltinType] public static readonly LangtType Real64 = new Wrapper("real64", LLVMTypeRef.Double) {RealBitDepth = 64};
     [BuiltinType] public static readonly LangtType Real32 = new Wrapper("real32", LLVMTypeRef.Float) {RealBitDepth = 32};
+    [BuiltinType] public static readonly LangtType Real16 = new Wrapper("real16", LLVMTypeRef.Half) {RealBitDepth = 16};
     [BuiltinType] public static readonly LangtType Int64  = new Wrapper("int64" , LLVMTypeRef.Int64) {IntegerBitDepth = 64};
     [BuiltinType] public static readonly LangtType Int32  = new Wrapper("int32" , LLVMTypeRef.Int32) {IntegerBitDepth = 32};
     [BuiltinType] public static readonly LangtType Int16  = new Wrapper("int16" , LLVMTypeRef.Int16) {IntegerBitDepth = 16};
@@ -43,6 +44,9 @@ public abstract record LangtType(string Name) : INamedScoped
     [BuiltinType] public static readonly LangtType Bool   = new Wrapper("bool"  , LLVMTypeRef.Int1);
 
     [BuiltinType] public static readonly LangtType None   = new Wrapper("none"  , LLVMTypeRef.Void);
+
+    public static readonly LangtType[] IntegerTypes = new[] {Int8, Int16, Int32, Int64};
+    public static readonly LangtType[] RealTypes    = new[] {Real16, Real32, Real64};
 
     public static readonly LangtType Error = new Wrapper("error", LLVMTypeRef.Void);
 

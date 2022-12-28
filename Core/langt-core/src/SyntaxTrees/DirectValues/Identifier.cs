@@ -7,6 +7,23 @@ namespace Langt.AST;
 
 // TODO: MAJOR: prevent "cascading" state assignment of pointer reading; reset non-err state variables automatically?
 
+public record BoundVariableReference(BoundASTNode BoundSource, LangtVariable Variable) : BoundASTNode(BoundSource.ASTSource)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundSource};
+    
+    public override bool IsLValue => Variable.IsWriteable;
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        generator.PushValue
+        ( 
+            RawExpressionType, 
+            Variable!.UnderlyingValue!.LLVM,
+            DebugSourceName
+        );
+    }
+}
+
 public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
@@ -14,69 +31,18 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     public override void Dump(VisitDumper visitor)
         => visitor.VisitNoDepth(Tok);
 
-    public override bool IsLValue => IsVariable;
-
-    public bool IsVariable => Resolution is (not null) and LangtVariable;
-    public bool IsFunctionGroup => Resolution is (not null) and LangtFunctionGroup;
-    public bool IsFunction {get; private set;}
-
-    public LangtVariable? Variable => Resolution as LangtVariable;
-    public LangtFunction? Function {get; private set;}
-
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        Resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range, state);
-        HasResolution = Resolution is not null;
+        var resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range);
+        if(!resolution) return resolution.Cast<BoundASTNode>();
 
-        state.CG.Logger.Debug(DebugSourceName + " points to " + Resolution.GetFullName(), "lowering");
-        
-        if(!IsVariable) return;
-
-        RawExpressionType = LangtType.PointerTo(Variable!.Type);
-        Variable.UseCount++;
-    }
-
-    protected override void ResetTargetTypeData(TypeCheckState state)
-    {
-        IsFunction = false;
-        Function = null;
-
-        if(IsFunctionGroup) RawExpressionType = LangtType.Error;
-    }
-    protected override void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType = null)
-    {
-        if(!IsFunctionGroup || targetType is null)
-        {
-            return;
-        }
-        
-        if(!targetType.IsFunctionPtr)
-        {
-            state.Error("Cannot target-type a reference to a function group to non-function pointer", Range);
-        }
-
-        var fp = (LangtFunctionType)targetType.PointeeType!;
-        var fg = Resolution as LangtFunctionGroup;
-
-        Function = fg!.ResolveExactOverload(fp.ParameterTypes, fp.IsVararg, this, state, false);
-
-        if(Function is null)
-        {
-            state.Error("Cannot target-type a reference to a function group to a function pointer which does not match any of the group's overloads", Range);
-        }
-
-        RawExpressionType = targetType;
-        IsFunction = true;
-    }
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(IsVariable)
-        {
-            lowerer.PushValue( 
-                RawExpressionType, Variable!.UnderlyingValue!.LLVM,
-                DebugSourceName
-            );
-        }
+        return Result.Success<BoundASTNode>
+        (
+            new BoundASTWrapper(this)
+            {
+                HasResolution = true,
+                Resolution = resolution.Value
+            }
+        );
     }
 }

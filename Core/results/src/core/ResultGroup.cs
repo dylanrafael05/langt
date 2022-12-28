@@ -112,5 +112,5 @@ public struct ResultGroup : IResult<ResultGroup>
         return From(result);
     }
     public static ResultGroup GreedyForeach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
-        => From(input.Select(resultor));
+        => From(input.Select(resultor).ToArray());
 }

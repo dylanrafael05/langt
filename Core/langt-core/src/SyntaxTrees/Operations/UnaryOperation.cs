@@ -2,8 +2,6 @@ using Langt.Lexing;
 using Langt.Codegen;
 using Langt.Structure.Visitors;
 
-using TT = Langt.Lexing.TokenType;
-
 namespace Langt.AST;
 
 public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDirectValue
@@ -16,23 +14,24 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
         visitor.Visit(Operand);
     }
 
-    protected override void InitialTypeCheckSelf(TypeCheckState state)
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        Operand.TypeCheck(state);
-        
-        if(Operator.Type is not TT.Not) throw new Exception("Unknown unary operator " + Operator.Type);
+        var fn = state.CG.GetOperator(new(Parsing.OperatorType.Unary, Operator.Type));
+        var fr = fn.ResolveOverload(new[] {Operand}, Range, state);
 
-        if(!state.MakeMatch(LangtType.Bool, Operand))
-        {
-            state.Error("Cannot negate non-boolean value", Range);
-        }
-    }
+        var builder = ResultBuilder.From(fr);
 
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        Operand.Lower(lowerer);
-        var o = lowerer.PopValue(DebugSourceName);
+        if(!fr) return builder.Build<BoundASTNode>();
 
-        lowerer.PushValue(o.Type, lowerer.Builder.BuildNot(o.LLVM, "not"), DebugSourceName);
+        var fo = fr.Value;
+        var fp = fo.OutputParameters.Value.ToArray();
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundFunctionCall(this, fo.Function, fp)
+            {
+                RawExpressionType = fo.Function.Type.ReturnType
+            }
+        );
     }
 }

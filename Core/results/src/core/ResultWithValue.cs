@@ -37,12 +37,12 @@ public struct Result<T> : IPrimitiveResult<Result<T>>
     public static bool operator false(Result<T> self) 
         => ((IResult)self).HasErrors;
 
-    public Result<T> WithError(IResultError error) => new(Value, HasValue, Errors.Append(error), true, Metadata, HasMetadata);
+    public Result<T> WithError(IResultError error) => new(PossibleValue, HasValue, Errors.Append(error), true, Metadata, HasMetadata);
     public Result<T> WithErrors(IResultError first, params IResultError[] rest) => WithError(first).WithErrors(rest);
-    public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(Value, HasValue, Errors.Concat(errors), HasErrors || errors.Any(), Metadata, HasMetadata);
-    public Result<T> WithMetadata(IResultMetadata metadata) => new(Value, HasValue, Errors, HasErrors, Metadata.Append(metadata), true);
+    public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(PossibleValue, HasValue, Errors.Concat(errors), HasErrors || errors.Any(), Metadata, HasMetadata);
+    public Result<T> WithMetadata(IResultMetadata metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Append(metadata), true);
     public Result<T> WithMetadata(IResultMetadata first, params IResultMetadata[] rest) => WithMetadata(first).WithMetadata(rest);
-    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Value, HasValue, Errors, HasErrors, Metadata.Concat(metadata), HasMetadata || metadata.Any());
+    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Concat(metadata), HasMetadata || metadata.Any());
 
     public Result<T> WithDataFrom(IResult other)
         => WithErrors(other.Errors)

@@ -18,24 +18,24 @@ public class LangtFileScope : LangtScope
         var baseResult = HoldingScope!.Resolve<TOut>(input, outputType, range, propogate);
 
         // End propogation here if necessary
-        if(propogate && !baseResult) return baseResult;
+        if(propogate || !baseResult) return baseResult;
 
         // Accumulate all non-null results into this list
-        var includedResults = Result.SkipForeach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, propogate));
+        var includedResults = ResultGroup.Foreach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, propogate)).CombineSkip();
 
-        var allResults = includedResults
-            .Value
-            .Append(baseResult.Value)
-            .ToArray();
+        var allResults = includedResults.Value.ToList();
+
+        if(baseResult) 
+            allResults.Add(baseResult.Value);
 
         var builder = ResultBuilder
             .From(includedResults)
             .WithData(baseResult);
 
         // Return normal circumstances
-        if(allResults.Length == 0) return builder.WithDgnError($"Could not find {outputType} named {input}", range).Build<TOut>();
+        if(allResults.Count == 0) return builder.WithDgnError($"Could not find {outputType} named {input}", range).Build<TOut>();
 
-        if(allResults.Length == 1) return builder.Build(allResults.First());
+        if(allResults.Count == 1) return builder.Build(allResults.First());
 
         // If allowed, produce an ambiguous resolution error
         return builder.WithDgnError(

@@ -33,7 +33,7 @@ public class DiagnosticCollection : ICollection<Diagnostic>
 
     public void AddResult(IResult r)
     {
-        foreach(var d in (r.Errors.OfType<Diagnostic>()).Concat(r.Metadata.OfType<Diagnostic>()))
+        foreach(var d in r.Errors.OfType<Diagnostic>().Concat(r.Metadata.OfType<Diagnostic>()))
         {
             Add(d);
         }

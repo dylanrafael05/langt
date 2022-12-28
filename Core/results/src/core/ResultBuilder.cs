@@ -83,7 +83,7 @@ public class ResultBuilder
     public static bool operator false(ResultBuilder self) 
         => self.HasErrors;
 
-    public Result Build() => Result.Success().WithDataFrom(this);
+    public Result Build() => Result.Blank().WithDataFrom(this);
     public Result<T> Build<T>()
     {
         if(!HasErrors)
@@ -91,7 +91,7 @@ public class ResultBuilder
             throw new InvalidOperationException($"Attempted to build a valued-result without a value using a {GetType().Name} without any errors present");
         }
 
-        return Result.Success<T>(default!).WithDataFrom(this);
+        return Result.Blank<T>().WithDataFrom(this);
     }
     public Result<T> Build<T>(T value) => Result.Success(value).WithDataFrom(this);
 }
