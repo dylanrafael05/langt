@@ -15,6 +15,11 @@
 		},
 		{
 			"include": "#strings"
+		},
+		{
+			"name": "comment",
+			"begin": "#",
+			"end": "[\\n\\r]"
 		}
 	],
 	"repository": {
@@ -25,12 +30,12 @@
 					"match": "\\b(if|while|else|return)\\b"
 				},
 				{
-					"name": "keyword.operator.langt",
-					"match": "\\b(and|or|not|as|ptrto)\\b"
+					"name": "constant.language",
+					"match": "\\b(true|false)\\b"
 				},
 				{
 					"name": "keyword.other.langt",
-					"match": "\\b(let|extern|struct)\\b"
+					"match": "\\b(let|extern|struct|alias|namespace|using|and|or|not|as)\\b"
 				},
 				{
 					"name": "keyword.other.type.langt",

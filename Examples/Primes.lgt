@@ -1,12 +1,18 @@
-extern sqrt(x: real32) : real32
+extern sqrt(x real32) real32
 
-extern printf(txt: ptr ...) : none
-extern scanf(text: ptr ...): int32
+extern printf(txt *int8 ...) none
+extern scanf(text *int8 ...) int32
 
-let is_prime(x: int32) : bool
+struct PrimeResult
 {
-    let upper: real32 = sqrt(x)
-    let i: int32 = 2
+    isprime bool,
+    factor int32
+}
+
+let is_prime(x int32) PrimeResult
+{
+    let upper = sqrt(x)
+    let i = 2
 
     while i < upper
     {
@@ -14,26 +20,28 @@ let is_prime(x: int32) : bool
 
         if x % i == 0 
         {
-            return false
+            return PrimeResult {false, i}
         }
     }
 
-    return true
+    return PrimeResult {true, 0}
 }   
 
-let main() : none
+let main() none
 {
-    let val : int32 = 0
+    let val = 0
 
     printf("Enter a number:\n\r")
-    scanf("%i", ptrto val)
+    scanf("%i", &val)
 
-    if is_prime(val)
+    let r int32 = is_prime(val)
+
+    if not r.isprime
     {
-        printf("%i is prime", val)
+        printf("%i is not prime, and it has a factor of %d", val, r.factor)
     }
     else
     {
-        printf("%i is not prime", val)
+        printf("%i is prime", val)
     }
 }
