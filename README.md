@@ -58,7 +58,9 @@ Future plans, in approximate order of future completion, are as follows:
 ### Language Features
 - [ ] Add support for *block comments*: 
 ```julia
-#[ block comment ]
+#[ 
+    block comment 
+]
 ```
 *Status: unstarted*
 
@@ -155,13 +157,18 @@ let const nullchar char = '\0'
 ```julia
 let namespace sys 
 {
-    let private malloc(size int64) *none extern
+    let private malloc(size int64) *none extern C
     let private const NULL = 0 as *none
     let private struct ptr_s {value *none}
     let private alias ptr_a = *none
 }
 
 let n = sys::malloc(0) # error! Cannot access private member 'malloc' of namespace 'sys' from outside 'sys'
+```
+
+- [ ] Add support for `sizeof[x]`:
+```julia
+let const char_size = sizeof[char]
 ```
 
 - [ ] Add support for simple `enum` types: 
@@ -208,9 +215,12 @@ let func[T]() none {} # cannot be extern
 let trait hash(this) int32 #'this' serves as both the parameter and type
 let trait print(this) none
 
-#               [param+type]      [param] [type]
-let hash for int32(this) int32 => this as this
+# the type of this is 'thistype'
+let hash for int32(this) int32 => this as thistype
 let hash for int64(this) int32 => this as int32
+
+# thistype can be included in the signature of a trait
+let trait copy(this) thistype 
 
 # multiple function traits
 let trait formattable
