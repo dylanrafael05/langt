@@ -2,8 +2,6 @@
 
 Welcome to the repository of my programming language, langt!
 
-I am relatively new to effective git-hub usage, and as such there will be many idiosyncracies and poor practices found inside this repository.
-
 ---
 Here is the structure of the top-level of folders, including any notable nested folders
 
@@ -17,6 +15,7 @@ Here is the structure of the top-level of folders, including any notable nested 
 
 ---
 The code written in this repository uses the C# bindings for LLVM which can be found [here](https://github.com/dotnet/LLVMSharp).
+No parser generators or lexers are used for compilation, but TextMate is used to provide simple lexical highlighting for vscode in `Experimental/langt-vscode`
 
 ---
 ## Usage
