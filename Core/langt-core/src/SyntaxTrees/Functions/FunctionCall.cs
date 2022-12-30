@@ -94,7 +94,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             var smatch = funcType.MatchSignature(state, Range, givenArgs);
             builder.AddData(smatch.OutResult);
 
-            boundArgs = smatch.OutResult.WithDefault().ToArray()!;
+            boundArgs = smatch.OutResult.Value;
 
             if(!builder)
             {

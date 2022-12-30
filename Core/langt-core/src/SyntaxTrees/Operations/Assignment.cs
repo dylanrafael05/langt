@@ -32,21 +32,24 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
+        var builder = ResultBuilder.Empty();
+
         var leftResult = Left.Bind(state, new TypeCheckOptions {AutoDeferenceLValue = false});
-        if(!leftResult) return leftResult;
+        builder.AddData(leftResult);
+        if(!leftResult) return builder.Build<BoundASTNode>();
 
         var left = leftResult.Value;
-
-        var rightResult = Right.BindMatching(state, left.TransformedType.PointeeType!);
-        if(!rightResult) return rightResult;
-        var right = rightResult.Value;
-
-        var builder = ResultBuilder.From(leftResult, rightResult);
-
+        
         if(!left.TransformedType.IsPointer || !left.IsLValue)
         {
             return builder.WithDgnError($"Cannot assign to a non-assignable value", Range).Build<BoundASTNode>();
         }
+
+        var rightResult = Right.BindMatching(state, left.TransformedType.PointeeType!);
+        builder.AddData(rightResult);
+        if(!rightResult) return builder.Build<BoundASTNode>();
+
+        var right = rightResult.Value;
         
         return builder.Build<BoundASTNode>
         (

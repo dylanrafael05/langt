@@ -59,7 +59,7 @@ public class LangtScope : IScoped
 
             // If the above condition failed,
             // produce a warning that an ambiguity was present but not fatal
-            builder.AddWarning($"Possible reference candidate {r.FullName} found, but expected a {outputType}; try to disambiguate", range);
+            builder.AddWarning($"Possible reference candidate {r.GetFullName()} found, but expected a {outputType}; try to disambiguate", range);
         }
 
         Result<TOut>? result = null;
@@ -75,9 +75,13 @@ public class LangtScope : IScoped
         {
             builder.AddDgnError($"Could not find {outputType} named {input}", range);
         }
+        else
+        {
+            builder.AddData(result.Value);
+        }
 
         // Return the result, null or not
-        return result is null ? builder.Build<TOut>() : builder.Build(result.Value.Value);
+        return result is null || builder.HasErrors ? builder.Build<TOut>() : builder.Build(result.Value.Value);
     }
 
     public Result<LangtVariable> ResolveVariable(string name, SourceRange range, bool propogate = true) 

@@ -26,10 +26,10 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : Bound
 
         foreach(var n in nodes)
         {
-            var res = n.Bind(state).Forgive((BoundASTNode)null!);
+            var res = n.Bind(state);
             builder.AddData(res);
             
-            var bast = res.Value;
+            var bast = res.Or(new BoundASTWrapper(n) {IsError = true})!;
 
             if(returns)
             {
@@ -37,11 +37,15 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : Bound
             }
 
             returns |= bast.Returns;
+
+            boundNotes.Add(bast);
         }
+
+        if(!builder) return builder.Build<BoundASTNode>();
         
         return builder.Build<BoundASTNode>
         (
-            new BoundGroup(source, boundNotes)
+            new BoundGroup(source, boundNotes!)
             {
                 RawExpressionType = LangtType.None
             }

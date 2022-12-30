@@ -37,7 +37,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true, RawExpressionType = LangtType.None});
+        if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true});
 
         var rtype = state.CG.CurrentFunction!.Type.ReturnType;
 
@@ -50,8 +50,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
         (
             new BoundReturn(this, vr.Value)
             {
-                Returns = true,
-                RawExpressionType = LangtType.None
+                Returns = true
             }
         );
     }

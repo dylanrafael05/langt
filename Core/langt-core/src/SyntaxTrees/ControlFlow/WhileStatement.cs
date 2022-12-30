@@ -66,9 +66,6 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
         return ResultBuilder.From(results).Build<BoundASTNode>
         (
             new BoundWhileStatement(this, cond, blk)
-            {
-                RawExpressionType = LangtType.None
-            }
         );
     }
 }

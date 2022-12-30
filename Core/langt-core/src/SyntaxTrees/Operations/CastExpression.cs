@@ -51,9 +51,13 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         if(!cv) return builder.Build<BoundASTNode>();
         var conversion = cv.Value;
 
+        // TODO: make RawExpressionType required or a parameter
         return builder.Build<BoundASTNode>
         (
             new BoundCastExpression(this, val, conversion.TransformProvider.TransformerFor(val.TransformedType, type))
+            {
+                RawExpressionType = type
+            }
         );
     }
 }

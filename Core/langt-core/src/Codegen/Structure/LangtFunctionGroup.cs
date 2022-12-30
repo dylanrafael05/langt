@@ -4,7 +4,9 @@ namespace Langt.Codegen;
 
 public record LangtFunctionGroup(string Name) : INamedScoped
 {
-    public record struct Resolution(LangtFunction Function, ResultGroup<BoundASTNode> OutputParameters, SignatureMatchLevel MatchLevel);
+    public string DisplayName => CodeGenerator.DisplayableFunctionGroupName(Name);
+
+    public record struct Resolution(LangtFunction Function, Result<BoundASTNode[]> OutputParameters, SignatureMatchLevel MatchLevel);
 
     public LangtScope? HoldingScope { get; set; }
 
@@ -17,7 +19,7 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
         if(r) return Result.Error
         (
-            Diagnostic.Error($"Cannot redefine overload of function {Name} with signature {overload.Type.SignatureString}", range)
+            Diagnostic.Error($"Cannot redefine overload of function {this.GetFullName()} with signature {overload.Type.SignatureString}", range)
         );
 
         overloads.Add(overload);
@@ -65,8 +67,14 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
     public Result<Resolution> ResolveOverload(ASTNode[] parameters, SourceRange range, ASTPassState state) 
     {
-        var resolves = overloads
+        var resolvesFirst = overloads
             .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, parameters)})
+            .ToArray();
+
+        if(resolvesFirst.FirstOrDefault(p => p.Resolution.InternalError) is var p && p is not null) 
+            return p.Resolution.OutResult.Cast<Resolution>();
+
+        var resolves = resolvesFirst
             .Where(r => !r.Resolution.OutResult.HasErrors)
             .Select(r => new Resolution(r.Value, r.Resolution.OutResult, r.Resolution.Level))
             .ToArray();
@@ -80,7 +88,7 @@ public record LangtFunctionGroup(string Name) : INamedScoped
     {
         var resolves = overloads
             .Where(o => o.Type.ParameterTypes.SequenceEqual(parameterTypes) && o.Type.IsVararg == isVararg)
-            .Select(o => new Resolution(o, ResultGroup.From<BoundASTNode>(), SignatureMatchLevel.Exact))
+            .Select(o => new Resolution(o, Result.Blank<BoundASTNode[]>(), SignatureMatchLevel.Exact))
             .ToArray();
         
         return HandleOverload(

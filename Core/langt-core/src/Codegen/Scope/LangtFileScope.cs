@@ -18,7 +18,7 @@ public class LangtFileScope : LangtScope
         var baseResult = HoldingScope!.Resolve<TOut>(input, outputType, range, propogate);
 
         // End propogation here if necessary
-        if(propogate || !baseResult) return baseResult;
+        if(!propogate || !baseResult) return baseResult;
 
         // Accumulate all non-null results into this list
         var includedResults = ResultGroup.Foreach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, propogate)).CombineSkip();
@@ -40,7 +40,7 @@ public class LangtFileScope : LangtScope
         // If allowed, produce an ambiguous resolution error
         return builder.WithDgnError(
             "Ambiguity between " + 
-            string.Join(", ", allResults.Select(t => t.FullName)) +
+            string.Join(", ", allResults.Select(t => t.GetFullName())) +
             "; either disambiguate, remove includes, or use explicit '.' accesses"
         , range).Build<TOut>();
     }

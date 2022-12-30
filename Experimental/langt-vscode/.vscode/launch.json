@@ -6,9 +6,10 @@
 	"version": "0.2.0",
     "configurations": [
         {
-            "name": "Extension",
+            "name": "extension",
             "type": "extensionHost",
             "request": "launch",
+            "cwd": "${workspaceFolder}/Expiremental/langt-vscode",
             "args": [
                 "--extensionDevelopmentPath=${workspaceFolder}"
             ]

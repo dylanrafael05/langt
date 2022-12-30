@@ -88,7 +88,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
             new BoundIfStatement(this, cond, block, boundElse)
             {
                 RawExpressionType = LangtType.None,
-                Returns = block.Returns && (boundElse?.Returns ?? true)
+                Returns = block.Returns && (boundElse?.Returns ?? false)
             }
         );
     }

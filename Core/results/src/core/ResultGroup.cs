@@ -19,10 +19,10 @@ public struct ResultGroup : IResult<ResultGroup>
     
     public ResultGroup(IEnumerable<Result> innerResults)
     {
-        Errors = innerResults.SelectMany(r => r.Errors);
+        Errors = innerResults.SelectMany(r => r.Errors).ToArray();
         HasErrors = innerResults.Any(r => r.HasErrors);
         
-        Metadata = innerResults.SelectMany(r => r.Metadata);
+        Metadata = innerResults.SelectMany(r => r.Metadata).ToArray();
         HasMetadata = innerResults.Any(r => r.HasMetadata);
 
         InnerResults = innerResults;

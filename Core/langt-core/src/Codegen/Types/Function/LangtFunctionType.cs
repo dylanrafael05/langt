@@ -5,7 +5,7 @@ namespace Langt.Codegen;
 
 public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[] ParameterTypes) : LangtType(GetName(ReturnType, ParameterTypes, IsVararg))
 {
-    public record struct ResolutionResult(ResultGroup<BoundASTNode> OutResult, SignatureMatchLevel Level);
+    public record struct ResolutionResult(Result<BoundASTNode[]> OutResult, SignatureMatchLevel Level, bool InternalError);
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
@@ -40,38 +40,61 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
         {
             return new
             (
-                ResultGroup.From
+                Result.Error<BoundASTNode[]>
                 (
-                    Result.Error<BoundASTNode>
-                    (
-                        Diagnostic.Error("Incorrect number of parameters", range)
-                    )
+                    Diagnostic.Error("Incorrect number of parameters", range)
                 ),
-                SignatureMatchLevel.None
+                SignatureMatchLevel.None,
+                false
             );
         }
 
         level = SignatureMatchLevel.Exact;
+        bool internalErr = false;
+        Result<BoundASTNode>? internalErrRes = null;
 
-        return new
+        var group = ResultGroup.Foreach
         (
-            ResultGroup.Foreach
-            (
-                parameters.Indexed(),
-                p => 
+            parameters.Indexed(),
+            p => 
+            {
+                if(p.Index >= ParameterTypes.Length)
                 {
-                    var op = p.Value.BindMatching(state, ParameterTypes[p.Index], out var coerced);
-                    var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
-
-                    if(level < clevel)
+                    var r = p.Value.Bind(state);
+                    
+                    if(!r) 
                     {
-                        level = clevel;
+                        internalErr = true;
+                        internalErrRes = r;
                     }
 
-                    return op;
+                    return r;
                 }
-            ),
-            level
+
+                var op = p.Value.BindMatching(state, ParameterTypes[p.Index], out var coerced, out internalErr);
+                if(internalErr)
+                {
+                    internalErrRes = op;
+                }
+
+                var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
+
+                if(level < clevel)
+                {
+                    level = clevel;
+                }
+
+                return op;
+            }
         );
+
+        if(internalErr)
+        {
+            return new(internalErrRes!.Value.Cast<BoundASTNode[]>(), level, true);
+        }
+        else 
+        {
+            return new(group.Combine().Map(k => k.ToArray()), level, false);
+        }
     }
 }

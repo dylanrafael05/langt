@@ -28,7 +28,7 @@ public struct ResultGroup<T> : IResult<ResultGroup<T>>
     public Result<IEnumerable<T>> Combine() => Result.Success<IEnumerable<T>>(WithDefault()!).WithDataFrom(this);
     public Result<IEnumerable<T?>> CombineWithDefault(T? defaultValue = default) => Result.Success(WithDefault(defaultValue)).WithDataFrom(this);
     public Result<IEnumerable<T?>> CombineWithDefault(Func<T?> defaultValueProducer) => Result.Success(WithDefault(defaultValueProducer)).WithDataFrom(this);
-    public Result<IEnumerable<T>> CombineSkip() => Result.Success(SkipErrors()).WithDataFrom(this);
+    public Result<IEnumerable<T>> CombineSkip() => Result.Success(SkipErrors()).WithMetadata(Metadata);
     
     public ResultGroup(IEnumerable<Result<T>> innerResults)
     {

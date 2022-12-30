@@ -55,8 +55,8 @@ public static class BuiltinOperators
             ITransformer? convmM = null;
             if(i1 != i2)
             {
-                var conv12 = generator.ResolveConversion(i1, i2, SourceRange.Default).Expect();
-                var conv21 = generator.ResolveConversion(i2, i1, SourceRange.Default).Expect();
+                var conv21 = generator.ResolveConversion(i1, i2, SourceRange.Default).Expect()!;
+                var conv12 = generator.ResolveConversion(i2, i1, SourceRange.Default).Expect()!;
 
                 convmM = conv12.IsImplicit 
                     ? conv12.TransformProvider.TransformerFor(i1, i2) 
@@ -88,7 +88,7 @@ public static class BuiltinOperators
             {
                 if(convmM is not null)
                 {
-                    generator.DefineBinaryOperator(op, i1, i2, iM, (b, x, y) => b.BuildICmp
+                    generator.DefineBinaryOperator(op, i1, i2, LangtType.Bool, (b, x, y) => b.BuildICmp
                     (
                         pred, 
                         convmM.Input == i1 ? convmM.Perform(generator, x) : x, 
@@ -121,8 +121,8 @@ public static class BuiltinOperators
             ITransformer? convmM = null;
             if(i1 != i2)
             {
-                var conv12 = generator.ResolveConversion(i1, i2, SourceRange.Default).Expect();
-                var conv21 = generator.ResolveConversion(i2, i1, SourceRange.Default).Expect();
+                var conv21 = generator.ResolveConversion(i1, i2, SourceRange.Default).Expect();
+                var conv12 = generator.ResolveConversion(i2, i1, SourceRange.Default).Expect();
 
                 convmM = conv12.IsImplicit 
                     ? conv12.TransformProvider.TransformerFor(i1, i2) 
@@ -154,7 +154,7 @@ public static class BuiltinOperators
             {
                 if(convmM is not null)
                 {
-                    generator.DefineBinaryOperator(op, i1, i2, iM, (b, x, y) => b.BuildFCmp
+                    generator.DefineBinaryOperator(op, i1, i2, LangtType.Bool, (b, x, y) => b.BuildFCmp
                     (
                         pred, 
                         convmM.Input == i1 ? convmM.Perform(generator, x) : x, 

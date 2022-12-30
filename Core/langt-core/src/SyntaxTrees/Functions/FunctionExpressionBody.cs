@@ -29,6 +29,13 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
         var e = Expression.Bind(state);
         if(!e) return e;
 
-        return Result.Success<BoundASTNode>(new BoundFunctionExpressionBody(this, e.Value));
+        return Result.Success<BoundASTNode>
+        (
+            new BoundFunctionExpressionBody(this, e.Value)
+            {
+                RawExpressionType = e.Value.TransformedType, 
+                Returns = true
+            }
+        );
     }
 }

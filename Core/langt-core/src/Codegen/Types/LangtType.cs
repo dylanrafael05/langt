@@ -6,6 +6,8 @@ using System.Diagnostics.CodeAnalysis;
 namespace Langt.Codegen;
 public abstract record LangtType(string Name) : INamedScoped
 {
+    string INamed.DisplayName => Name;
+
     public int? IntegerBitDepth {get; init;}
     public int? RealBitDepth {get; init;}
 

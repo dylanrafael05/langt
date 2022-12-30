@@ -121,7 +121,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// What is the direct type (unaffected by transformers) of this AST node. Should be
     /// equal to <see cref="LangtType.Error"/> if this node is not an expression.
     /// </summary>
-    public LangtType RawExpressionType {get; set;} = LangtType.Error;
+    public LangtType RawExpressionType {get; set;} = LangtType.None;
     /// <summary>
     /// What is the inferabble type of this AST node; what type should be used for type
     /// inference of this expression if it is distinct from <see cref="RawExpressionType"/>.
@@ -146,6 +146,8 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// a function or due to a degenerate condition.
     /// </summary>
     public bool Unreachable {get; set;} = false;
+
+    public bool IsError {get; set;} = false;
     
     /// <summary>
     /// Whether or not this AST node represents an identifier for a statically resolveable
@@ -269,7 +271,12 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         if(bast.HasResolution && bast.Resolution is LangtVariable v) 
         {
-            bast = new BoundVariableReference(bast, v);
+            bast = new BoundVariableReference(bast, v)
+            {
+                RawExpressionType = LangtType.PointerTo(v.Type),
+                HasResolution = true,
+                Resolution = v
+            };
         }
 
         if(options.AutoDeferenceLValue) bast.TryDeferenceLValue();
@@ -277,10 +284,13 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         return result.Map(_ => bast);
     }
 
-    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions options = default)
+    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool coerced, out bool internalErr, TypeCheckOptions options = default)
     {
         coerced = false;
-        // TODO: implement custom messages for failure cases
+        internalErr = false;
+        
+        //TODO: check that errors are not caused by type checking to report as internal; split type checking into separate phase.
+        //this can be done by adding a "refine bindings" pass which reconstructs the bound ast with type information.
 
         var binding = Bind(state, options with 
         {
@@ -296,9 +306,9 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         if(bast.HasResolution)
         {
-            if(type.IsFunction && bast.Resolution is LangtFunctionGroup fg)
+            if(type.IsFunctionPtr && bast.Resolution is LangtFunctionGroup fg)
             {
-                var funcType = (LangtFunctionType)type;
+                var funcType = (LangtFunctionType)type.PointeeType!;
 
                 var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
                 builder.AddData(fr);
@@ -311,6 +321,14 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
                 );
             }
         }
+
+        internalErr = true;
+        
+        if(binding.Value.TransformedType == LangtType.None) return builder
+            .WithDgnError($"Expression must have a value", Range)
+            .Build<BoundASTNode>();
+
+        internalErr = false;
 
         if(type == ftype) return builder.Build(bast);
         coerced = true;
@@ -336,8 +354,10 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         bast.ApplyTransform(conv.TransformProvider.TransformerFor(ftype, type));
         return builder.Build(bast);
     }
+    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool internalErr, TypeCheckOptions options = default)
+        => BindMatching(state, type, out _, out internalErr, options);
     public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, TypeCheckOptions options = default)
-        => BindMatching(state, type, out _, options);
+        => BindMatching(state, type, out _, out _, options);
 
     // /// <summary>
     // /// Perform the initial steps of type checking.

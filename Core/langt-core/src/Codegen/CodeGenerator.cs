@@ -27,8 +27,29 @@ public class CodeGenerator : IProjectDependency
         {new(OperatorType.Binary, TokenType.GreaterEqual), "op_greater_equal"},
 
         {new(OperatorType.Unary, TokenType.Minus), "op_neg"},
-        {new(OperatorType.Unary, TokenType.Not),   "op_not"}
+        {new(OperatorType.Unary, TokenType.Not),   "op_not"},
     };
+    public static Dictionary<string, string> MagicNameToDescription {get;} = new()
+    {
+        {"op_add", "operator +"},
+        {"op_sub", "operator -"},
+        {"op_mul", "operator *"},
+        {"op_div", "operator /"},
+        {"op_mod", "operator %"},
+
+        {"op_equal",         "operator =="},
+        {"op_not_equal",     "operator !="},
+        {"op_less",          "operator <" },
+        {"op_less_equal",    "operator <="},
+        {"op_greater",       "operator >" },
+        {"op_greater_equal", "operator >="},
+
+        {"op_neg", "operator unary -"},
+        {"op_not", "operator not"}
+    };
+
+    public static string DisplayableFunctionGroupName(string name) 
+        => MagicNameToDescription.TryGetValue(name, out var value) ? value : name;
 
     public delegate LLVMValueRef BinaryOpDefiner(LLVMBuilderRef builder, LLVMValueRef a, LLVMValueRef b);
     public delegate LLVMValueRef UnaryOpDefiner(LLVMBuilderRef builder, LLVMValueRef x);
@@ -125,7 +146,7 @@ public class CodeGenerator : IProjectDependency
             Project.GlobalScope.DefineFunctionGroup(new LangtFunctionGroup(op), SourceRange.Default).Expect();
         }
 
-        //BuiltinOperators.Initialize(this);
+        BuiltinOperators.Initialize(this);
     }
 
     public LangtFunctionGroup GetOperator(OperatorSpec op)

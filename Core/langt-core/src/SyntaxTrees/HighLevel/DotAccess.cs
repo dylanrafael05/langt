@@ -31,9 +31,10 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         var result = new BoundDotAccess(this, left)
         {
-            HasResolution = left.HasResolution //&& left.Resolution is not LangtVariable //TODO: ?
+            HasResolution = left.HasResolution && left.Resolution is not LangtVariable
         };
 
+        // TODO: make 'static' and 'dynamic' resolutions distinct; variables vs. types
         if (result.HasResolution)
         {
             if(left.Resolution is not LangtNamespace ns) 
@@ -46,6 +47,8 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
             builder.AddData(resolutionResult);
             
             result.Resolution = resolutionResult.OrDefault();
+
+            return builder.Build<BoundASTNode>(result);
         }
 
         if(!left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)

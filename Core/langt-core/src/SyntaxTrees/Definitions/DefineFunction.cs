@@ -127,7 +127,7 @@ public record FunctionDefinition(ASTToken Let,
 
         if(Let.Type is TokenType.Extern || Function is null)
         {
-            // TODO: prechcek extern existence
+            // TODO: precheck extern existence
             return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
         }
 
@@ -161,7 +161,7 @@ public record FunctionDefinition(ASTToken Let,
 
         Result<BoundASTNode> br;
 
-        if(Function.Type.ReturnType == LangtType.None)
+        if(Function.Type.ReturnType == LangtType.None || Body is FunctionBlockBody)
         {
             br = Body!.Bind(state);
         }

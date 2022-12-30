@@ -17,19 +17,8 @@ public record LangtConversion(TransformProvider TransformProvider)
             Builtin.Add(new(provider) {IsImplicit = isImplicit});
         }
 
-        var types = new[] 
-        {
-            LangtType.Int8,
-            LangtType.Int16,
-            LangtType.Int32,
-            LangtType.Int64,
-
-            LangtType.Real32,
-            LangtType.Real64,
-        };
-
-        var intTypes = types.Where(t => t.IsInteger);
-        var realTypes = types.Where(t => t.IsReal);
+        var intTypes = LangtType.IntegerTypes;
+        var realTypes = LangtType.RealTypes;
 
         void BuildConverters(
             IEnumerable<LangtType> source, 

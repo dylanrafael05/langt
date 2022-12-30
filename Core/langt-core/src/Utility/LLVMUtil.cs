@@ -5,17 +5,7 @@ public static class LLVMUtil
 {
     public static void PrimeLLVM()
     {
-        LLVM.LinkInMCJIT();
         LLVM.LinkInInterpreter();
-
-        LLVM.InitializeX86AsmParser();
-        LLVM.InitializeX86AsmPrinter();
-
-        LLVM.InitializeX86Target();
-        LLVM.InitializeX86TargetMC();
-        LLVM.InitializeX86TargetInfo();
-
-        LLVM.InitializeX86Disassembler();
     }
 
     public static LLVMTypeRef CreatePointerType(this LLVMContextRef ctx, uint AS) 

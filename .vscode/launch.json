@@ -10,10 +10,18 @@
             "request": "launch",
             "preLaunchTask": "build",
             "program": "${workspaceFolder}/Core/langt-cli/bin/Debug/net7.0/win-x64/langt-cli.dll",
-            "args": ["!"],
+            "args": ["defer"],
             "cwd": "${workspaceFolder}/Examples",
             "console": "integratedTerminal",
             "stopAtEntry": false
+        },
+        {
+            "name": "extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/Experimental/langt-vscode"
+            ]
         }
     ]
 }

@@ -5,7 +5,9 @@ namespace Langt.Codegen;
 
 public record LangtVariable(string Name, LangtType Type) : INamedScoped
 {
-    public bool IsWriteable {get; init;}
+    string INamed.DisplayName => Name;
+    
+    public bool IsWriteable {get; init;} = true;
     public uint? ParameterNumber {get; init;}
 
     public int UseCount {get; set;} = 0;

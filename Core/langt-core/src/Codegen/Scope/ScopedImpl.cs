@@ -6,7 +6,7 @@ public static class ScopedImpl
     {
         if(s is null) return "";
 
-        var name = (s as INamed)?.Name;
+        var name = (s as INamed)?.DisplayName;
 
         if(s.HoldingScope is null) return name ?? "";
 

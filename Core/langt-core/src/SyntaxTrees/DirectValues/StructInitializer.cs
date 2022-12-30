@@ -91,9 +91,14 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         );
         builder.AddData(results);
 
+        if(!results) return builder.Build<BoundASTNode>();
+
         return builder.Build<BoundASTNode>
         (
             new BoundStructInitializer(this, results.Value.ToArray())
+            {
+                RawExpressionType = type
+            }
         );
     }
 }
