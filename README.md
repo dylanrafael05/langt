@@ -12,7 +12,7 @@ Here is the structure of the top-level of folders, including any notable nested 
   - `langt-cli` is the project which serves as a command-line interface with the compiler
   - `results` is the project which implements the `Result` and `Result<T>` classes for usage throughout the codebase.
 - `Examples`: contains example langt files used for testing the compiler and language.
-- `Expiremental`: contains currently unfinished projects like an implementation of the LSP and a vscode extension
+- `Experimental`: contains currently unfinished projects like an implementation of the LSP and a vscode extension
 - `Other`: miscellaneous items
 
 ---
