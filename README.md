@@ -2,7 +2,7 @@
 
 Welcome to the repository of my programming language, langt!
 
-![https://github.com/dylanrafael05/langt/blob/main/Experimental/langt-vscode/icons/Light.png](Icon)
+![Icon](Experimental/langt-vscode/icons/Light.png)
 
 ---
 Here is the structure of the top-level of folders, including any notable nested folders
