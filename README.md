@@ -17,8 +17,9 @@ Here is the structure of the top-level of folders, including any notable nested 
 - `Other`: miscellaneous items
 
 ---
-The code written in this repository uses the C# bindings for LLVM which can be found [here](https://github.com/dotnet/LLVMSharp).
-No parser generators or lexers are used for compilation, but TextMate is used to provide simple lexical highlighting for vscode in `Experimental/langt-vscode`
+The code written in this repository uses the C# bindings for LLVM which can be found [here](https://github.com/dotnet/LLVMSharp). The command line interface uses
+the [System.CommandLine](https://www.nuget.org/packages/System.CommandLine) module from NuGet to simplify argument parsing.
+No parser generators or lexers are used for compilation of Langt itself, but TextMate is used to provide simple lexical highlighting for vscode in `Experimental/langt-vscode`. This will likely be removed when the extension transitions to being a language server client.
 
 ---
 ## Usage
