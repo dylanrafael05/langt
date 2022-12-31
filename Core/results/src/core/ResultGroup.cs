@@ -1,13 +1,7 @@
 namespace Results;
 
-public struct ResultGroup : IResult<ResultGroup>
+public struct ResultGroup : IResultlike<ResultGroup>
 {
-    bool IResult.HasValue => !HasErrors;
-    object? IResult.Value => ((IResult)this).HasValue 
-        ? null 
-        : throw new InvalidOperationException($"Cannot get .{nameof(IResult.Value)} if .{nameof(IResult.HasValue)} returns false!")
-        ;
-
     
     public IEnumerable<IResultError> Errors {get; init;}
     public IEnumerable<IResultMetadata> Metadata {get; init;}

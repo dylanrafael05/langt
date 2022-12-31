@@ -44,7 +44,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
 
             varT = tn.Value;
             
-            var bn = Value.BindMatching(state, varT);
+            var bn = Value.BindMatchingExprType(state, varT);
             builder.AddData(bn);
             if(!bn) return builder.Build<BoundASTNode>();
 

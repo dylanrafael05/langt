@@ -4,9 +4,10 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : BoundASTNode(Source)
+public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtScope? Scope) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundNodes};
+    public bool HasScope => Scope is not null;
 
     public override void LowerSelf(CodeGenerator generator)
     {
@@ -17,7 +18,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : Bound
         }
     }
 
-    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state)
+    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, LangtScope? scope = null)
     {
         var builder = ResultBuilder.Empty();
         var returns = false;
@@ -45,7 +46,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes) : Bound
         
         return builder.Build<BoundASTNode>
         (
-            new BoundGroup(source, boundNotes!)
+            new BoundGroup(source, boundNotes!, scope)
             {
                 RawExpressionType = LangtType.None
             }
@@ -74,5 +75,13 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
         => ResultGroup.GreedyForeach(Statements, n => n.RefineDefinitions(state)).Combine();
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
-        => BoundGroup.BindFromNodes(this, Statements, state);
+    {
+        var scope = options.PredefinedBlockScope ?? state.CG.CreateUnnamedScope();
+
+        var r = BoundGroup.BindFromNodes(this, Statements, state, scope);
+
+        if(!options.HasPredefinedBlockScope) state.CG.CloseScope();
+
+        return r;
+    }
 }

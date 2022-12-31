@@ -102,8 +102,8 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         {
             var results = Result.GreedyAll
             (
-                Left.BindMatching(state, LangtType.Bool),
-                Right.BindMatching(state, LangtType.Bool)
+                Left.BindMatchingExprType(state, LangtType.Bool),
+                Right.BindMatchingExprType(state, LangtType.Bool)
             );
             builder.AddData(results);
 

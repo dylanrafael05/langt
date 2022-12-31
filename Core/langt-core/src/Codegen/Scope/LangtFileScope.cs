@@ -18,10 +18,10 @@ public class LangtFileScope : LangtScope
         var baseResult = HoldingScope!.Resolve<TOut>(input, outputType, range, propogate);
 
         // End propogation here if necessary
-        if(!propogate || !baseResult) return baseResult;
+        if(!propogate) return baseResult;
 
         // Accumulate all non-null results into this list
-        var includedResults = ResultGroup.Foreach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, propogate)).CombineSkip();
+        var includedResults = ResultGroup.Foreach(IncludedNamespaces, n => n.Resolve<TOut>(input, outputType, range, false)).CombineSkip();
 
         var allResults = includedResults.Value.ToList();
 
@@ -29,8 +29,10 @@ public class LangtFileScope : LangtScope
             allResults.Add(baseResult.Value);
 
         var builder = ResultBuilder
-            .From(includedResults)
-            .WithData(baseResult);
+            .From(includedResults);
+
+        if(baseResult) builder
+            .AddData(baseResult);
 
         // Return normal circumstances
         if(allResults.Count == 0) return builder.WithDgnError($"Could not find {outputType} named {input}", range).Build<TOut>();

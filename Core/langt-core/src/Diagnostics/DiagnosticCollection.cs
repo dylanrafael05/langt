@@ -31,7 +31,7 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     public void Fatal(string message, SourceRange range)
         => Add(new(MessageSeverity.Fatal, message, range));
 
-    public void AddResult(IResult r)
+    public void AddResult(IResultlike r)
     {
         foreach(var d in r.Errors.OfType<Diagnostic>())
         {

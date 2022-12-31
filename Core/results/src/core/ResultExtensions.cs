@@ -2,12 +2,49 @@ namespace Results;
 
 public static class ResultExtensions
 {
+    public static R WithError<R>(this R r, IResultError err) where R : IMutableResultlike<R>
+        => r.WithErrors(new IResultError[] {err});
+    public static R WithMetadata<R>(this R r, IResultMetadata meta) where R : IMutableResultlike<R>
+        => r.WithMetadata(new IResultMetadata[] {meta});
+
+    public static R WithDataFrom<R>(this R r, IResultlike other) where R : IMutableResultlike<R>
+        => r.WithErrors(other.Errors).WithMetadata(other.Metadata);
+
+    public static R ExcludingErrors<R>(this R r) where R : IMutableResultlike<R>
+        => r.ExcludingErrors(r.Errors);
+    public static R ExcludingMetadata<R>(this R r) where R : IMutableResultlike<R>
+        => r.ExcludingMetadata(r.Metadata);
+
+    public static T Or<R, T>(this R r, T orValue) where R : IResultlike, IValued<T>
+        => r.HasValue ? r.Value : orValue;
+    public static T Or<R, T>(this R r, Func<T> orValueProvider) where R : IResultlike, IValued<T>
+        => r.HasValue ? r.Value : orValueProvider();
+
+    public static R Forgive<R, T>(this R r, Func<T> defaultValue) where R : IMutableValuedResultlike<R, T>
+        => r.Forgive().WithValue(r.Or(defaultValue)!);
+    public static R Forgive<R, T>(this R r, T defaultValue) where R : IMutableValuedResultlike<R, T>
+        => r.Forgive(() => defaultValue);
+    
+    public static R Forgive<R>(this R r) where R : IMutableResultlike<R>
+    {
+        var nmeta = from e in r.Errors let t = e.TryDemote() where t is not null select t;
+        return r
+            .ExcludingErrors()
+            .WithMetadata(nmeta)
+        ;
+    }
+
+    public static bool AnyErr<T>(this IResultlike r) where T : IResultError
+        => r.Errors.Any(e => e is T);
+    public static bool AnyMeta<T>(this IResultlike r) where T : IResultMetadata
+        => r.Metadata.Any(e => e is T);
+
     // General Result //
-    public static void IfErrors(this IResult r1, Action<IEnumerable<IResultError>> a) 
+    public static void IfErrors(this IResultlike r1, Action<IEnumerable<IResultError>> a) 
     {
         if(r1.HasErrors) a(r1.Errors);
     }
-    public static void IfMetadata(this IResult r1, Action<IEnumerable<IResultMetadata>> a) 
+    public static void IfMetadata(this IResultlike r1, Action<IEnumerable<IResultMetadata>> a) 
     {
         if(r1.HasMetadata) a(r1.Metadata);
     }
@@ -19,7 +56,7 @@ public static class ResultExtensions
         => r1.WithDataFrom(r2);
 
     // Value Results //
-    private static Result<T> MergeData<T>(Result<T> item, IResult a, IResult b)
+    private static Result<T> MergeData<T>(Result<T> item, IResultlike a, IResultlike b)
         => item
             .WithDataFrom(a)
             .WithDataFrom(b);

@@ -54,7 +54,17 @@ public class TreeItemContainer<T> : IEnumerable<TreeItemSpec<T>>
     }
 }
 
-public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : ISourceRanged
+/// <summary>
+/// Represents a tree of arbitrary child count where every item has an associated range.
+/// 
+/// Children are specified through the 'ChildContainer' property, which also stores information about
+/// the expressions they reference for future use.
+/// 
+/// !: this might be worth removing for performance reasons.
+/// 
+/// Note that TChild should be be type of the inheriter.
+/// </summary>
+public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : SourcedTreeNode<TChild>, ISourceRanged
 {
     public abstract TreeItemContainer<TChild> ChildContainer {get;}
 
@@ -76,6 +86,56 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : IS
         Range = SourceRange.CombineFrom(Children.Select(x => (ISourceRanged)x));
         DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
     }
+
+    // TODO: abstract this out to a TreeNode class?
+    // Tree operations //
+    public void Walk(Action<TChild> each)
+    {
+        each((TChild)this);
+        foreach(var c in Children) 
+        {
+            c.Walk(each);
+        }
+    }
+
+    public bool TryFindFirst(Predicate<TChild> pred, [NotNullWhen(true)] out TChild? item)
+    {
+        if(pred((TChild)this))
+        {
+            item = (TChild)this;
+            return true;
+        }
+
+        foreach(var c in Children)
+        {
+            if(c.TryFindFirst(pred, out item)) return true;
+        }
+
+        item = default;
+        return false;
+    }
+
+    public bool TryFindLast(Predicate<TChild> pred, [NotNullWhen(true)] out TChild? item)
+    {
+        if(!pred((TChild)this))
+        {
+            item = default;
+            return false;
+        }
+
+        foreach(var c in Children)
+        {
+            if(c.TryFindLast(pred, out item)) return true;
+        }
+
+        item = (TChild)this;
+        return true;
+    }
+
+    public bool TryFindDeepestContaining(SourceRange range, [NotNullWhen(true)] out TChild? item) 
+        => TryFindLast(c => c.Range.Contains(range), out item);
+    public bool TryFindDeepestContaining(SourcePosition position, [NotNullWhen(true)] out TChild? item) 
+        => TryFindLast(c => c.Range.Contains(position), out item);
 }
 
 public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function) : BoundASTNode(Source.ASTSource)
@@ -108,6 +168,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// <summary>
     /// Is the current AST node representative of an expression which can automatically
     /// be dereferenced or be assigned to if it constitutes a pointer?
+    /// TODO: remove in favor of a LangtLValueType or LangtPointerType.IsLValue
     /// </summary>
     public virtual bool IsLValue => false;
 
@@ -185,8 +246,74 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// <seealso cref="LangtType.IsPointer"/>
     public void TryDeferenceLValue()
     {
-        if(!IsLValue || !TransformedType.IsPointer) return;
+        if(!IsLValue) return;
         ApplyTransform(LangtReadPointer.Transformer(TransformedType));
+    }
+
+    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType type, out bool coerced)
+    {
+        coerced = false;
+
+        var builder = ResultBuilder.Empty();
+
+        if(HasResolution)
+        {
+            // Attempt to handle function references
+            if(Resolution is LangtFunctionGroup fg)
+            {
+                if(!type.IsFunctionPtr)
+                {
+                    return builder
+                        .WithDgnError("Cannot target type a function reference to a non-functional type", Range)
+                        .Build<BoundASTNode>()
+                        .TagTargetTypeDependent();
+                }
+
+                var funcType = (LangtFunctionType)type.PointeeType!;
+
+                var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
+                builder.AddData(fr);
+
+                if(!fr) return builder.Build<BoundASTNode>();
+
+                return builder.Build<BoundASTNode>
+                (
+                    new BoundFunctionReference(this, fr.Value.Function)  
+                )
+                .TagTargetTypeDependent();
+            }
+        }
+
+        // Fail if expression has type of 'none'
+        if(TransformedType == LangtType.None) return builder
+            .WithDgnError($"Expression must have a value", Range)
+            .Build<BoundASTNode>();
+
+        // Return here if types match
+        if(type == TransformedType) return builder.Build(this);
+        
+        // Beyond this point, coersion takes place
+        coerced = true;
+
+        // Attempt to find a conversion
+        var convResult = state.CG.ResolveConversion(type, TransformedType, Range);
+        if(!convResult) return builder.WithData(convResult).Build<BoundASTNode>();
+
+        var conv = convResult.Value;
+
+        // Refuse non-implicit conversions
+        if(!conv.IsImplicit)
+        {
+            return builder
+                .WithDgnError($"Could not find conversion from {TransformedType.GetFullName()} to {type.GetFullName()} (an explicit conversion exists)", Range)
+                .Build<BoundASTNode>()
+                .TagTargetTypeDependent()
+            ;
+        }
+
+        // Return with conversion
+        ApplyTransform(conv.TransformProvider.TransformerFor(TransformedType, type));
+        return builder.Build(this);
     }
 
     public virtual void LowerSelf(CodeGenerator generator)
@@ -254,7 +381,6 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     /// </summary>
     public bool ContainsInvalid => IsInvalid || Children.Any(c => c.ContainsInvalid);
 
-    // TODO: Reimplement to allow for 'before all' / 'after all' hooks
 
     public virtual Result HandleDefinitions(ASTPassState state) => Result.Success();
     public virtual Result RefineDefinitions(ASTPassState state) => Result.Success();
@@ -284,13 +410,14 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         return result.Map(_ => bast);
     }
 
-    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool coerced, out bool internalErr, TypeCheckOptions options = default)
+    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions options = default)
     {
         coerced = false;
-        internalErr = false;
         
-        //TODO: check that errors are not caused by type checking to report as internal; split type checking into separate phase.
-        //this can be done by adding a "refine bindings" pass which reconstructs the bound ast with type information.
+        //TODO: check that errors are not caused by type checking to report as internal
+        //this can be done by adding a 'public record TargetTypeError(Diagnostic Diagnostic) : IResultError'
+        //or by making diagnostics passed by along with some record
+        //'public record DiagnosticResultError(Diagnostic Diagnostic, bool IsTargetTypeError) : IResultError'
 
         var binding = Bind(state, options with 
         {
@@ -302,62 +429,14 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         var bast = binding.Value;
         
-        var ftype = bast.TransformedType;
+        var nbast = bast.MatchExprType(state, type, out coerced);
+        builder.AddData(nbast);
 
-        if(bast.HasResolution)
-        {
-            if(type.IsFunctionPtr && bast.Resolution is LangtFunctionGroup fg)
-            {
-                var funcType = (LangtFunctionType)type.PointeeType!;
-
-                var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
-                builder.AddData(fr);
-
-                if(!fr) return builder.Build<BoundASTNode>();
-
-                return builder.Build<BoundASTNode>
-                (
-                    new BoundFunctionReference(bast, fr.Value.Function)  
-                );
-            }
-        }
-
-        internalErr = true;
-        
-        if(binding.Value.TransformedType == LangtType.None) return builder
-            .WithDgnError($"Expression must have a value", Range)
-            .Build<BoundASTNode>();
-
-        internalErr = false;
-
-        if(type == ftype) return builder.Build(bast);
-        coerced = true;
-
-        if(bast.IsLValue && ftype.PointeeType == type)
-        {
-            bast.ApplyTransform(LangtReadPointer.Transformer(ftype));
-            return builder.Build(bast);
-        }
-
-        var convResult = state.CG.ResolveConversion(type, ftype, Range);
-        if(!convResult) return builder.WithData(convResult).Build<BoundASTNode>();
-
-        var conv = convResult.Value;
-        if(!conv.IsImplicit)
-        {
-            return builder
-                .WithDgnError($"Could not find conversion from {ftype.GetFullName()} to {type.GetFullName()} (an explicit conversion exists)", Range)
-                .Build<BoundASTNode>()
-            ;
-        }
-
-        bast.ApplyTransform(conv.TransformProvider.TransformerFor(ftype, type));
-        return builder.Build(bast);
+        return builder.Build(nbast.PossibleValue!);
+        // TODO: reimplement function overload resolution to use the fact that type checking can be bound
     }
-    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, out bool internalErr, TypeCheckOptions options = default)
-        => BindMatching(state, type, out _, out internalErr, options);
-    public Result<BoundASTNode> BindMatching(ASTPassState state, LangtType type, TypeCheckOptions options = default)
-        => BindMatching(state, type, out _, out _, options);
+    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions options = default)
+        => BindMatchingExprType(state, type, out _, options);
 
     // /// <summary>
     // /// Perform the initial steps of type checking.

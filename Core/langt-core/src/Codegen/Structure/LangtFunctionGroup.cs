@@ -67,11 +67,13 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
     public Result<Resolution> ResolveOverload(ASTNode[] parameters, SourceRange range, ASTPassState state) 
     {
+        var mmsi = LangtFunctionType.MutableMatchSignatureInput.From(parameters);
+
         var resolvesFirst = overloads
-            .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, parameters)})
+            .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, mmsi)})
             .ToArray();
 
-        if(resolvesFirst.FirstOrDefault(p => p.Resolution.InternalError) is var p && p is not null) 
+        if(resolvesFirst.FirstOrDefault(p => !p.Resolution.OutResult.IsTargetTypeDependent()) is var p && p is not null) 
             return p.Resolution.OutResult.Cast<Resolution>();
 
         var resolves = resolvesFirst

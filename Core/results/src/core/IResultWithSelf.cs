@@ -1,6 +1,6 @@
 namespace Results;
 
-public interface IResult<Self> : IResult where Self : IResult<Self>
+public interface IResultlike<Self> : IResultlike where Self : IResultlike<Self>
 {
     public abstract static bool operator !(Self self);
     public abstract static bool operator true(Self self);

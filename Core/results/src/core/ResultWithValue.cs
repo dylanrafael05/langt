@@ -1,6 +1,6 @@
 namespace Results;
 
-public struct Result<T> : IPrimitiveResult<Result<T>>
+public struct Result<T> : IMutableValuedResultlike<Result<T>, T>
 {
     private T? valueStorage;
 
@@ -8,13 +8,11 @@ public struct Result<T> : IPrimitiveResult<Result<T>>
     public bool HasErrors {get; private init;} = false;
     public bool HasMetadata {get; private init;} = false;
 
-    object? IResult.Value => this.Value;
-
     public T Value 
     {
         get => HasValue
             ? valueStorage!
-            : throw new InvalidOperationException($"Cannot get .{nameof(IResult.Value)} if .{nameof(IResult.HasValue)} returns false!")
+            : throw new InvalidOperationException($"Cannot get .{nameof(IValued<T>.Value)} if .{nameof(IValued<T>.HasValue)} returns false!")
             ;
         
         init => valueStorage = value;
@@ -33,23 +31,25 @@ public struct Result<T> : IPrimitiveResult<Result<T>>
         => self.HasErrors;
     
     public static bool operator true(Result<T> self) 
-        => ((IResult)self).HasValue;
+        => self.HasValue;
     public static bool operator false(Result<T> self) 
-        => ((IResult)self).HasErrors;
+        => self.HasErrors;
 
-    public Result<T> WithError(IResultError error) => new(PossibleValue, HasValue, Errors.Append(error), true, Metadata, HasMetadata);
-    public Result<T> WithErrors(IResultError first, params IResultError[] rest) => WithError(first).WithErrors(rest);
-    public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(PossibleValue, HasValue, Errors.Concat(errors), HasErrors || errors.Any(), Metadata, HasMetadata);
-    public Result<T> WithMetadata(IResultMetadata metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Append(metadata), true);
-    public Result<T> WithMetadata(IResultMetadata first, params IResultMetadata[] rest) => WithMetadata(first).WithMetadata(rest);
-    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Concat(metadata), HasMetadata || metadata.Any());
+    public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(PossibleValue, HasValue, Errors.Concat(errors).ToArray(), HasErrors || errors.Any(), Metadata, HasMetadata);
+    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Concat(metadata).ToArray(), HasMetadata || metadata.Any());
+    public Result<T> ExcludingErrors(IEnumerable<IResultError> errors)
+    {
+        var nerr = Errors.Except(errors).ToArray();
+        return new(PossibleValue, HasValue, nerr, nerr.Length > 0, Metadata, HasMetadata);
+    }
+    public Result<T> ExcludingMetadata(IEnumerable<IResultMetadata> metadata)
+    {
+        var nmd = Metadata.Except(metadata).ToArray();
+        return new(PossibleValue, HasValue, Errors, HasErrors, nmd, nmd.Length > 0);
+    }
 
-    public Result<T> WithDataFrom(IResult other)
-        => WithErrors(other.Errors)
-          .WithMetadata(other.Metadata);
-    public Result<T> WithDataFrom(ResultBuilder other)
-        => WithErrors(other.Errors)
-          .WithMetadata(other.Metadata);
+    public Result<T> WithValue(T value) => new(value, true, Errors, HasErrors, Metadata, HasMetadata);
+    public Result<T> ExcludingValue() => new(default, false, Errors, HasErrors, Metadata, HasMetadata);
     
     public Result<T> Forgive(T defaultValue)
     {
@@ -99,7 +99,7 @@ public struct Result<T> : IPrimitiveResult<Result<T>>
     }
 
     public Result<T> And(Result other) 
-        => WithDataFrom(other);
+        => this.WithDataFrom(other);
 
     public T? OrDefault() 
     {

@@ -5,7 +5,45 @@ namespace Langt.Codegen;
 
 public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[] ParameterTypes) : LangtType(GetName(ReturnType, ParameterTypes, IsVararg))
 {
-    public record struct ResolutionResult(Result<BoundASTNode[]> OutResult, SignatureMatchLevel Level, bool InternalError);
+    public record struct MatchSignatureResult(Result<BoundASTNode[]> OutResult, SignatureMatchLevel Level);
+    public class MutableMatchSignatureInput
+    {
+        private MutableMatchSignatureInput(ASTNode[] parameters)
+        {
+            Parameters = parameters;
+            BoundParameters = new Result<BoundASTNode>?[parameters.Length];
+        }
+        public static MutableMatchSignatureInput From(ASTNode[] parameters) => new(parameters);
+
+        private ASTNode[] Parameters {get; init;}
+        private Result<BoundASTNode>?[] BoundParameters  {get; init;}
+        
+        public int ParameterCount => Parameters.Length;
+
+        public Result<BoundASTNode> GetBoundTo(int n, ASTPassState state, LangtType? t, out bool coerced)
+        {
+            Result<BoundASTNode> current;
+
+            if(BoundParameters[n] is null)
+            {
+                current = Parameters[n].Bind(state, new TypeCheckOptions {TargetType = t});
+                
+                if(!current.IsTargetTypeDependent())
+                    BoundParameters[n] = current;
+            }
+            else 
+            {
+                current = BoundParameters[n]!.Value;
+            }
+
+            coerced = false;
+            if(t is null || !current) return current;
+            return current.Value.MatchExprType(state, t, out coerced);
+        }
+
+        public Result<BoundASTNode> Get(int n, ASTPassState state) 
+            => GetBoundTo(n, state, null, out _);
+    }
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
@@ -31,12 +69,12 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
             IsVararg
         );
 
-    public ResolutionResult MatchSignature(ASTPassState state, SourceRange range, ASTNode[] parameters)
+    public MatchSignatureResult MatchSignature(ASTPassState state, SourceRange range, MutableMatchSignatureInput ipt)
     {
         var level = SignatureMatchLevel.None;
 
-        // less params given than required           || more params given than specified if not vararg
-        if(parameters.Length < ParameterTypes.Length || (!IsVararg && parameters.Length > ParameterTypes.Length)) 
+        // less params given than required            || more params given than specified if not vararg
+        if(ipt.ParameterCount < ParameterTypes.Length || (!IsVararg && ipt.ParameterCount > ParameterTypes.Length)) 
         {
             return new
             (
@@ -44,38 +82,28 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
                 (
                     Diagnostic.Error("Incorrect number of parameters", range)
                 ),
-                SignatureMatchLevel.None,
-                false
+                SignatureMatchLevel.None
             );
         }
 
         level = SignatureMatchLevel.Exact;
-        bool internalErr = false;
-        Result<BoundASTNode>? internalErrRes = null;
+        var internalErr = false;
 
         var group = ResultGroup.Foreach
         (
-            parameters.Indexed(),
-            p => 
+            Enumerable.Range(0, ipt.ParameterCount),
+            index => 
             {
-                if(p.Index >= ParameterTypes.Length)
+                if(index >= ParameterTypes.Length)
                 {
-                    var r = p.Value.Bind(state);
-                    
-                    if(!r) 
-                    {
-                        internalErr = true;
-                        internalErrRes = r;
-                    }
+                    var r = ipt.Get(index, state);
 
                     return r;
                 }
 
-                var op = p.Value.BindMatching(state, ParameterTypes[p.Index], out var coerced, out internalErr);
-                if(internalErr)
-                {
-                    internalErrRes = op;
-                }
+                var op = ipt.GetBoundTo(index, state, ParameterTypes[index], out var coerced);
+
+                internalErr = !op.IsTargetTypeDependent();
 
                 var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
 
@@ -88,13 +116,9 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
             }
         );
 
-        if(internalErr)
-        {
-            return new(internalErrRes!.Value.Cast<BoundASTNode[]>(), level, true);
-        }
-        else 
-        {
-            return new(group.Combine().Map(k => k.ToArray()), level, false);
-        }
+        return new(group.Combine().Map(k => k.ToArray()), level);
     }
+
+    public MatchSignatureResult MatchSignature(ASTPassState state, SourceRange range, ASTNode[] parameters)
+        => MatchSignature(state, range, MutableMatchSignatureInput.From(parameters));
 }

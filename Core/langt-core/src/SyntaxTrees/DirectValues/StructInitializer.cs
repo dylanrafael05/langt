@@ -79,7 +79,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
                 var ftype = f.Type;
                 var fname = f.Name;
 
-                var r = a.Value.BindMatching(state, ftype);
+                var r = a.Value.BindMatchingExprType(state, ftype);
 
                 if(!r) return Result.Error<BoundASTNode>
                 (

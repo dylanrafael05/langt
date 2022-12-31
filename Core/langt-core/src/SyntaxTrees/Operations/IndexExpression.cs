@@ -46,7 +46,7 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         var results = Result.All
         (
             Value.Bind(state),
-            IndexValue.BindMatching(state, LangtType.Int64)
+            IndexValue.BindMatchingExprType(state, LangtType.Int64)
         );
         builder.AddData(results);
 

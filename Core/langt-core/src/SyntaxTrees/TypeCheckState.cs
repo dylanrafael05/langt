@@ -19,6 +19,9 @@ public struct TypeCheckOptions
 {
     public LangtType? TargetType {get; init;} = null;
     public bool AutoDeferenceLValue {get; init;} = true;
+    public LangtScope? PredefinedBlockScope {get; init;} = null;
+
+    public bool HasPredefinedBlockScope => PredefinedBlockScope is not null;
 
     public TypeCheckOptions()
     {}

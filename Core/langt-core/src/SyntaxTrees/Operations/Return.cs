@@ -41,7 +41,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 
         var rtype = state.CG.CurrentFunction!.Type.ReturnType;
 
-        var vr = Value.BindMatching(state, rtype);
+        var vr = Value.BindMatchingExprType(state, rtype);
         if(!vr) return vr;
 
         var builder = ResultBuilder.From(vr);

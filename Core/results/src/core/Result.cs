@@ -1,33 +1,25 @@
 namespace Results;
 
-public struct Result : IPrimitiveResult<Result>
+public struct Result : IMutableResultlike<Result>
 {
-    bool IResult.HasValue => !HasErrors;
-
     public bool HasErrors {get; private init;} = false;
     public bool HasMetadata {get; private init;} = false;
-    
-    object? IResult.Value => ((IResult)this).HasValue 
-        ? null 
-        : throw new InvalidOperationException($"Cannot get .{nameof(IResult.Value)} if .{nameof(IResult.HasValue)} returns false!")
-        ;
 
     public IEnumerable<IResultError> Errors {get; init;}
     public IEnumerable<IResultMetadata> Metadata {get; init;}
 
-    public Result WithError(IResultError error) => new(Errors.Append(error), true, Metadata, HasMetadata);
-    public Result WithErrors(IResultError first, params IResultError[] rest) => WithError(first).WithErrors(rest);
-    public Result WithErrors(IEnumerable<IResultError> errors) => new(Errors.Concat(errors), HasErrors || errors.Any(), Metadata, HasMetadata);
-    public Result WithMetadata(IResultMetadata metadata) => new(Errors, HasErrors, Metadata.Append(metadata), true);
-    public Result WithMetadata(IResultMetadata first, params IResultMetadata[] rest) => WithMetadata(first).WithMetadata(rest);
-    public Result WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Errors, HasErrors, Metadata.Concat(metadata), HasMetadata || metadata.Any());
-
-    public Result WithDataFrom(IResult other)
-        => WithErrors(other.Errors)
-          .WithMetadata(other.Metadata);
-    public Result WithDataFrom(ResultBuilder builder)
-        => WithErrors(builder.Errors)
-          .WithMetadata(builder.Metadata);
+    public Result WithErrors(IEnumerable<IResultError> errors) => new(Errors.Concat(errors).ToArray(), HasErrors || errors.Any(), Metadata, HasMetadata);
+    public Result WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Errors, HasErrors, Metadata.Concat(metadata).ToArray(), HasMetadata || metadata.Any());
+    public Result ExcludingErrors(IEnumerable<IResultError> errors)
+    {
+        var nerr = Errors.Except(errors).ToArray();
+        return new(nerr, nerr.Length > 0, Metadata, HasMetadata);
+    }
+    public Result ExcludingMetadata(IEnumerable<IResultMetadata> metadata)
+    {
+        var nmd = Metadata.Except(metadata).ToArray();
+        return new(Errors, HasErrors, nmd, nmd.Length > 0);
+    }
 
     public Result Forgive()
     {
@@ -48,9 +40,9 @@ public struct Result : IPrimitiveResult<Result>
         => self.HasErrors;
     
     public static bool operator true(Result self) 
-        => ((IResult)self).HasValue;
+        => !!self;
     public static bool operator false(Result self) 
-        => ((IResult)self).HasErrors;
+        => !self;
 
     public Result() : this(Array.Empty<IResultError>(), false, Array.Empty<IResultMetadata>(), false)
     {}
@@ -73,8 +65,8 @@ public struct Result : IPrimitiveResult<Result>
     public static Result<T> Error<T>(IEnumerable<IResultError> errors) => Success<T>(default!).WithErrors(errors);
     public static Result<T> Error<T>(IResultError first, params IResultError[] rest) => Error<T>(Enumerable.Empty<IResultError>().Append(first).Concat(rest));
 
-    public static Result Wrap(IResult r) => new(r.Errors, r.HasErrors, r.Metadata, r.HasMetadata);
-    public static Result<T> Wrap<T>(T value, IResult r) => Success(value).WithDataFrom(r);
+    public static Result Wrap(IResultlike r) => new(r.Errors, r.HasErrors, r.Metadata, r.HasMetadata);
+    public static Result<T> Wrap<T>(T value, IResultlike r) => Success(value).WithDataFrom(r);
 
     public static Result<(T1, T2)> GreedyAll<T1, T2>(Result<T1> a, Result<T2> b)
         => a.GreedyAnd(b);

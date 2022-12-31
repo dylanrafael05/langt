@@ -1,18 +1,9 @@
 namespace Langt;
 
-public readonly record struct Source(string Content, string Name);
-
-public readonly record struct SourcePosition(int Char, int Line, int Column, Source Source)
-{
-    public override string ToString()
-        => $"{Source.Name}:line {Line}";
-}
-
-public interface ISourceRanged 
-{
-    SourceRange Range {get;}
-}
-
+/// <summary>
+/// Represents a contiguous segment of a source object by line, character, and column.
+/// May be Default, indicating no source is available.
+/// </summary>
 public readonly record struct SourceRange(int CharStart, int LineStart, int ColumnStart, int CharEnd, int LineEnd, int ColumnEnd, Source Source)
 {
     public SourcePosition Start => new(CharStart, LineStart, ColumnStart, Source);
@@ -25,7 +16,7 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
 
     public override string ToString()
     {
-        if(IsDefault) return "{unknown}:line unknown";
+        if(IsDefault) return "unknown";
 
         if(LineStart == LineEnd) 
         {
@@ -48,6 +39,11 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
 
         return new(start.Char, start.Line, start.Column, end.Char, end.Line, end.Column, start.Source);
     }
+
+    public bool Contains(SourcePosition position) 
+        => CharStart >= position.Char && position.Char >= CharEnd;
+    public bool Contains(SourceRange range) 
+        => Contains(range.Start) && Contains(range.End);
 
     public static SourceRange Combine(IEnumerable<SourceRange?> ranges) 
     {

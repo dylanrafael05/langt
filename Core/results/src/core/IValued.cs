@@ -1,14 +1,9 @@
 namespace Results;
 
-public interface IResult
+public interface IValued<T>
 {
     bool HasValue {get;}
-    bool HasErrors {get;}
-    bool HasMetadata {get;}
-
-    object? Value {get;}
-    IEnumerable<IResultError> Errors {get;}
-    IEnumerable<IResultMetadata> Metadata {get;}
+    T Value {get;}
 }
 
 // TODO: break this class into two: 'IResultDataHolder' and 'IResult'

@@ -62,7 +62,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
     {
         var results = Result.All
         (
-            Condition.BindMatching(state, LangtType.Bool),
+            Condition.BindMatchingExprType(state, LangtType.Bool),
             Block.Bind(state)
         );
         var builder = ResultBuilder.From(results);

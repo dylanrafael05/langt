@@ -132,10 +132,37 @@ public record FunctionDefinition(ASTToken Let,
         }
 
         var previousFunction = state.CG.CurrentFunction;
+        
+        Result<BoundASTNode> bodyResult;
 
         state.CG.CurrentFunction = Function;
         var scope = state.CG.CreateUnnamedScope();
+        {
+            DefineParametersInScope(builder, scope);
 
+            if(Function.Type.ReturnType == LangtType.None || Body is FunctionBlockBody)
+            {
+                bodyResult = Body!.Bind(state, new TypeCheckOptions {PredefinedBlockScope = scope});
+            }
+            else 
+            {
+                bodyResult = Body!.BindMatchingExprType(state, Function.Type.ReturnType);
+            }
+
+            builder.AddData(bodyResult);
+            if(!bodyResult) return builder.Build<BoundASTNode>();
+        }
+        state.CG.CloseScope();
+        state.CG.CurrentFunction = previousFunction;
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundFunctionDefinition(this, Function, scope, bodyResult.Value)  
+        );
+    }
+
+    private void DefineParametersInScope(ResultBuilder builder, LangtScope scope)
+    {
         var count = 0u;
         foreach(var argspec in ArgSpec.Values)
         {
@@ -158,27 +185,5 @@ public record FunctionDefinition(ASTToken Let,
 
             count++;
         }
-
-        Result<BoundASTNode> br;
-
-        if(Function.Type.ReturnType == LangtType.None || Body is FunctionBlockBody)
-        {
-            br = Body!.Bind(state);
-        }
-        else 
-        {
-            br = Body!.BindMatching(state, Function.Type.ReturnType);
-        }
-
-        builder.AddData(br);
-        if(!br) return builder.Build<BoundASTNode>();
-
-        state.CG.CloseScope();
-        state.CG.CurrentFunction = previousFunction;
-
-        return builder.Build<BoundASTNode>
-        (
-            new BoundFunctionDefinition(this, Function, scope, br.Value)  
-        );
     }
 }

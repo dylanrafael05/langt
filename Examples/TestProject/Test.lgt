@@ -1,5 +1,6 @@
-let main() none 
+using sys
+
+let main() none
 {
-    let text = sys.make_string("Hello ") + sys.make_string("World!")
-    sys.print(text)
+    print(make_string("Hello") + make_string(" ") + make_string("World!"))
 }

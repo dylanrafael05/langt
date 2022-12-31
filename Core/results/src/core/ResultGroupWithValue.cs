@@ -1,13 +1,11 @@
 namespace Results;
 
-public struct ResultGroup<T> : IResult<ResultGroup<T>>
+public struct ResultGroup<T> : IResultlike<ResultGroup<T>>, IValued<IEnumerable<T>>
 {
-    bool IResult.HasValue => !HasErrors;
-    object? IResult.Value => Value;
-
-    public IEnumerable<T> Value => ((IResult)this).HasValue 
+    bool IValued<IEnumerable<T>>.HasValue => !HasErrors;
+    public IEnumerable<T> Value => ((IValued<IEnumerable<T>>)this).HasValue 
         ? InnerResults.Select(r => r.Value) 
-        : throw new InvalidOperationException($"Cannot get .{nameof(IResult.Value)} if .{nameof(IResult.HasValue)} returns false!")
+        : throw new InvalidOperationException($"Cannot get .{nameof(IValued<IEnumerable<T>>.Value)} if .{nameof(IValued<IEnumerable<T>>.HasValue)} returns false!")
         ;
 
     public IEnumerable<IResultError> Errors {get; init;}

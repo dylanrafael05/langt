@@ -2,7 +2,6 @@ using Langt.Lexing;
 using Langt.Codegen;
 using Langt.Structure.Visitors;
 using Langt.Utility;
-using Langt.Utility.Functional;
 
 namespace Langt.AST;
 
@@ -58,7 +57,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
                     _ => ('\0', true)
                 };
 
-                if(!err)
+                if(err)
                 {
                     return ResultBuilder.Empty().WithDgnError($"Unrecognized string escape sequence '\\{source[i+1]}'", Range).Build<BoundASTNode>();
                 }
