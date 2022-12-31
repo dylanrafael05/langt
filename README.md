@@ -2,7 +2,8 @@
 
 Welcome to the repository of my programming language, langt!
 
-![Icon](Experimental/langt-vscode/icons/Light.png)
+![Icon](LANGT_LOGO.png)
+> Logo created using [fontstruct](https://fontstruct.com/)
 
 ---
 Here is the structure of the top-level of folders, including any notable nested folders
