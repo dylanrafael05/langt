@@ -13,15 +13,18 @@ public class LangtProject
         LLVMModuleName = llvmModuleName;
 
         logger.Init();
+
+        CodeGenerator = new(this);
     }
 
+    public CodeGenerator CodeGenerator {get; private init;}
     public LangtScope GlobalScope {get; private init;} = new();
     public List<LangtFile> Files {get; private init;} = new();
     public DiagnosticCollection Diagnostics {get; private init;} = new();
 
     public ILogger Logger {get; private init;}
     public string LLVMModuleName {get; init;}
-    public LLVMModuleRef? Module {get; private set;}
+    public LLVMModuleRef Module => CodeGenerator.Module;
 
     public void AddFileContents(FileInfo file)
         => AddFileContents(file.FullName, File.ReadAllText(file.FullName));
@@ -35,23 +38,14 @@ public class LangtProject
         Files.Add(new(this, new(content, name)));
     }
 
-    public bool Build() 
+    public void BindSyntaxTrees()
     {
-#if DEBUG
-        try
-        {
-#endif
-        var cg = new CodeGenerator(this);
-        LLVMUtil.PrimeLLVM();
-
-        var startState = GeneralPassState.Start(cg);
-
-        Logger.Note("Building . . . ");
+        var startState = GeneralPassState.Start(CodeGenerator);
 
         Logger.Note("Handling definitions . . . ");
         foreach(var f in Files)
         {
-            cg.Open(f);
+            CodeGenerator.Open(f);
             Diagnostics.AddResult(
                 f.AST.HandleDefinitions(startState)
             );
@@ -60,7 +54,7 @@ public class LangtProject
         Logger.Note("Refining definitions . . . ");
         foreach(var f in Files)
         {
-            cg.Open(f);
+            CodeGenerator.Open(f);
             Diagnostics.AddResult(
                 f.AST.RefineDefinitions(startState)
             );
@@ -69,14 +63,24 @@ public class LangtProject
         Logger.Note("Performing binding . . . ");
         foreach(var f in Files)
         {  
-            cg.Open(f);
+            CodeGenerator.Open(f);
             var r = f.AST.Bind(startState);  
             Diagnostics.AddResult(r);
 
             if(!r) continue;
             f.BoundAST = r.Value;
         }
+    }
 
+    public bool Compile() 
+    {
+#if DEBUG
+        try
+        {
+#endif
+        Logger.Note("Building . . . ");
+
+        BindSyntaxTrees();
 
         if(Diagnostics.AnyErrors)
         {
@@ -88,26 +92,25 @@ public class LangtProject
         Logger.Note("Lowering . . . ");
         foreach(var f in Files)
         {
-            cg.Open(f);
-            f.BoundAST!.Lower(cg);
+            CodeGenerator.Open(f);
+            f.BoundAST!.Lower(CodeGenerator);
         }
 
 #if DEBUG
-        Logger.Debug("Pre-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings(), "llvm");
-        if(!cg.Verify()) return false;
+        Logger.Debug("Pre-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
+        if(!CodeGenerator.Verify()) return false;
 #endif
         
         Logger.Note("Optimizing . . . ");
-        Optimizer.Optimize(cg);
+        Optimizer.Optimize(CodeGenerator);
 
 #if DEBUG
-        if(!cg.Verify()) return false;
+        if(!CodeGenerator.Verify()) return false;
 #endif
 
         Logger.Note("Done building!");
-        Module = cg.Module;
 
-        Logger.Debug("Post-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings(), "llvm");
+        Logger.Debug("Post-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
 
         return true;
 

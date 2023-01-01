@@ -86,6 +86,9 @@ publish/
 *.pubxml
 *.azurePubxml
 
+# node modules
+node_modules/
+
 # NuGet Packages Directory
 ## TODO: If you have NuGet Package Restore enabled, uncomment the next line
 packages/

@@ -24,12 +24,18 @@ public class LangtLanguageServer
             server => server
                 .WithInput(Console.OpenStandardInput())
                 .WithOutput(Console.OpenStandardOutput())
+                .WithLoggerFactory(new LoggerFactory())
+                .AddDefaultLoggingProvider()
+                .WithServices(Services)
                 .AddHandler<TextDocumentHandler>()
-                .AddHandler<TokenizationHandler>()
-                .ConfigureLogging(b => b.AddLanguageProtocolLogging())
         );
 
         return server;
+    }
+
+    public static void Services(IServiceCollection s) 
+    {
+        s.AddSingleton(new ProjectManager());
     }
 
     public const string LanguageID = "langt";

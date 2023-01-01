@@ -42,6 +42,8 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
 
     public bool Contains(SourcePosition position) 
         => CharStart >= position.Char && position.Char >= CharEnd;
+    public bool Contains(Position position) 
+        => CharStart >= position.Char && position.Char >= CharEnd;
     public bool Contains(SourceRange range) 
         => Contains(range.Start) && Contains(range.End);
 

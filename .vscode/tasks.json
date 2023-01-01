@@ -2,7 +2,16 @@
     "version": "2.0.0",
     "tasks": [
         {
-            "label": "build",
+            "label": "build-ext",
+            "command": "bash",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}/Experimental/langt-vscode"
+            },
+            "args": ["build.sh"]
+        },
+        {
+            "label": "build cli",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -14,7 +23,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish",
+            "label": "publish cli",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -26,7 +35,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch",
+            "label": "watch cli",
             "command": "dotnet",
             "type": "process",
             "args": [
