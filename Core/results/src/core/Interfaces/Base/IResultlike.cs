@@ -1,4 +1,4 @@
-namespace Results;
+namespace Results.Interfaces;
 
 public interface IResultlike
 {

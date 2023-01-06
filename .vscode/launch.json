@@ -8,9 +8,9 @@
             "name": "run with deferred arguments",
             "type": "coreclr",
             "request": "launch",
-            "preLaunchTask": "build",
+            "preLaunchTask": "build-cli",
             "program": "${workspaceFolder}/Core/langt-cli/bin/Debug/net7.0/win-x64/langt-cli.dll",
-            "args": ["defer"],
+            "args": ["defer", "--loop"],
             "cwd": "${workspaceFolder}/Examples",
             "console": "integratedTerminal",
             "stopAtEntry": false

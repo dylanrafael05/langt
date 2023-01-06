@@ -100,5 +100,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
                 RawExpressionType = type
             }
         );
+
+        // TODO: add another syntax tree? resolved syntax tree?
     }
 }

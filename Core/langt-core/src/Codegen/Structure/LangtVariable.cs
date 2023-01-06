@@ -3,7 +3,7 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public record LangtVariable(string Name, LangtType Type) : INamedScoped
+public record LangtVariable(string Name, LangtType Type, string Documentation = "") : INamedScoped
 {
     string INamed.DisplayName => Name;
     

@@ -8,9 +8,8 @@ namespace Langt.AST;
 /// </summary>
 public abstract record ASTNamespace : ASTNode // TODO: permit only one namespace declaration per file; emit warnings for duplicate usings
 {
-    public abstract Result<LangtNamespace> Resolve(ASTPassState state, bool allowDefinitions = false);
-    
-    protected Result<LangtNamespace> ResolveFrom(LangtScope from, string name, ASTPassState state, [NotNullWhen(true)] bool allowDefinitions = false)
+    public abstract Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions options = default);
+    protected Result<LangtNamespace> ResolveFrom(LangtScope from, string name, [NotNullWhen(true)] bool allowDefinitions = false)
     {
         var nsResult = from.ResolveNamespace(name, Range);
 

@@ -1,12 +1,14 @@
+using Results.Interfaces;
+
 namespace Results;
 
-public class ResultBuilder : IMutableResultlike<ResultBuilder>
+public class ResultBuilder : IModdable<ResultBuilder>, IResultlike
 {
     public static ResultBuilder Empty() => new();
     public static ResultBuilder From(IResultlike first, params IResultlike[] rest) => Empty().WithData(first).WithData(rest);
 
     private readonly List<IResultError> errors = new();
-    private readonly List<IResultMetadata> metadata = new();
+    private List<IResultMetadata> metadata = new();
 
     public IEnumerable<IResultError> Errors => errors;
     public bool HasErrors => errors.Count != 0;
@@ -16,9 +18,11 @@ public class ResultBuilder : IMutableResultlike<ResultBuilder>
     public void AddError(IResultError err) => errors.Add(err);
     public void AddErrors(params IResultError[] errs) => errors.AddRange(errs);
     public void AddErrors(IEnumerable<IResultError> errs) => errors.AddRange(errs);
-    public void AddMetadata(IResultMetadata meta) => metadata.Add(meta);
-    public void AddMetadata(params IResultMetadata[] meta) => metadata.AddRange(meta);
-    public void AddMetadata(IEnumerable<IResultMetadata> meta) => metadata.AddRange(meta);
+    public void AddMetadata(params IResultMetadata[] meta) => AddMetadata((IEnumerable<IResultMetadata>)meta);
+    public void AddMetadata(IEnumerable<IResultMetadata> meta)
+    {
+        metadata = IResultMetadata.MergeMetadataImmediate(metadata, meta).ToList();
+    }
     public void AddData(IResultlike result) 
     {
         AddErrors(result.Errors);
@@ -93,27 +97,18 @@ public class ResultBuilder : IMutableResultlike<ResultBuilder>
 
         return Result.Blank<T>().WithDataFrom(this);
     }
-    public Result<T> Build<T>(T value) => Result.Success(value).WithDataFrom(this);
+    public Result<T> Build<T>(T value) 
+        => Result.Success(value).WithDataFrom(this);
 
-    public void ExcludeErrors(IEnumerable<IResultError> errors)
+    public ResultBuilder ClearErrors()
     {
-        var eset = errors.ToHashSet();
-        this.errors.RemoveAll(p => eset.Contains(p));
-    }
-    public void ExcludeMetadata(IEnumerable<IResultMetadata> metadata)
-    {
-        var eset = metadata.ToHashSet();
-        this.metadata.RemoveAll(p => eset.Contains(p));
-    }
-
-    public ResultBuilder ExcludingErrors(IEnumerable<IResultError> errors)
-    {
-        ExcludeErrors(errors);
+        errors.Clear();
         return this;
     }
-    public ResultBuilder ExcludingMetadata(IEnumerable<IResultMetadata> metadata)
+
+    public ResultBuilder ClearMetadata()
     {
-        ExcludeMetadata(metadata);
+        metadata.Clear();
         return this;
     }
 }

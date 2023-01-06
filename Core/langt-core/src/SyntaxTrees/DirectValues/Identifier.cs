@@ -33,10 +33,15 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range);
-        if(!resolution) return resolution.Cast<BoundASTNode>();
+        var builder = ResultBuilder.Empty();
 
-        return Result.Success<BoundASTNode>
+        var resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range);
+        builder.AddData(resolution);
+        if(!resolution) return builder.Build<BoundASTNode>();
+
+        builder.AddStaticReference(Range, resolution.Value);
+
+        return builder.Build<BoundASTNode>
         (
             new BoundASTWrapper(this)
             {

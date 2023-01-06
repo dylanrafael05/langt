@@ -15,7 +15,6 @@ public record VarargSpec(ASTToken Ellipsis) : ASTNode
 
 public record BoundFunctionDefinition(FunctionDefinition Source,
                                       LangtFunction Function,
-                                      LangtScope Scope,
                                       BoundASTNode Body) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
@@ -24,7 +23,7 @@ public record BoundFunctionDefinition(FunctionDefinition Source,
     {
         if(Source.Let.Type is TokenType.Extern) return; //work is already done for us when creating the prototypes!
         
-        lowerer.BuildFunction(Function, Scope.AllItems.OfType<LangtVariable>(), Body);
+        lowerer.BuildFunction(Function, Body);
     }
 }
 
@@ -99,7 +98,9 @@ public record FunctionDefinition(ASTToken Let,
 
             if(!a) return builder.Build();
 
-            ArgTypes[argc++] = a.Value;
+            ArgTypes[argc] = a.Value;
+
+            argc++;
         }
 
         var fnType = new LangtFunctionType(retType, VarargSpec is not null, ArgTypes!);
@@ -108,15 +109,17 @@ public record FunctionDefinition(ASTToken Let,
         
         Function = new LangtFunction
         (
+            FunctionGroup!,
             fnType,
             ArgSpec.Values.Select(v => v.Name.ContentStr).ToArray(), 
-            lf
+            lf,
+            Let.Documentation
         );
 
         var afr = FunctionGroup!.AddFunctionOverload(Function, Range);
         builder.AddData(afr);
 
-        state.CG.Logger.Debug($"Function overload addition failed: {afr.HasErrors}", "results");
+        builder.AddStaticReference(Identifier.Range, Function, true);
 
         return builder.Build();
     }
@@ -157,7 +160,7 @@ public record FunctionDefinition(ASTToken Let,
 
         return builder.Build<BoundASTNode>
         (
-            new BoundFunctionDefinition(this, Function, scope, bodyResult.Value)  
+            new BoundFunctionDefinition(this, Function, bodyResult.Value)  
         );
     }
 
@@ -170,18 +173,13 @@ public record FunctionDefinition(ASTToken Let,
 
             if(t is null) continue;
 
-            builder.AddData
-            (
-                scope.DefineVariable
-                (
-                    new(argspec.Name.ContentStr, t)
-                    {
-                        ParameterNumber = count
-                    }, 
-                    Range
-                )
-                .Forgive()
-            );
+            var variable = new LangtVariable(argspec.Name.ContentStr, t)
+            {
+                ParameterNumber = count
+            };
+
+            builder.AddData(scope.DefineVariable(variable, Range).Forgive());
+            builder.AddStaticReference(argspec.Name.Range, variable, true);
 
             count++;
         }

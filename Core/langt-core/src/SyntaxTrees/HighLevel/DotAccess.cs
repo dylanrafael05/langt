@@ -28,14 +28,9 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         // Deconstruct and get values
         var left = iptResult.Value;
+        var hasResolution = left.HasResolution;
 
-        var result = new BoundDotAccess(this, left)
-        {
-            HasResolution = left.HasResolution && left.Resolution is not LangtVariable
-        };
-
-        // TODO: make 'static' and 'dynamic' resolutions distinct; variables vs. types
-        if (result.HasResolution)
+        if (hasResolution && left.Resolution is not LangtVariable)
         {
             if(left.Resolution is not LangtNamespace ns) 
             {
@@ -45,13 +40,19 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
             var resolutionResult = ns.Resolve(Right.ContentStr, Range);
             builder.AddData(resolutionResult);
-            
-            result.Resolution = resolutionResult.OrDefault();
 
-            return builder.Build<BoundASTNode>(result);
+            if(!builder) return builder.Build<BoundASTNode>();
+
+            return builder.Build<BoundASTNode>
+            (
+                new BoundStaticAccess(this, left, Right, resolutionResult.Value)
+            )
+                .AddStaticReference(Right.Range, resolutionResult.Value);
         }
 
-        if(!left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)
+        var result = new BoundStructFieldAccess(this, left);
+
+        if(!left.IsLValue || !left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)
         {
             return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
                 .Build<BoundASTNode>();

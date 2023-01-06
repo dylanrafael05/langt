@@ -1,6 +1,6 @@
 namespace Langt.Codegen;
 
-public record LangtAliasType(string Name) : LangtType(Name)
+public record LangtAliasType(string Name, string Documentation = "") : LangtType(Name, Documentation)
 {
     public override LangtType? AliasBaseType => basetype;
     private LangtType? basetype;

@@ -4,7 +4,7 @@ using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.Codegen;
-public abstract record LangtType(string Name) : INamedScoped
+public abstract record LangtType(string Name, string Documentation = "") : INamedScoped
 {
     string INamed.DisplayName => Name;
 
@@ -25,6 +25,8 @@ public abstract record LangtType(string Name) : INamedScoped
 
     public bool IsAlias => this is LangtAliasType;
     public virtual LangtType? AliasBaseType => null;
+
+    public virtual bool IsBuiltin => false;
     
     public LangtScope? HoldingScope { get; set; }
 
@@ -33,6 +35,7 @@ public abstract record LangtType(string Name) : INamedScoped
     public record Wrapper(string Name, LLVMTypeRef LLVMType) : LangtType(Name)
     {
         public override LLVMTypeRef Lower(CodeGenerator context) => LLVMType;
+        public override bool IsBuiltin => true;
     }
 
     [BuiltinType] public static readonly LangtType Real64 = new Wrapper("real64", LLVMTypeRef.Double) {RealBitDepth = 64};
@@ -42,13 +45,19 @@ public abstract record LangtType(string Name) : INamedScoped
     [BuiltinType] public static readonly LangtType Int32  = new Wrapper("int32" , LLVMTypeRef.Int32) {IntegerBitDepth = 32};
     [BuiltinType] public static readonly LangtType Int16  = new Wrapper("int16" , LLVMTypeRef.Int16) {IntegerBitDepth = 16};
     [BuiltinType] public static readonly LangtType Int8   = new Wrapper("int8"  , LLVMTypeRef.Int8) {IntegerBitDepth = 8};
-
     [BuiltinType] public static readonly LangtType Bool   = new Wrapper("bool"  , LLVMTypeRef.Int1);
-
     [BuiltinType] public static readonly LangtType None   = new Wrapper("none"  , LLVMTypeRef.Void);
 
-    public static readonly LangtType[] IntegerTypes = new[] {Int8, Int16, Int32, Int64};
-    public static readonly LangtType[] RealTypes    = new[] {Real16, Real32, Real64};
+    public static readonly LangtType[] IntegerTypes = {Int8, Int16, Int32, Int64};
+    public static readonly LangtType[] RealTypes    = {Real16, Real32, Real64};
+
+    public static readonly LangtType[] BuiltinTypes =
+    {
+        Real64, Real32, Real16,
+        Int64, Int32, Int16, Int8,
+        Bool,
+        None
+    };
 
     public static readonly LangtType Error = new Wrapper("error", LLVMTypeRef.Void);
 

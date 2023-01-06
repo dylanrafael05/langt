@@ -17,9 +17,9 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
     // TODO: move resolution logic to TypeCheckRaw?
     public Result<LangtStructureField> Field(ASTPassState state) 
     {
-        var t = Type.Resolve(state);
+        var t = Type.Bind(state);
         if(!t) return t.Cast<LangtStructureField>();
 
-        return Result.Success(new LangtStructureField(Name.ContentStr, t.Value)).WithDataFrom(t);
+        return Result.Success(new LangtStructureField(Name.ContentStr, (LangtType)t.Value.Resolution!)).WithDataFrom(t);
     }
 }

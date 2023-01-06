@@ -14,10 +14,5 @@ public record PointerType(ASTToken Ptr, ASTType Type) : ASTType
     }
 
     public override Result<LangtType> Resolve(ASTPassState state)
-    {
-        var t = Type.Resolve(state);
-        if(!t) return t;
-
-        return Result.Success(LangtType.PointerTo(t.Value));
-    }
+        => Type.Resolve(state).Map(LangtType.PointerTo);
 }

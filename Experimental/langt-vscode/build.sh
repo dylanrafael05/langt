@@ -1,5 +1,6 @@
 # Initialize
 printf $"Beginning build . . . \n"
+npm install
 
 # Compile typescript
 printf $"Compiling typescript . . . \n"

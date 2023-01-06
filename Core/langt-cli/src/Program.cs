@@ -19,6 +19,8 @@ public static partial class Program
 
     public static RootCommand? Root {get; private set;}
 
+    public const string NoOutputFile = "<derived from input>";
+
     public static async Task Main(string[] args)
     {
 #if DEBUG
@@ -43,34 +45,55 @@ public static partial class Program
             debugFlags.AddAlias("-d");
             Root.AddGlobalOption(debugFlags);
 
-            var run = new Command("run", """Runs the provided Langt file or directory through by means of its "main" function""");
+            var fileinput = new Argument<string>("input", "A path to the input file")
+                .ValidFilePathOrDirectory(".txt", ".lgt");
 
-                var runinput = new Argument<string>("input", "A path to the input file");
+            var disableopt = new Option<bool>("--no-opt", "Disables all optimization")
+            {
+                Arity = ArgumentArity.ZeroOrOne
+            };
+            disableopt.AddAlias("-O");
 
-                    runinput.AddValidator(r => 
-                    {
-                        var filename = r.GetValueOrDefault<string>();
+            var outputtype = new Option<string>("--otype", "The type of output to produce")
+                .FromAmong("llvm");
+            
+            outputtype.SetDefaultValue("llvm");
+            outputtype.AddAlias("-t");
 
-                        if(!File.Exists(filename))
-                        {
-                            if(!Directory.Exists(filename))
-                            {
-                                r.ErrorMessage = "Could not find " + filename + "" + Environment.NewLine + "Please enter a valid filename";
-                            }
-                        }
-                        else if(Path.GetExtension(filename) is not (".txt" or ".lgt"))
-                        {
-                            r.ErrorMessage = "Input file must be either a .lgt file or a .txt file";
-                        }
-                    });
+            var outputname = new Option<string>("--out", "The name of the file to put the output in")
+                .LegalFilePathsOnly();
 
-                run.Add(runinput);
+            outputname.SetDefaultValue(NoOutputFile);
+            outputname.AddAlias("-o");
 
-            run.SetHandler(OnRun, runinput, noisy, debugFlags);
+            var run = new Command("run", """Runs the provided Langt file or directory through by means of its "main" function""")
+            {
+                fileinput,
+                disableopt
+            };
+
+            run.SetHandler(OnRun, fileinput, disableopt, noisy, debugFlags);
             Root.Add(run);
 
-            var defer = new Command("defer", """Defers command execution to read arguments from the console input. Ignores all options.""");
-            defer.SetHandler(DeferAsync);
+            var compile = new Command("compile", """Compiles the given file or directory and outputs it in the given format""")
+            {
+                fileinput,
+                disableopt,
+                outputtype,
+                outputname
+            };
+            compile.SetHandler(OnCompile, fileinput, disableopt, outputtype, outputname, noisy, debugFlags);
+            Root.Add(compile);
+
+            var loop = new Option<bool>("--loop", "Repeatedly await new arguments after each call");
+            loop.AddAlias("-l");
+
+            var defer = new Command("defer", """Defers command execution to read arguments from the console input. Ignores all options.""")
+            {
+                loop
+            };
+
+            defer.SetHandler(DeferAsync, loop);
             Root.Add(defer);
 
         Root.TreatUnmatchedTokensAsErrors = true;
@@ -82,40 +105,41 @@ public static partial class Program
         Noisy = noisy;
     }
 
-    public async static Task DeferAsync() 
-    {
-        Console.WriteLine();
-        Console.WriteLine("Welcome to . . .");
-        Console.WriteLine(".-----------------------.");
-        Console.WriteLine("|     DEFFERED JAIL     |");
-        Console.WriteLine("'-----------------------'");
-        Console.WriteLine();
-        Console.WriteLine("Enter arguments (omitting the call to langt):");
+    public async static Task DeferAsync(bool loop) 
+    {   
+        do
+        {
+            Console.Clear();
 
-        var line = Console.ReadLine()!;
-        Console.WriteLine();
+            Console.WriteLine("Welcome to . . .");
+            Console.WriteLine(".-----------------------.");
+            Console.WriteLine("|     DEFFERED JAIL     |");
+            Console.WriteLine("'-----------------------'");
+            Console.WriteLine();
+            Console.WriteLine("Enter arguments (omitting the call to langt):");
 
-        await Root!.InvokeAsync
-        (
-            Whitespace().Split(line)
-        );
+            var line = Console.ReadLine()!;
+            var args = Whitespace().Split(line);
+
+            await Root!.InvokeAsync(args);
+
+            if(loop) 
+            {
+                Console.WriteLine("Done! Press any key to continue, and escape to exit . . . ");
+                var k = Console.ReadKey().Key;
+
+                if(k == ConsoleKey.Escape) break;
+            }
+        }
+        while(loop);
     }
 
-    public static void OnRun(string input, bool noisy, string[] debugFlags)
+    public static LangtProject CompileProject(string input, ILogger logger, bool disableopt)
     {
-        SetFlags(noisy);
-
-        Console.WriteLine();
-
-        using ILogger logger = new CLILogger()
-        {
-            DebugFlags = debugFlags.ToHashSet()
-        };
-
         var proj = new LangtProject(logger, input);
 
         proj.LoadFromFileOrDirectory(input);
-        proj.Build();
+        proj.Compile(!disableopt);
 
         proj.LogAllDiagnostics();
 
@@ -124,17 +148,34 @@ public static partial class Program
             CLILogger.Abort();
         }
 
-        logger.Note("Running function main in " + input + " . . .");
+        return proj;
+    }
 
+    public static ILogger InitLogger(bool noisy, string[] debugFlags)
+    {
+        SetFlags(noisy);
+
+        return new CLILogger()
+        {
+            DebugFlags = debugFlags.ToHashSet()
+        };
+    }
+
+    public static bool Try(Action a) 
+    {
         try
         {
-            LLVMUtil.CallMain(proj.Module!.Value, logger);
+            a();
+
+            return true;
         }
         catch(Exception e) 
         {
             Console.ForegroundColor = ConsoleColor.Red;
 
             Console.WriteLine("An error occured: " + e.Message);
+
+#if DEBUG
             Console.WriteLine("Press enter to continue, press space to see error stack.");
 
             if(Console.ReadKey().Key == ConsoleKey.Spacebar)
@@ -142,15 +183,40 @@ public static partial class Program
                 Console.WriteLine();
                 Console.Write(e.ToString());
             }
+#endif
 
             Console.ResetColor();
-            Environment.Exit(1);
+            return false;
         }
+    }
+
+    public static void OnCompile(string input, bool disableopt, string otype, string ofilename, bool noisy, string[] debugFlags) => Try(() =>
+    {
+        Console.WriteLine();
+
+        using ILogger logger = InitLogger(noisy, debugFlags);
+        var proj = CompileProject(input, logger, disableopt);
+
+        if(ofilename == NoOutputFile) ofilename = Path.ChangeExtension(input, "ll");
+
+        proj.Module.PrintToFile(ofilename);
+    });
+
+    public static void OnRun(string input, bool disableopt, bool noisy, string[] debugFlags) => Try(() =>
+    {
+        Console.WriteLine();
+
+        using ILogger logger = InitLogger(noisy, debugFlags);
+        var proj = CompileProject(input, logger, disableopt);
+
+        logger.Note("Running function main in " + input + " . . .");
+
+        LLVMUtil.CallMain(proj.Module, logger);
         
         Console.WriteLine();
         logger.Note("Finished running!");
         Console.WriteLine();
-    }
+    });
 
     [GeneratedRegex(@"[ \t]+")]
     private static partial Regex Whitespace();

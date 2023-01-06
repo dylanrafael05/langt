@@ -11,6 +11,24 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
 
     public override void LowerSelf(CodeGenerator generator)
     {
+        if(HasScope)
+        {
+            foreach(var variable in Scope!.NamedItems.Values.OfType<LangtVariable>())
+            {
+                var v = generator.Builder.BuildAlloca(generator.LowerType(variable.Type), "var."+variable.Name);
+                
+                if(variable.IsParameter)
+                {
+                    generator.Builder.BuildStore
+                    (
+                        generator.CurrentFunction!.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v
+                    );
+                }
+
+                variable.Attach(v);
+            }
+        }
+
         foreach(var s in BoundNodes)
         {
             s.Lower(generator);
@@ -22,6 +40,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
     {
         var builder = ResultBuilder.Empty();
         var returns = false;
+        var anyUnreachableLog = false;
 
         var boundNotes = new List<BoundASTNode>();
 
@@ -34,7 +53,13 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
 
             if(returns)
             {
+                if(!anyUnreachableLog)
+                {
+                    builder.AddWarning("Unreachable code", bast.Range);
+                }
+
                 bast.Unreachable = true;
+                anyUnreachableLog = true;
             }
 
             returns |= bast.Returns;
@@ -48,7 +73,8 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
         (
             new BoundGroup(source, boundNotes!, scope)
             {
-                RawExpressionType = LangtType.None
+                RawExpressionType = LangtType.None,
+                Returns = returns
             }
         );
     }

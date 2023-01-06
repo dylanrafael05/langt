@@ -19,23 +19,30 @@ public record FunctionPtrType(ASTToken Star, ASTToken Open, SeparatedCollection<
 
     public override Result<LangtType> Resolve(ASTPassState state)
     {
-        var retResult = ReturnType.Resolve(state);
+        var retResult = ReturnType.Bind(state);
         var argsResult = ResultGroup.GreedyForeach
         (
             Arguments.Values,
-            t => t.Resolve(state)
+            t => t.Bind(state)
         ).Combine();
 
         var fType = new LangtFunctionType
         (
-            retResult.Or(LangtType.Error)!, 
+            retResult.Map(k => k.Resolution as LangtType).Or(LangtType.Error)!, 
             Ellipsis is not null, 
-            argsResult.Or(Arguments.Values.Select(_ => LangtType.Error))!.ToArray()
+            argsResult
+                .Map(k => k.Select(x => x.Resolution as LangtType))
+                .Or(Arguments.Values.Select(_ => LangtType.Error))!
+                .ToArray()!
         );
 
-        return Result.Success<LangtType>(new LangtPointerType(fType))
-            .WithDataFrom(retResult)
-            .WithDataFrom(argsResult)
-        ;
+        var builder = ResultBuilder.From(retResult, argsResult);
+
+        if(!builder) return builder.Build<LangtType>();
+
+        return builder.Build<LangtType>
+        (
+            new LangtPointerType(fType)
+        );
     }
 }

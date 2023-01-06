@@ -4,6 +4,8 @@ namespace Langt.Codegen;
 
 public record LangtFunctionGroup(string Name) : INamedScoped
 {
+    string INamed.Documentation => "";
+
     public string DisplayName => CodeGenerator.DisplayableFunctionGroupName(Name);
 
     public record struct Resolution(LangtFunction Function, Result<BoundASTNode[]> OutputParameters, SignatureMatchLevel MatchLevel);
@@ -15,6 +17,8 @@ public record LangtFunctionGroup(string Name) : INamedScoped
 
     public Result AddFunctionOverload(LangtFunction overload, SourceRange range)
     {
+        if(overload.Group != this) throw new InvalidDataException("Cannot add a function overload to a group other than the one it is defined for.");
+
         var r = ResolveExactOverload(overload.Type.ParameterTypes, overload.Type.IsVararg, range);
 
         if(r) return Result.Error
@@ -73,7 +77,8 @@ public record LangtFunctionGroup(string Name) : INamedScoped
             .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, mmsi)})
             .ToArray();
 
-        if(resolvesFirst.FirstOrDefault(p => !p.Resolution.OutResult.IsTargetTypeDependent()) is var p && p is not null) 
+        if(resolvesFirst.FirstOrDefault(p => p.Resolution.OutResult.HasErrors && !p.Resolution.OutResult.GetBindingOptions().TargetTypeDependent) is var p 
+            && p is not null) 
             return p.Resolution.OutResult.Cast<Resolution>();
 
         var resolves = resolvesFirst

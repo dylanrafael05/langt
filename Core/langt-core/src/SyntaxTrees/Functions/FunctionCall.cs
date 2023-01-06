@@ -76,8 +76,22 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             if(!resolveResult) return builder.Build<BoundASTNode>();
 
             var resolution = resolveResult.Value;
+            builder.AddData(resolution.OutputParameters);
 
             boundArgs = resolution.OutputParameters.Value.ToArray();
+
+            builder.ModifyBindingOptions(b => 
+            {
+                var r = iptResult.GetBindingOptions().References;
+
+                foreach(var k in r.OfType<StaticReference>().Where(k => k.Item is LangtFunctionGroup).ToArray())
+                {
+                    b.References.Remove(k);
+                    b.References.Add(k with {Item = resolution.Function});
+                }
+
+                return b;
+            });
 
             return builder.Build<BoundASTNode>
             (

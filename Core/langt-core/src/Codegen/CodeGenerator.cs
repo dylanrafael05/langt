@@ -166,7 +166,7 @@ public class CodeGenerator : IProjectDependency
         var ftype = new LangtFunctionType(r, false, new[] {x});
 
         var lfn = CreateNewFunction(opfn.Name, false, ftype);
-        var fn = new LangtFunction(ftype, new[] {"__x"}, lfn);
+        var fn = new LangtFunction(opfn, ftype, new[] {"__x"}, lfn);
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
@@ -187,7 +187,7 @@ public class CodeGenerator : IProjectDependency
         var ftype = new LangtFunctionType(r, false, new[] {a, b});
 
         var lfn = CreateNewFunction(opfn.Name, false, ftype);
-        var fn = new LangtFunction(ftype, new[] {"__a", "__b"}, lfn);
+        var fn = new LangtFunction(opfn, ftype, new[] {"__a", "__b"}, lfn);
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
@@ -200,26 +200,17 @@ public class CodeGenerator : IProjectDependency
         );
     }
 
-    public void BuildFunction(LangtFunction fn, IEnumerable<LangtVariable> locals, BoundASTNode body)
+    public void BuildFunction(LangtFunction fn, BoundASTNode body)
     {
         var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
         Builder.PositionAtEnd(bb);
 
-        CurrentFunction = fn;
-
-        foreach(var variable in locals)
+        var pf = CurrentFunction;
         {
-            var v = Builder.BuildAlloca(LowerType(variable.Type), "var."+variable.Name);
-            
-            if(variable.IsParameter)
-            {
-                Builder.BuildStore(fn.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v);
-            }
-
-            variable.Attach(v);
+            CurrentFunction = fn;
+            body.Lower(this);
         }
-
-        body.Lower(this);
+        CurrentFunction = pf;
     }
 
     public void BuildFunctionCall(LLVMValueRef fn, BoundASTNode[] arguments, LangtFunctionType fntype, string sourceName)
@@ -262,6 +253,8 @@ public class CodeGenerator : IProjectDependency
 
     public void SetCurrentNamespace(LangtNamespace ns)
     {
+        Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
+
         CurrentFile!.Scope.HoldingScope = ns;
         CurrentNamespace = ns;
     }

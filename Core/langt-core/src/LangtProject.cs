@@ -2,6 +2,7 @@ using Langt.AST;
 using Langt.Optimization;
 using Langt.Structure.Visitors;
 using Langt.Utility;
+using Langt.Utility.Collections;
 
 namespace Langt.Codegen;
 
@@ -21,6 +22,7 @@ public class LangtProject
     public LangtScope GlobalScope {get; private init;} = new();
     public List<LangtFile> Files {get; private init;} = new();
     public DiagnosticCollection Diagnostics {get; private init;} = new();
+    public OrderedList<StaticReference> References {get; private init;} = new();
 
     public ILogger Logger {get; private init;}
     public string LLVMModuleName {get; init;}
@@ -38,6 +40,12 @@ public class LangtProject
         Files.Add(new(this, new(content, name)));
     }
 
+    private void HandleResult(IResultlike r) 
+    {
+        Diagnostics.AddResult(r);
+        References.AddRange(r.GetBindingOptions().References);
+    }
+
     public void BindSyntaxTrees()
     {
         var startState = GeneralPassState.Start(CodeGenerator);
@@ -46,7 +54,7 @@ public class LangtProject
         foreach(var f in Files)
         {
             CodeGenerator.Open(f);
-            Diagnostics.AddResult(
+            HandleResult(
                 f.AST.HandleDefinitions(startState)
             );
         }
@@ -55,7 +63,7 @@ public class LangtProject
         foreach(var f in Files)
         {
             CodeGenerator.Open(f);
-            Diagnostics.AddResult(
+            HandleResult(
                 f.AST.RefineDefinitions(startState)
             );
         }
@@ -65,14 +73,14 @@ public class LangtProject
         {  
             CodeGenerator.Open(f);
             var r = f.AST.Bind(startState);  
-            Diagnostics.AddResult(r);
+            HandleResult(r);
 
             if(!r) continue;
             f.BoundAST = r.Value;
         }
     }
 
-    public bool Compile() 
+    public bool Compile(bool optimize) 
     {
 #if DEBUG
         try
@@ -101,16 +109,19 @@ public class LangtProject
         if(!CodeGenerator.Verify()) return false;
 #endif
         
-        Logger.Note("Optimizing . . . ");
-        Optimizer.Optimize(CodeGenerator);
+        if(optimize)
+        {
+            Logger.Note("Optimizing . . . ");
+            Optimizer.Optimize(CodeGenerator);
 
 #if DEBUG
-        if(!CodeGenerator.Verify()) return false;
+            if(!CodeGenerator.Verify()) return false;
 #endif
 
-        Logger.Note("Done building!");
+            Logger.Note("Done building!");
 
-        Logger.Debug("Post-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
+            Logger.Debug("Post-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
+        }
 
         return true;
 

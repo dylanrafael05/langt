@@ -8,9 +8,18 @@ public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier)
 
     public override Result<LangtType> Resolve(ASTPassState state)
     {
-        var ns = Namespace.Resolve(state);
-        
-        if(!ns) return ns.Cast<LangtType>();
-        else    return ns.Value.ResolveType(Identifier.ContentStr, Range);
+        var builder = ResultBuilder.Empty();
+
+        var nr = Namespace.Resolve(state);
+        builder.AddData(nr);
+        if(!nr) return builder.Build<LangtType>();
+
+        var ns = nr.Value;
+        var tr = ns!.ResolveType(Identifier.ContentStr, Range);
+        builder.AddData(tr);
+        if(!tr) return builder.Build<LangtType>();
+
+        builder.AddStaticReference(Identifier.Range, tr.Value);
+        return builder.Build(tr.Value);
     }
 }   

@@ -1,10 +1,10 @@
 'use strict';
 
 import { workspace, Disposable, ExtensionContext } from 'vscode';
-import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind, InitializeParams } from 'vscode-languageclient';
+import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind, InitializeParams } from 'vscode-languageclient/node';
 import { Trace } from 'vscode-jsonrpc';
 
-// TODO: remove!
+// TODO: remove
 const serverPath = String.raw`C:\Users\dylan\OneDrive\Desktop\Programming\langt\Experimental\langt-lsp\bin\Debug\net7.0\win-x64\langt-lsp.dll`
 
 export function activate(context: ExtensionContext) {
@@ -36,10 +36,7 @@ export function activate(context: ExtensionContext) {
 
     // Create the language client and start the client.
     const client = new LanguageClient('langtLanguageServer', 'Langt Language', serverOptions, clientOptions);
-    client.trace = Trace.Verbose;
-    let disposable = client.start();
-
-    // Push the disposable to the context's subscriptions so that the
-    // client can be deactivated on extension deactivation
-    context.subscriptions.push(disposable);
+    client.setTrace(Trace.Verbose);
+    
+    client.start();
 }

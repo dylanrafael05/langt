@@ -32,6 +32,6 @@ public record FunctionBlockBody(Block Block) : FunctionBody
         var b = Block.Bind(state);
         if(!b) return b;
 
-        return Result.Success<BoundASTNode>(new BoundFunctionBlockBody(this, b.Value));
+        return b.Map<BoundASTNode>(k => new BoundFunctionBlockBody(this, k));
     }
 }

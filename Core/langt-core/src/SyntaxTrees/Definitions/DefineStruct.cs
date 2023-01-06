@@ -21,14 +21,19 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
     public override Result HandleDefinitions(ASTPassState state)
     {
-        var t = new LangtStructureType(Name.ContentStr);
+        var builder = ResultBuilder.Empty();
+
+        var t = new LangtStructureType(Name.ContentStr, Struct.Documentation);
+        builder.AddStaticReference(Name.Range, t, true);
+
         var dt = state.CG.ResolutionScope.DefineType(t, Range);
+        builder.AddData(dt);
 
         if(!dt) return dt;
 
         StructureType = t;
 
-        return Result.Success();
+        return builder.Build();
     }
 
     public override Result RefineDefinitions(ASTPassState state)

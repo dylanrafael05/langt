@@ -1,6 +1,7 @@
 namespace Results;
+using Interfaces;
 
-public struct Result : IMutableResultlike<Result>
+public struct Result : IModdable<Result>, IResultlike, IResultOperators<Result>
 {
     public bool HasErrors {get; private init;} = false;
     public bool HasMetadata {get; private init;} = false;
@@ -8,24 +9,19 @@ public struct Result : IMutableResultlike<Result>
     public IEnumerable<IResultError> Errors {get; init;}
     public IEnumerable<IResultMetadata> Metadata {get; init;}
 
-    public Result WithErrors(IEnumerable<IResultError> errors) => new(Errors.Concat(errors).ToArray(), HasErrors || errors.Any(), Metadata, HasMetadata);
-    public Result WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Errors, HasErrors, Metadata.Concat(metadata).ToArray(), HasMetadata || metadata.Any());
-    public Result ExcludingErrors(IEnumerable<IResultError> errors)
-    {
-        var nerr = Errors.Except(errors).ToArray();
-        return new(nerr, nerr.Length > 0, Metadata, HasMetadata);
-    }
-    public Result ExcludingMetadata(IEnumerable<IResultMetadata> metadata)
-    {
-        var nmd = Metadata.Except(metadata).ToArray();
-        return new(Errors, HasErrors, nmd, nmd.Length > 0);
-    }
+    
+    public static bool operator !(Result self)
+        => self.HasErrors;
+    
+    public static bool operator true(Result self) 
+        => !self.HasErrors;
+    public static bool operator false(Result self) 
+        => self.HasErrors;
 
-    public Result Forgive()
-    {
-        var nmeta = from e in Errors let t = e.TryDemote() where t is not null select t;
-        return Success().WithMetadata(Metadata).WithMetadata(nmeta);
-    }
+    public Result WithErrors(IEnumerable<IResultError> errors) => new(Errors.Concat(errors).ToArray(), HasErrors || errors.Any(), Metadata, HasMetadata);
+    public Result WithMetadata(IEnumerable<IResultMetadata> metadata) => new(Errors, HasErrors, IResultMetadata.MergeMetadataImmediate(metadata, Metadata), HasMetadata || metadata.Any());
+    public Result ClearErrors() => new(Array.Empty<IResultError>(), false, Metadata, HasMetadata);
+    public Result ClearMetadata() => new(Errors, HasErrors, Array.Empty<IResultMetadata>(), false);
 
     public void Expect(string reason = "expected valid result", Func<string, Exception>? exceptionBuilder = null)
     {
@@ -34,15 +30,6 @@ public struct Result : IMutableResultlike<Result>
             throw exceptionBuilder?.Invoke(reason) ?? new InvalidOperationException($".{nameof(Expect)} called on an invalid result: {reason}");
         }
     }
-
-
-    public static bool operator !(Result self)
-        => self.HasErrors;
-    
-    public static bool operator true(Result self) 
-        => !!self;
-    public static bool operator false(Result self) 
-        => !self;
 
     public Result() : this(Array.Empty<IResultError>(), false, Array.Empty<IResultMetadata>(), false)
     {}
@@ -106,7 +93,7 @@ public struct Result : IMutableResultlike<Result>
         => ForgiveAll(results);
 
     public static Result SkipAll(IEnumerable<Result> results)
-        => results.Aggregate((r, n) => n ? r.GreedyAnd(n) : r);
+        => results.Aggregate((r, n) => !n.HasErrors ? r.GreedyAnd(n) : r);
     public static Result SkipAll(params Result[] results)
         => SkipAll(results);
 

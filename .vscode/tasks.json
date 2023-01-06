@@ -11,7 +11,7 @@
             "args": ["build.sh"]
         },
         {
-            "label": "build cli",
+            "label": "build-cli",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -23,7 +23,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "publish cli",
+            "label": "publish-cli",
             "command": "dotnet",
             "type": "process",
             "args": [
@@ -35,7 +35,7 @@
             "problemMatcher": "$msCompile"
         },
         {
-            "label": "watch cli",
+            "label": "watch-cli",
             "command": "dotnet",
             "type": "process",
             "args": [

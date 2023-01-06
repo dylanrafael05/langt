@@ -31,14 +31,7 @@ public class TextDocumentHandler : TextDocumentSyncHandlerBase
 
     public override Task<Unit> Handle(DidOpenTextDocumentParams request, CancellationToken cancellationToken)
     {
-        if(proj.ContainsFile(request.TextDocument))
-        {
-            proj.UpdateFile(request.TextDocument);
-        }
-        else 
-        {
-            proj.AddFile(request.TextDocument);
-        }
+        proj.AddFile(request.TextDocument);
 
         PublishDiagnostics(request.TextDocument);
         

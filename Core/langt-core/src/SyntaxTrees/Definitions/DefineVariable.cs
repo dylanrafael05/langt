@@ -62,7 +62,8 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
             varT = boundValue.NaturalType ?? boundValue.TransformedType;
         }
         
-        var variable = new LangtVariable(Identifier.ContentStr, varT);
+        var variable = new LangtVariable(Identifier.ContentStr, varT, Let.Documentation);
+        builder.AddStaticReference(Identifier.Range, variable, true);
 
         var couldDef = state.CG.ResolutionScope.DefineVariable(variable, Range);
         builder.AddData(couldDef);

@@ -11,12 +11,12 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
         private MutableMatchSignatureInput(ASTNode[] parameters)
         {
             Parameters = parameters;
-            BoundParameters = new Result<BoundASTNode>?[parameters.Length];
+            CachedBoundParameters = new Result<BoundASTNode>?[parameters.Length];
         }
         public static MutableMatchSignatureInput From(ASTNode[] parameters) => new(parameters);
 
         private ASTNode[] Parameters {get; init;}
-        private Result<BoundASTNode>?[] BoundParameters  {get; init;}
+        private Result<BoundASTNode>?[] CachedBoundParameters  {get; init;}
         
         public int ParameterCount => Parameters.Length;
 
@@ -24,16 +24,16 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
         {
             Result<BoundASTNode> current;
 
-            if(BoundParameters[n] is null)
+            if(CachedBoundParameters[n] is null)
             {
                 current = Parameters[n].Bind(state, new TypeCheckOptions {TargetType = t});
                 
-                if(!current.IsTargetTypeDependent())
-                    BoundParameters[n] = current;
+                if(!current.GetBindingOptions().TargetTypeDependent)
+                    CachedBoundParameters[n] = current;
             }
             else 
             {
-                current = BoundParameters[n]!.Value;
+                current = CachedBoundParameters[n]!.Value;
             }
 
             coerced = false;
@@ -87,7 +87,6 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
         }
 
         level = SignatureMatchLevel.Exact;
-        var internalErr = false;
 
         var group = ResultGroup.Foreach
         (
@@ -102,8 +101,6 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
                 }
 
                 var op = ipt.GetBoundTo(index, state, ParameterTypes[index], out var coerced);
-
-                internalErr = !op.IsTargetTypeDependent();
 
                 var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
 

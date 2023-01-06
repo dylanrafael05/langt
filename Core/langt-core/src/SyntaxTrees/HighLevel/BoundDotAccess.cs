@@ -2,8 +2,21 @@ using Langt.Codegen;
 
 namespace Langt.AST;
 
-public record BoundDotAccess(DotAccess SourceNode, BoundASTNode Left) : BoundASTWrapper(SourceNode)
+public record BoundStaticAccess(ASTNode Source, BoundASTNode Left, ASTNode Right) : BoundASTNode(Source)
 {
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left};
+
+    public BoundStaticAccess(ASTNode Source, BoundASTNode Left, ASTNode Right, INamedScoped Resolution) : this(Source, Left, Right)
+    {
+        HasResolution = true;
+        this.Resolution = Resolution;
+    }
+}
+
+public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : BoundASTNode(SourceNode)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left};
+
     public LangtStructureField? Field {get; set;}
     public int? FieldIndex {get; set;}
 
@@ -11,8 +24,6 @@ public record BoundDotAccess(DotAccess SourceNode, BoundASTNode Left) : BoundAST
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
-        if(HasResolution) return;
-
         Left.Lower(lowerer);
 
         var s = lowerer.PopValue(DebugSourceName);

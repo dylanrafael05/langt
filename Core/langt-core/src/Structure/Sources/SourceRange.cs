@@ -14,6 +14,8 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
 
     public int Length => CharEnd - CharStart;
 
+    public string RawRepresentation => $"SourceRange {{LineStart = {LineStart}, ColumnStart = {ColumnStart}, CharStart = {CharStart}, LineEnd = {LineEnd}, ColumnEnd = {ColumnEnd}, CharEnd = {CharEnd}}}";
+
     public override string ToString()
     {
         if(IsDefault) return "unknown";
@@ -42,8 +44,19 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
 
     public bool Contains(SourcePosition position) 
         => CharStart >= position.Char && position.Char >= CharEnd;
-    public bool Contains(Position position) 
-        => CharStart >= position.Char && position.Char >= CharEnd;
+    public bool Contains(SimplePosition position) 
+    {
+        if(position.Line == LineStart && LineStart == LineEnd)
+            return Comparisons.BetweenInclusive(ColumnStart, position.Column, ColumnEnd);
+
+        if(position.Line == LineStart)
+            return ColumnStart <= position.Column;
+
+        if(position.Line == LineEnd)
+            return position.Column <= ColumnEnd;
+
+        return Comparisons.BetweenExclusive(LineStart, position.Line, LineEnd);
+    }
     public bool Contains(SourceRange range) 
         => Contains(range.Start) && Contains(range.End);
 

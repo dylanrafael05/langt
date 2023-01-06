@@ -10,7 +10,7 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
 
     public override Result HandleDefinitions(ASTPassState state)
     {
-        var n = Identifier.Resolve(state, true);
+        var n = Identifier.Resolve(state, new TypeCheckOptions {AllowNamesapceDefinitions=true});
         if(!n) return n.Drop();
 
         LNamespace = n.Value;

@@ -89,12 +89,14 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : So
 
     // TODO: abstract this out to a TreeNode class?
     // Tree operations //
-    public void Walk(Action<TChild> each)
+    public void Walk(Predicate<TChild> each)
     {
-        each((TChild)this);
-        foreach(var c in Children) 
+        if(each((TChild)this))
         {
-            c.Walk(each);
+            foreach(var c in Children) 
+            {
+                c.Walk(each);
+            }
         }
     }
 
@@ -151,6 +153,8 @@ public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function
         );
     }
 }
+
+
 
 public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>, IElement<VisitDumper>
 {
@@ -215,7 +219,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// item.
     /// </summary>
     /// <seealso cref="INamedScoped"/>
-    public bool HasResolution {get; set;}
+    public virtual bool HasResolution {get; init;}
     /// <summary>
     /// The statically resolveable item this AST node represents an identifier for.
     /// Will not be <see langword="null"/> if <see cref="HasResolution"/> returns true.
@@ -223,7 +227,11 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// <seealso cref="HasResolution"/>
     /// <seealso cref="INamedScoped"/>
     [MemberNotNullWhen(true, nameof(HasResolution))]
-    public INamedScoped? Resolution {get; set;}
+    public virtual INamedScoped? Resolution {get; init;}
+
+    public LangtType ExpectType => Expect.ValueIs<LangtType>(Resolution, "Expected a type");
+    public LangtVariable ExpectVariable => Expect.ValueIs<LangtVariable>(Resolution, "Expected a variable");
+    public LangtNamespace ExpectNamespace => Expect.ValueIs<LangtNamespace>(Resolution, "Expected a namespace");
 
     /// <summary>
     /// The list of transformers currently applied to this AST node, in reverse order 
@@ -266,7 +274,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
                     return builder
                         .WithDgnError("Cannot target type a function reference to a non-functional type", Range)
                         .Build<BoundASTNode>()
-                        .TagTargetTypeDependent();
+                        .AsTargetTypeDependent();
                 }
 
                 var funcType = (LangtFunctionType)type.PointeeType!;
@@ -280,7 +288,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
                 (
                     new BoundFunctionReference(this, fr.Value.Function)  
                 )
-                .TagTargetTypeDependent();
+                .AsTargetTypeDependent();
             }
         }
 
@@ -297,7 +305,8 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
 
         // Attempt to find a conversion
         var convResult = state.CG.ResolveConversion(type, TransformedType, Range);
-        if(!convResult) return builder.WithData(convResult).Build<BoundASTNode>();
+        if(!convResult) return builder.WithData(convResult).Build<BoundASTNode>()
+                        .AsTargetTypeDependent();
 
         var conv = convResult.Value;
 
@@ -307,24 +316,25 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
             return builder
                 .WithDgnError($"Could not find conversion from {TransformedType.GetFullName()} to {type.GetFullName()} (an explicit conversion exists)", Range)
                 .Build<BoundASTNode>()
-                .TagTargetTypeDependent()
+                .AsTargetTypeDependent()
             ;
         }
 
         // Return with conversion
-        ApplyTransform(conv.TransformProvider.TransformerFor(TransformedType, type));
-        return builder.Build(this);
+        var res = this with {}; //TODO: explicit copy function should be implemented just in case
+        res.ApplyTransform(conv.TransformProvider.TransformerFor(TransformedType, type));
+        return builder.Build(res)
+            .AsTargetTypeDependent();
     }
 
     public virtual void LowerSelf(CodeGenerator generator)
-        => generator.Logger.Note("Cannot yet lower AST Node of type " + GetType().Name);
+    {}
     public void Lower(CodeGenerator generator)
     {   
         generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
 
         if(Unreachable)
         {
-            generator.Project.Diagnostics.Warning("Unreachable code detected", Range);
             return;
         }
 
@@ -395,7 +405,8 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
 
         var bast = result.Value;
 
-        if(bast.HasResolution && bast.Resolution is LangtVariable v) 
+        // NOTE: does not bind to a variable reference if target type dependent; is this correct?
+        if(!result.GetBindingOptions().TargetTypeDependent && bast.HasResolution && bast.Resolution is LangtVariable v) 
         {
             bast = new BoundVariableReference(bast, v)
             {
@@ -403,6 +414,8 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
                 HasResolution = true,
                 Resolution = v
             };
+
+            v.UseCount++;
         }
 
         if(options.AutoDeferenceLValue) bast.TryDeferenceLValue();
@@ -432,8 +445,8 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         var nbast = bast.MatchExprType(state, type, out coerced);
         builder.AddData(nbast);
 
-        return builder.Build(nbast.PossibleValue!);
-        // TODO: reimplement function overload resolution to use the fact that type checking can be bound
+        if(!nbast) return builder.Build<BoundASTNode>();
+        return builder.Build(nbast.Value);
     }
     public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions options = default)
         => BindMatchingExprType(state, type, out _, options);

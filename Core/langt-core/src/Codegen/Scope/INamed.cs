@@ -2,6 +2,7 @@ namespace Langt.Codegen;
 
 public interface INamed
 {
-    string Name {get; init;}
+    string Name {get;}
     string DisplayName {get;}
+    string Documentation {get;}
 }

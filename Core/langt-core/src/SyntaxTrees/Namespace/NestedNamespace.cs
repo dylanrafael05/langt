@@ -6,12 +6,21 @@ public record NestedNamespace(ASTNamespace Namespace, ASTToken Dot, ASTToken Ide
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 
-    public override Result<LangtNamespace> Resolve(ASTPassState state, bool allowDefinitions = false)
+    public override Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions options)
     {
-        var ns = Namespace.Resolve(state, allowDefinitions);
-        if(!ns) return ns;
+        var builder = ResultBuilder.Empty();
 
-        return ResolveFrom(ns.Value, Identifier.ContentStr, state, allowDefinitions).WithDataFrom(ns);
+        var ns = Namespace.Resolve(state, options);
+        builder.AddData(ns);
+        if(!ns) return builder.Build<LangtNamespace>();
+
+        var r = ResolveFrom(ns.Value, Identifier.ContentStr, options.AllowNamesapceDefinitions);
+        builder.AddData(r);
+        if(!r) return builder.Build<LangtNamespace>();
+
+        var res = r.Value;
+        builder.AddStaticReference(Identifier.Range, res);
+
+        return builder.Build(res);
     }
-
 }

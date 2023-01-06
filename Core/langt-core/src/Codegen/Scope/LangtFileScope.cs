@@ -6,6 +6,7 @@ public class LangtFileScope : LangtScope
 {
     public LangtFileScope(LangtScope parent)
     {
+        if(parent is null) throw new ArgumentNullException(nameof(parent));
         HoldingScope = parent;
     }
 

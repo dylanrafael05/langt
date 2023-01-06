@@ -1,6 +1,6 @@
 namespace Langt.Codegen;
 
-public record LangtStructureType(string Name) : LangtType(Name)
+public record LangtStructureType(string Name, string Documentation = "") : LangtType(Name, Documentation)
 {
     public record struct ResolveFieldResult(ResolveFieldResult.ResultType Type)
     {

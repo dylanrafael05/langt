@@ -52,12 +52,12 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         => new(type, Range);
     private Token Grab(int count, TT type)
     {
-        index += count;
+        Pass(count);
         return BuildToken(type);
     }
     private Token GrabLineBreak(int count)
     {
-        index += count;
+        Pass(count);
         lineIndex++;
         columnIndex = 0;
         return BuildToken(TT.LineBreak);
@@ -99,7 +99,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         ('\r', '\n') or ('\n', '\r') => (GrabLineBreak(2), false),
         ('\n', _   ) or ('\r', _   ) => (GrabLineBreak(1), false),
         (' ' , _   ) or ('\t', _   ) => (GrabNone(() => PassAll(ch => ch is ' ' or '\t')), false),
-        ('#' , _   )                 => (GrabNone(() => PassAll(ch => ch is not '\r' and not '\n')), false),
+        ('#' , _   )                 => (GrabAll(ch => ch is not '\r' and not '\n', TT.Comment), false),
         _                            => (null, true)
     };
 
@@ -166,7 +166,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
             do
             {
-                index++;
+                Pass();
 
                 PassAll(ch => ch is not '"' and not '\n' and not '\r');
 
@@ -177,7 +177,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
             } 
             while(Last.Nullable() is '\\' && Current.Nullable() is '"');
 
-            index++;
+            Pass();
 
         }, TT.String),
 
@@ -190,7 +190,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
             if(Current is (true, '.'))
             {
-                index++;
+                Pass();
                 PassAll(ch => ch is >= '0' and <= '9');
 
                 return TT.Decimal;
@@ -250,10 +250,10 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         while(last != TT.EndOfFile)
         {
             BeginToken();
-
             while(LexWhitespace() is var r && !r.isDone) 
             {
                 if(r.token is Token ws) yield return ws;
+                BeginToken();
             }
 
             BeginToken();

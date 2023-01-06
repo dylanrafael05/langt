@@ -1,6 +1,7 @@
 namespace Results;
+using Interfaces;
 
-public struct Result<T> : IMutableValuedResultlike<Result<T>, T>
+public struct Result<T> : IModdable<Result<T>>, IValuedResultlike<T>, IResultOperators<Result<T>>
 {
     private T? valueStorage;
 
@@ -25,8 +26,6 @@ public struct Result<T> : IMutableValuedResultlike<Result<T>, T>
         : default
         ;
 
-    public static explicit operator Result<T>(T i) => Result.Success(i);
-
     public static bool operator !(Result<T> self)
         => self.HasErrors;
     
@@ -36,17 +35,9 @@ public struct Result<T> : IMutableValuedResultlike<Result<T>, T>
         => self.HasErrors;
 
     public Result<T> WithErrors(IEnumerable<IResultError> errors) => new(PossibleValue, HasValue, Errors.Concat(errors).ToArray(), HasErrors || errors.Any(), Metadata, HasMetadata);
-    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(PossibleValue, HasValue, Errors, HasErrors, Metadata.Concat(metadata).ToArray(), HasMetadata || metadata.Any());
-    public Result<T> ExcludingErrors(IEnumerable<IResultError> errors)
-    {
-        var nerr = Errors.Except(errors).ToArray();
-        return new(PossibleValue, HasValue, nerr, nerr.Length > 0, Metadata, HasMetadata);
-    }
-    public Result<T> ExcludingMetadata(IEnumerable<IResultMetadata> metadata)
-    {
-        var nmd = Metadata.Except(metadata).ToArray();
-        return new(PossibleValue, HasValue, Errors, HasErrors, nmd, nmd.Length > 0);
-    }
+    public Result<T> WithMetadata(IEnumerable<IResultMetadata> metadata) => new(PossibleValue, HasValue, Errors, HasErrors, IResultMetadata.MergeMetadataImmediate(metadata, Metadata), HasMetadata || metadata.Any());
+    public Result<T> ClearErrors() => new(PossibleValue, HasValue, Array.Empty<IResultError>(), false, Metadata, HasMetadata);
+    public Result<T> ClearMetadata() => new(PossibleValue, HasValue, Errors, HasErrors, Array.Empty<IResultMetadata>(), false);
 
     public Result<T> WithValue(T value) => new(value, true, Errors, HasErrors, Metadata, HasMetadata);
     public Result<T> ExcludingValue() => new(default, false, Errors, HasErrors, Metadata, HasMetadata);
@@ -137,7 +128,7 @@ public struct Result<T> : IMutableValuedResultlike<Result<T>, T>
     public Result<TOut> Map<TOut>(Func<T,TOut> mapper)
     {
         if(HasValue) return Result.Success(mapper(Value)).WithDataFrom(this);
-        else         return Result.Error<TOut>(Errors).WithDataFrom(this);
+        else         return Result.Blank<TOut>().WithDataFrom(this);
     }
 
     public Result<TOut> Combine<TOther, TOut>(Result<TOther> other, Func<T, TOther, TOut> combinator)

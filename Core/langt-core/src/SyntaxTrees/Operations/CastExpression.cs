@@ -4,9 +4,9 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record BoundCastExpression(CastExpression Source, BoundASTNode Value, ITransformer Transformer) : BoundASTNode(Source)
+public record BoundCastExpression(CastExpression Source, BoundASTNode Value, BoundASTNode Type, ITransformer Transformer) : BoundASTNode(Source)
 {
-    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value, Type};
     public override void LowerSelf(CodeGenerator lowerer)
     {
         Value.Lower(lowerer);
@@ -37,13 +37,15 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         var results = Result.All
         (
             Value.Bind(state),
-            Type.Resolve(state) 
+            Type.Bind(state) 
         );
         var builder = ResultBuilder.From(results);
 
         if(!results) return builder.Build<BoundASTNode>();
 
-        var (val, type) = results.Value;
+        var (val, boundType) = results.Value;
+
+        var type = (LangtType)boundType.Resolution!;
 
         var cv = state.CG.ResolveConversion(type, val.TransformedType, Range);
         builder.AddData(cv);
@@ -54,7 +56,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         // TODO: make RawExpressionType required or a parameter
         return builder.Build<BoundASTNode>
         (
-            new BoundCastExpression(this, val, conversion.TransformProvider.TransformerFor(val.TransformedType, type))
+            new BoundCastExpression(this, val, boundType, conversion.TransformProvider.TransformerFor(val.TransformedType, type))
             {
                 RawExpressionType = type
             }

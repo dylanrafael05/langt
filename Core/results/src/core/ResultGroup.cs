@@ -1,6 +1,7 @@
 namespace Results;
+using Interfaces;
 
-public struct ResultGroup : IResultlike<ResultGroup>
+public struct ResultGroup : IResultlike, IResultOperators<ResultGroup>
 {
     
     public IEnumerable<IResultError> Errors {get; init;}
@@ -9,9 +10,9 @@ public struct ResultGroup : IResultlike<ResultGroup>
     public bool HasErrors {get; private init;} = false;
     public bool HasMetadata {get; private init;} = false;
 
-    public IEnumerable<Result> InnerResults {get; init;}
+    public IEnumerable<IResultlike> InnerResults {get; init;}
     
-    public ResultGroup(IEnumerable<Result> innerResults)
+    public ResultGroup(IEnumerable<IResultlike> innerResults)
     {
         Errors = innerResults.SelectMany(r => r.Errors).ToArray();
         HasErrors = innerResults.Any(r => r.HasErrors);
@@ -31,10 +32,10 @@ public struct ResultGroup : IResultlike<ResultGroup>
     public static bool operator false(ResultGroup self)
         => !self;
         
-    public static ResultGroup From(params Result[] results) => new(results);
-    public static ResultGroup From(IEnumerable<Result> results) => new(results);
-    public static ResultGroup<T> From<T>(params Result<T>[] results) => new(results);
-    public static ResultGroup<T> From<T>(IEnumerable<Result<T>> results) => new(results);
+    public static ResultGroup From(params IResultlike[] results) => new(results);
+    public static ResultGroup From(IEnumerable<IResultlike> results) => new(results);
+    public static ResultGroup<T> From<T>(params IValuedResultlike<T>[] results) => new(results);
+    public static ResultGroup<T> From<T>(IEnumerable<IValuedResultlike<T>> results) => new(results);
 
     /// <summary>
     /// Applies a Result-returning function to every item in an array and returns the 
@@ -50,30 +51,30 @@ public struct ResultGroup : IResultlike<ResultGroup>
     /// Its encapsulated array is not guaranteed to be the same size as the input array
     /// if any errors occured.
     /// </returns>
-    public static ResultGroup<TOut> Foreach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, Result<TOut>> resultor)
+    public static ResultGroup<TOut> Foreach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, IValuedResultlike<TOut>> resultor)
     {
-        var result = new List<Result<TOut>>();
+        var result = new List<IValuedResultlike<TOut>>();
 
         foreach(var v in input)
         {
             var r = resultor(v);
             result.Add(r);
 
-            if(!r) break;
+            if(r.HasErrors) break;
         }
 
         return From(result);
     }
-    public static ResultGroup Foreach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
+    public static ResultGroup Foreach<TIn>(IEnumerable<TIn> input, Func<TIn, IResultlike> resultor)
     {
-        var result = new List<Result>();
+        var result = new List<IResultlike>();
 
         foreach(var v in input)
         {
             var r = resultor(v);
             result.Add(r);
 
-            if(!r) break;
+            if(r.HasErrors) break;
         }
 
         return From(result);
@@ -94,7 +95,7 @@ public struct ResultGroup : IResultlike<ResultGroup>
     /// </returns>
     public static ResultGroup<TOut> GreedyForeach<TIn, TOut>(IEnumerable<TIn> input, Func<TIn, Result<TOut>> resultor)
     {
-        var result = new List<Result<TOut>>();
+        var result = new List<IValuedResultlike<TOut>>();
 
         foreach(var v in input)
         {
@@ -105,6 +106,6 @@ public struct ResultGroup : IResultlike<ResultGroup>
 
         return From(result);
     }
-    public static ResultGroup GreedyForeach<TIn>(IEnumerable<TIn> input, Func<TIn, Result> resultor)
+    public static ResultGroup GreedyForeach<TIn>(IEnumerable<TIn> input, Func<TIn, IResultlike> resultor)
         => From(input.Select(resultor).ToArray());
 }

@@ -14,5 +14,10 @@ public record SimpleType(ASTToken Name) : ASTType
     }
 
     public override Result<LangtType> Resolve(ASTPassState state)
-        => state.CG.ResolutionScope.ResolveType(Name.ContentStr, Range);
+    {
+        var t = state.CG.ResolutionScope.ResolveType(Name.ContentStr, Range);
+        if(!t) return t;
+
+        return t.AddStaticReference(Range, t.Value);
+    }
 }

@@ -28,6 +28,8 @@ public class LangtLanguageServer
                 .AddDefaultLoggingProvider()
                 .WithServices(Services)
                 .AddHandler<TextDocumentHandler>()
+                .AddHandler<TokenHandler>()
+                .AddHandler<HoverHandler>()
         );
 
         return server;
