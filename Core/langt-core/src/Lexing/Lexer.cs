@@ -30,7 +30,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
     {
         Project = project;
 
-        Source = src.Content.ToCharArray();
+        base.Source = src.Content.ToCharArray();
         this.src = src;
         startPos = new(0, 1, 0, src);
     }
@@ -48,6 +48,19 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         return Grab(1, TT.Error);
     }
 
+    private bool SeesCount(char c, int count) 
+    {
+        for(var i = 0; i < count; i++)
+        {
+            if(Get(i).Nullable() != c)
+            {
+                return false;
+            }
+        }
+
+        return true;
+    }
+
     private Token BuildToken(TT type)
         => new(type, Range);
     private Token Grab(int count, TT type)
@@ -55,11 +68,15 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         Pass(count);
         return BuildToken(type);
     }
-    private Token GrabLineBreak(int count)
+    private void PassLineBreak(int count)
     {
         Pass(count);
         lineIndex++;
         columnIndex = 0;
+    }
+    private Token GrabLineBreak(int count)
+    {
+        PassLineBreak(count);
         return BuildToken(TT.LineBreak);
     }
     private Token GrabAll(Predicate<char> pred, TT type)
@@ -94,11 +111,38 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
     }
 
     // Sublexers
+    private Token GrabBlockComment() => GrabAfter(() => 
+    {
+        Pass(2);
+
+        while(Current.Nullable() != ']')
+        {
+            switch(Current.Nullable(), Next.Nullable())
+            {
+                case ('\n', '\r') or ('\r', '\n'): PassLineBreak(2); break;
+                case ('\n', _   ) or ('\r', _   ): PassLineBreak(1); break;
+
+                case (null, _): 
+                {
+                    Project.Diagnostics.Error("Unterminated block comment", Range);
+                    return TT.Error;
+                }
+
+                default: Pass(); break;
+            }
+        }
+
+        Pass();
+
+        return TT.BlockComment;
+    });
+
     private (Token? token, bool isDone) LexWhitespace() => (Current.Nullable(), Next.Nullable()) switch
     {
         ('\r', '\n') or ('\n', '\r') => (GrabLineBreak(2), false),
         ('\n', _   ) or ('\r', _   ) => (GrabLineBreak(1), false),
         (' ' , _   ) or ('\t', _   ) => (GrabNone(() => PassAll(ch => ch is ' ' or '\t')), false),
+        ('#' , '[' )                 => (GrabBlockComment(), false),
         ('#' , _   )                 => (GrabAll(ch => ch is not '\r' and not '\n', TT.Comment), false),
         _                            => (null, true)
     };
@@ -107,6 +151,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
     {
         '=' => Next.Nullable() switch
         {
+            '>' => Grab(2, TT.ArrowRight),
             '=' => Grab(2, TT.DoubleEquals),
             _   => Grab(1, TT.EqualsSign)
         },
@@ -130,15 +175,10 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
             _   => Grab(1, TT.LessThan)
         },
         
-        '-' => Next.Nullable() switch
-        {
-            '>' => Grab(2, TT.ArrowRight),
-            _   => Grab(1, TT.Minus)
-        },
-
         ',' => Grab(1, TT.Comma),
         
         '+' => Grab(1, TT.Plus),
+        '-' => Grab(1, TT.Minus),
         '*' => Grab(1, TT.Star),
         '/' => Grab(1, TT.Slash),
         '%' => Grab(1, TT.Percent),
@@ -206,41 +246,41 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
     private TT MapKeywordType(string str) => str switch 
     {
-        "let"    => TT.Let,
-        "const"  => TT.Const,
-        "extern" => TT.Extern,
+        "let"       => TT.Let,
+        "const"     => TT.Const,
+        "extern"    => TT.Extern,
 
-        "ptrto"  => TT.Ptrto,
+        "ptrto"     => TT.Ptrto,
 
-        "alias"  => TT.Alias,
-        "struct" => TT.Struct,
-        "type"   => TT.Type,
+        "alias"     => TT.Alias,
+        "struct"    => TT.Struct,
+        "type"      => TT.Type,
 
-        "sizeof" => TT.Sizeof,
+        "sizeof"    => TT.Sizeof,
 
-        "and"    => TT.And,
-        "not"    => TT.Not,
-        "or"     => TT.Or,
+        "and"       => TT.And,
+        "not"       => TT.Not,
+        "or"        => TT.Or,
 
-        "if"     => TT.If,
-        "else"   => TT.Else,
+        "if"        => TT.If,
+        "else"      => TT.Else,
 
-        "while"  => TT.While,
-        "for"    => TT.For,
+        "while"     => TT.While,
+        "for"       => TT.For,
 
-        "select" => TT.Select,
+        "select"    => TT.Select,
 
-        "as"     => TT.As,
+        "as"        => TT.As,
 
-        "return" => TT.Return,
+        "return"    => TT.Return,
 
-        "true"   => TT.True,
-        "false"  => TT.False,
+        "true"      => TT.True,
+        "false"     => TT.False,
 
         "namespace" => TT.Namespace,
         "using"     => TT.Using,
 
-        _ => TT.Identifier
+        _           => TT.Identifier
     };
 
     // Full Lexer

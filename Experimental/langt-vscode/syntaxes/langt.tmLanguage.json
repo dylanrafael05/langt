@@ -14,7 +14,7 @@
 			"match": "\\b[\\w_\\$][\\w\\d_\\$]*"
 		},
 		{
-			"name": "comment.block.documentation",
+			"name": "comment.block",
 			"begin": "#\\[\\(",
 			"end": "\\)\\]",
 			"patterns": [
@@ -23,7 +23,8 @@
 					"begin": "\\[",
 					"end": "\\]"
 				}
-			]
+			],
+			"contentName": "comment.block.documentation"
 		},
 		{
 			"name": "comment.block",

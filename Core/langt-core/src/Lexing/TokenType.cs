@@ -61,6 +61,7 @@ public enum TokenType
 
     String,
     Char,
+    AsciiChar,
 
     Alias,
 
@@ -72,8 +73,8 @@ public enum TokenType
     Using,
 
     LineBreak,
-    Whitespace,
     Comment,
+    BlockComment,
 
     OpenParen,
     CloseParen,

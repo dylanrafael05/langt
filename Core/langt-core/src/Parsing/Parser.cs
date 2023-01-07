@@ -42,14 +42,19 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public int PassLineBreaks(bool prefix)
     {
+        // Initialize; clear prefix if necessary
         if(prefix) Prefix.Clear();
         var linecount = 0;
 
-        while(CurrentType is TT.LineBreak or TT.Comment)
+        // Loop while "whitespace" is present
+        while(CurrentType is TT.LineBreak or TT.Comment or TT.BlockComment)
         {
             if(CurrentType is TT.LineBreak)
             {
                 linecount++;
+
+                // Clear prefix if more than one line break separates comments
+                if(prefix && Next.Nullable()?.Type is TT.LineBreak) Prefix.Clear();
             }
             else if(prefix) 
             {
@@ -128,6 +133,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             while(Current.Exists && CurrentType is not TT.CloseBlock)
             {
                 yield return pass(state);
+                PassLineBreaks(false);
             }
         }
 
@@ -165,8 +171,9 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
                 TT.While => WhileStatement(state),
                 TT.Return => Return(state),
 
-                // TODO; this might mess up internal state of parser
-                _ => Assignment(state)
+                _ => Assignment(state) is var a && (a is Assignment || a is FunctionCall) 
+                    ? a 
+                    : throw ParserException.Error("Statements must be a variable declaration, control flow statement, function call, or assignment")
             };
         }
         else 
@@ -543,7 +550,10 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         TT.OpenParen => ParentheticExpression(state),
         TT.Ampersand => PtrTo(state),
 
-        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state),
+        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), 
+            //TODO: this does not account for types in namespaces!
+            //TODO: refactor to allow for struct creation using static references.
+            //TODO: do so by having common types (static '::' access) have corresponding 'wrapper' types
         TT.Identifier => new Identifier(Grab()),
         TT.Integer or TT.Decimal
             => new NumericLiteral(Grab()),
@@ -560,7 +570,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         var type = Type(state);
         var open = Require(TT.OpenBlock);
         var args = SeparatedCollection(state, Expression, t => t is TT.Comma, t => t is TT.CloseBlock);
-        var close = Require(TT.CloseBlock);
+        var close = Require(TT.CloseBlock, "expected matching '}' for earlier '{'");
 
         return new(type, open, args, close);
     }
@@ -569,7 +579,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var open = Grab();
         var expr = Expression(state);
-        var close = Require(TT.CloseParen);
+        var close = Require(TT.CloseParen, "expected matching ')' for earlier '('");
 
         return new ParentheticExpression(open, expr, close);
     }
@@ -589,7 +599,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             {
                 b.Add(Grab());
                 
-                if(lineBreaksAfterSep) PassLineBreaks(false);
+                if(lineBreaksAfterSep) PassLineBreaks(true);
 
                 b.Add(pass(state)!);
             }
