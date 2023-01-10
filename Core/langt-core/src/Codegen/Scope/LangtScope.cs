@@ -4,9 +4,14 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public class LangtScope : IScoped
+public class LangtScope
 {
-    public LangtScope? HoldingScope {get; set;}
+    public LangtScope(LangtScope? holdingScope)
+    {
+        HoldingScope = holdingScope;
+    }
+    
+    public LangtScope? HoldingScope {get;}
 
     /// <summary>
     /// Get the nearest namespace to the current scope
@@ -17,49 +22,32 @@ public class LangtScope : IScoped
     public virtual bool IsNamespace => false;
     public bool IsGlobalScope => HoldingScope == null;
 
-    private readonly HashSet<string> definedNames = new();
-    private readonly List<IScoped> unnamedItems = new();
-    private readonly Dictionary<string, INamedScoped> namedItems = new();
+    private readonly Dictionary<string, Resolution> namedItems = new();
+    public IReadOnlyDictionary<string, Resolution> NamedItems => namedItems;
 
-    public IReadOnlySet<string> DefinedNames => definedNames;
-    public IReadOnlyList<IScoped> UnnamedItems => unnamedItems;
-    public IReadOnlyDictionary<string, INamedScoped> NamedItems => namedItems;
-    public IEnumerable<IScoped> AllItems => namedItems.Values.Concat(unnamedItems);
-
-    public void AddUnnamed(IScoped item) 
+    public LangtScope CreateUnnamedSubScope() 
     {
-        unnamedItems.Add(item);
-        item.HoldingScope = this;
-    }
-    public LangtScope AddUnnamedScope() 
-    {
-        var scope = new LangtScope();
-        AddUnnamed(scope);
+        var scope = new LangtScope(this);
         return scope;
     }
 
     // TODO: replace 'null' returns with Result.Error
-    public Result<INamedScoped> Resolve(string input,
+    public Result<Resolution> Resolve(string input,
                                  SourceRange range,
                                  bool propogate = true)
-        => Resolve<INamedScoped>(input, "item", range, propogate);
+        => Resolve<Resolution>(input, "item", range, propogate);
 
     public virtual Result<TOut> Resolve<TOut>(string input,
                                               string outputType,
                                               SourceRange range,
-                                              bool propogate = true) where TOut: class, INamedScoped
+                                              bool propogate = true) where TOut: Resolution
     {
         var builder = ResultBuilder.Empty();
 
         // Check if the item exists in the named items stored by this scope
-        if(namedItems.TryGetValue(input, out var r))
+        if(namedItems.TryGetValue(input, out var r) && r is TOut t)
         {
-            // If the item is found and is of the expected type, return it
-            if(r is TOut t) return builder.Build(t);
-
-            // If the above condition failed,
-            // produce a warning that an ambiguity was present but not fatal
-            builder.AddWarning($"Possible reference candidate {r.GetFullName()} found, but expected a {outputType}; try to disambiguate", range);
+            return builder.Build(t);
         }
 
         Result<TOut>? result = null;
@@ -93,29 +81,20 @@ public class LangtScope : IScoped
     public Result<LangtNamespace> ResolveNamespace(string name, SourceRange range, bool propogate = true) 
         => Resolve<LangtNamespace>(name, "namespace", range, propogate: propogate);
 
-    public virtual Result Define(
-        INamedScoped obj,
-        SourceRange sourceRange)
+    public virtual Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange) where T : Resolution
     {
-        if(definedNames.Contains(obj.Name))
+        var obj = constructor(this);
+
+        if(namedItems.ContainsKey(obj.Name))
         {
-            return ResultBuilder.Empty().WithDgnError($"Attempting to redefine name {obj.Name}", sourceRange).Build();
+            return ResultBuilder
+                .Empty()
+                .WithDgnError($"Attempting to redefine name {obj.Name}", sourceRange)
+                .Build<T>();
         }
 
         namedItems.Add(obj.Name, obj);
-        definedNames.Add(obj.Name);
-
-        obj.HoldingScope = this;
         
-        return Result.Success();
+        return Result.Success(obj);
     }
-
-    public Result DefineVariable(LangtVariable variable, SourceRange range)
-        => Define(variable, range);
-    public Result DefineType(LangtType type, SourceRange range)
-        => Define(type, range);
-    public Result DefineFunctionGroup(LangtFunctionGroup function, SourceRange range)
-        => Define(function, range);
-    public Result DefineNamespace(LangtNamespace ns, SourceRange range)
-        => Define(ns, range);
 }

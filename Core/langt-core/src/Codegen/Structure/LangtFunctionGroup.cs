@@ -2,11 +2,11 @@ using Langt.AST;
 
 namespace Langt.Codegen;
 
-public record LangtFunctionGroup(string Name) : INamedScoped
+public record LangtFunctionGroup(string RawName) : INamedScoped
 {
-    string INamed.Documentation => "";
+    string Codegen.Resolution.Documentation => "";
 
-    public string DisplayName => CodeGenerator.DisplayableFunctionGroupName(Name);
+    public string Name => CodeGenerator.DisplayableFunctionGroupName(RawName);
 
     public record struct Resolution(LangtFunction Function, Result<BoundASTNode[]> OutputParameters, SignatureMatchLevel MatchLevel);
 

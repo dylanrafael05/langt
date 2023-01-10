@@ -8,7 +8,7 @@ struct string
 }
 
 # Constructs a string from a string literal
-let make_string(chars *int8) string -> string {internal.strlen(chars), chars}
+let make_string(chars *int8) string => string {internal.strlen(chars), chars}
 
 # Prints a string to the console
 let print(a string) none

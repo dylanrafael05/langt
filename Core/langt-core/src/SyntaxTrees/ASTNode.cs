@@ -229,9 +229,9 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     [MemberNotNullWhen(true, nameof(HasResolution))]
     public virtual INamedScoped? Resolution {get; init;}
 
-    public LangtType ExpectType => Expect.ValueIs<LangtType>(Resolution, "Expected a type");
-    public LangtVariable ExpectVariable => Expect.ValueIs<LangtVariable>(Resolution, "Expected a variable");
-    public LangtNamespace ExpectNamespace => Expect.ValueIs<LangtNamespace>(Resolution, "Expected a namespace");
+    public LangtType ExpectType => Expect.Is<LangtType>(Resolution, "Expected a type");
+    public LangtVariable ExpectVariable => Expect.Is<LangtVariable>(Resolution, "Expected a variable");
+    public LangtNamespace ExpectNamespace => Expect.Is<LangtNamespace>(Resolution, "Expected a namespace");
 
     /// <summary>
     /// The list of transformers currently applied to this AST node, in reverse order 

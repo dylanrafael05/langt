@@ -34,7 +34,7 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
                 lowerer.LowerType(s.Type.PointeeType!), 
                 s.LLVM,
                 (uint)FieldIndex!.Value,
-                s.Type.PointeeType!.Name + "." + Field!.Name
+                s.Type.PointeeType!.RawName + "." + Field!.Name
             ),
             DebugSourceName
         );

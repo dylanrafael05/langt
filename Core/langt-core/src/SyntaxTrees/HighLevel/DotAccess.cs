@@ -62,7 +62,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index, out _))
         {
-            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range)
+            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.RawName}", Range)
                 .Build<BoundASTNode>();
         }
 

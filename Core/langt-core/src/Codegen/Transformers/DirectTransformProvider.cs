@@ -10,7 +10,7 @@ public class DirectTransformProvider : TransformProvider
     public override LangtType? DirectInput => input;
     public override LangtType? DirectResult => output;
 
-    public override string Name => input.Name + "->" + output.Name;
+    public override string Name => input.RawName + "->" + output.RawName;
 
     public DirectTransformProvider(LangtType output, LangtType input, TransformFunction perform)
     {

@@ -165,7 +165,7 @@ public class CodeGenerator : IProjectDependency
 
         var ftype = new LangtFunctionType(r, false, new[] {x});
 
-        var lfn = CreateNewFunction(opfn.Name, false, ftype);
+        var lfn = CreateNewFunction(opfn.RawName, false, ftype);
         var fn = new LangtFunction(opfn, ftype, new[] {"__x"}, lfn);
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
@@ -186,7 +186,7 @@ public class CodeGenerator : IProjectDependency
 
         var ftype = new LangtFunctionType(r, false, new[] {a, b});
 
-        var lfn = CreateNewFunction(opfn.Name, false, ftype);
+        var lfn = CreateNewFunction(opfn.RawName, false, ftype);
         var fn = new LangtFunction(opfn, ftype, new[] {"__a", "__b"}, lfn);
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
@@ -272,7 +272,7 @@ public class CodeGenerator : IProjectDependency
     }
 
     public LangtScope CreateUnnamedScope()
-        => ResolutionScope = ResolutionScope.AddUnnamedScope();
+        => ResolutionScope = ResolutionScope.CreateUnnamedSubScope();
     public void CloseScope()
     {
         ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close a scope; the current scope is the global scope!");
@@ -291,7 +291,7 @@ public class CodeGenerator : IProjectDependency
     public LangtValue PopValue(string source)
     {
         var s = PopValueNoDebug();
-        Project.Logger.Debug($"     Consumed one value from {source}; type {s.Type.Name}, value {s.LLVM.Name}", "lowering");
+        Project.Logger.Debug($"     Consumed one value from {source}; type {s.Type.RawName}, value {s.LLVM.Name}", "lowering");
         return s;
     }
     public LangtValue PopValueNoDebug()
@@ -315,7 +315,7 @@ public class CodeGenerator : IProjectDependency
         }
         else foreach(var s in unnamedValues)
         {
-            res += "\r\n          : type " + s.Type.Name + ", value " + s.LLVM.Name;
+            res += "\r\n          : type " + s.Type.RawName + ", value " + s.LLVM.Name;
         }
 
         Logger.Debug(res, "lowering");
@@ -377,6 +377,6 @@ public class CodeGenerator : IProjectDependency
         return LangtIdentifierPrepend 
             + (currentNamespace is null ? "" : currentNamespace.GetFullName() + "::") 
             + name 
-            + LangtFunctionType.GetSignatureString(isVararg, paramTypes);
+            + LangtFunctionType.GetFullSignatureString(isVararg, paramTypes);
     }
 }

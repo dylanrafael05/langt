@@ -2,13 +2,22 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.Codegen;
 
-public record LangtFunction(LangtFunctionGroup Group, LangtFunctionType Type, string[] ParameterNames, LLVMValueRef LLVMFunction, string Documentation = "") : INamedScoped
+public class LangtFunction : NamedBase
 {
-    public string Name => Group.Name;
-    public string DisplayName => Group.DisplayName;
-    public LangtScope? HoldingScope  
+    public LangtFunction(LangtFunctionGroup group)
     {
-        get => Group.HoldingScope;
-        set => Group.HoldingScope = value; //NOTE: is this problematic?
+        Group = group;
     }
+
+    public LangtFunctionGroup Group {get;}
+
+    public required LangtFunctionType Type {get; init;}
+    public required string[] ParameterNames {get; init;}
+    public required LLVMValueRef LLVMFunction {get; init;}
+
+    public override string Name => Group.RawName;
+
+    public LangtScope HoldingScope => Group.HoldingScope;
+    public SourceRange? DefinitionRange {get; init;}
+    public string Documentation {get; init;} = "";
 }

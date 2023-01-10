@@ -3,10 +3,17 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public record LangtVariable(string Name, LangtType Type, string Documentation = "") : INamedScoped
+public class LangtVariable : NamedScopedBase
 {
-    string INamed.DisplayName => Name;
-    
+    public LangtVariable(string name, LangtType type, string documentation = "") : base(documentation)
+    {
+        Name = name;
+        Type = type;
+    }
+
+    public override string Name {get; init;}
+    public LangtType Type {get; init;}
+
     public bool IsWriteable {get; init;} = true;
     public uint? ParameterNumber {get; init;}
 
@@ -15,15 +22,6 @@ public record LangtVariable(string Name, LangtType Type, string Documentation = 
     public bool IsParameter => ParameterNumber is not null;
     public LangtValue? UnderlyingValue {get; private set;}
 
-    public LangtScope? HoldingScope { get; set; }
-
     public void Attach(LLVMValueRef value)
         => UnderlyingValue = new(Type, value);
-    
-    protected virtual bool PrintMembers(StringBuilder stringBuilder)
-    {
-        stringBuilder.Append($"Name = {Name}, Type = {Type}, ");
-        stringBuilder.Append($"IsWriteable = {IsWriteable}, ParameterNumber = {ParameterNumber}");
-        return true;
-    }
 }

@@ -3,8 +3,21 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[] ParameterTypes) : LangtType(GetName(ReturnType, ParameterTypes, IsVararg))
+// TODO: continue implementing non-record types
+// * Make constructor functions return a Result 
+// * (to report errors like 'none' parameters or 'none' pointer types)
+// * and have them take in a source range.
+// * Create "forcing" variants to allow for pre-built types.
+
+public class LangtFunctionType: LangtType
 {
+    public LangtType ReturnType {get; private init;}
+    public bool IsVararg {get; private init;}
+    public LangtType[] ParameterTypes {get; private init;}
+
+    public override string RawName => GetName(ReturnType, ParameterTypes, IsVararg);
+    public override string FullName => RawName;
+
     public record struct MatchSignatureResult(Result<BoundASTNode[]> OutResult, SignatureMatchLevel Level);
     public class MutableMatchSignatureInput
     {
@@ -47,17 +60,19 @@ public record LangtFunctionType(LangtType ReturnType, bool IsVararg, LangtType[]
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
-        return GetSignatureString(varg, param) + ret.GetFullName();
+        return GetFullSignatureString(varg, param) + ret.FullName;
     }
 
+    public static string GetFullSignatureString(bool isVararg = false, params LangtType[] paramTypes)
+    {
+        return "("+string.Join(",", paramTypes.Select(p => p.FullName)) + (isVararg ? ",..." : "")+")";
+    }
     public static string GetSignatureString(bool isVararg, params LangtType[] paramTypes)
     {
-        return "("+string.Join(",", paramTypes.Select(p => p.GetFullName())) + (isVararg ? ",..." : "")+")";
+        return "("+string.Join(",", paramTypes.Select(p => p.FullName)) + (isVararg ? ",..." : "")+")";
     }
-    public static string GetSignatureString(params LangtType[] paramTypes)
-        => GetSignatureString(false, paramTypes);
 
-    public string SignatureString => GetSignatureString(IsVararg, ParameterTypes);
+    public string SignatureString => GetFullSignatureString(IsVararg, ParameterTypes);
     
     public LangtFunctionType(LangtType returnType, params LangtType[] parameterTypes) : this(returnType, false, parameterTypes)
     {}

@@ -4,10 +4,9 @@ namespace Langt.Codegen;
 
 public class LangtFileScope : LangtScope
 {
-    public LangtFileScope(LangtScope parent)
+    public LangtFileScope(LangtScope scope) : base(scope)
     {
-        if(parent is null) throw new ArgumentNullException(nameof(parent));
-        HoldingScope = parent;
+        Expect.ArgNonNull(scope, "File scopes must have an enclosing scope!");
     }
 
     // A list of namespaces included by the source code with 'using blah.blah.blah' directives
@@ -43,11 +42,11 @@ public class LangtFileScope : LangtScope
         // If allowed, produce an ambiguous resolution error
         return builder.WithDgnError(
             "Ambiguity between " + 
-            string.Join(", ", allResults.Select(t => t.GetFullName())) +
+            string.Join(", ", allResults.Select(t => t.FullName)) +
             "; either disambiguate, remove includes, or use explicit '.' accesses"
         , range).Build<TOut>();
     }
 
-    public override Result Define(INamedScoped obj, SourceRange sourceRange)
-        => HoldingScope!.Define(obj, sourceRange);
+    public override Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange)
+        => HoldingScope!.Define(constructor, sourceRange);
 }

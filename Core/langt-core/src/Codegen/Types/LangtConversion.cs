@@ -36,8 +36,8 @@ public record LangtConversion(TransformProvider TransformProvider)
 
                 Add(new DirectTransformProvider(to, from,
                     bitDepth(from) < bitDepth(to)
-                        ? (cg, v) => ext  (cg.Builder, v, cg.LowerType(to), from.Name + ".to." + to.Name)
-                        : (cg, v) => trunc(cg.Builder, v, cg.LowerType(to), from.Name + ".to." + to.Name)
+                        ? (cg, v) => ext  (cg.Builder, v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
+                        : (cg, v) => trunc(cg.Builder, v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
                 ), isImplicit: bitDepth(from) < bitDepth(to));
             }
         }
@@ -58,7 +58,7 @@ public record LangtConversion(TransformProvider TransformProvider)
         foreach(var (to, from) in realTypes.Choose(intTypes))
         {
             Add(new DirectTransformProvider(to, from, 
-                (cg, v) => cg.Builder.BuildSIToFP(v, cg.LowerType(to), from.Name + ".to." + to.Name)
+                (cg, v) => cg.Builder.BuildSIToFP(v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
             ), isImplicit: true);
         }
 
@@ -77,10 +77,10 @@ public record LangtConversion(TransformProvider TransformProvider)
                         cg.LowerType(lFuncType), 
                         cg.GetIntrinsic(lroundName, lFuncType), 
                         new[] {v}, 
-                        from.Name + ".round"
+                        from.RawName + ".round"
                     ),
                     cg.LowerType(to),
-                    from.Name + ".to." + to.Name
+                    from.RawName + ".to." + to.RawName
                 )
             ));
         }

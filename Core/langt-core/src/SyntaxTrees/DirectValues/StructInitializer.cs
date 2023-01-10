@@ -18,17 +18,17 @@ public record BoundStructInitializer(StructInitializer Source, BoundASTNode[] Bo
             llvmArgs.Add(lowerer.PopValue(DebugSourceName).LLVM);
         }
 
-        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(RawExpressionType), RawExpressionType.Name+".builder");
+        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(RawExpressionType), RawExpressionType.RawName+".builder");
 
         for(int i = 0; i < llvmArgs.Count; i++)
         {
-            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(RawExpressionType), structBuild, (uint)i, RawExpressionType.Name+".builder.element."+i);
+            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(RawExpressionType), structBuild, (uint)i, RawExpressionType.RawName+".builder.element."+i);
             lowerer.Builder.BuildStore(llvmArgs[i], fptr);
         }
 
         lowerer.PushValue( 
             RawExpressionType,
-            lowerer.Builder.BuildLoad2(lowerer.LowerType(RawExpressionType), structBuild, RawExpressionType.Name),
+            lowerer.Builder.BuildLoad2(lowerer.LowerType(RawExpressionType), structBuild, RawExpressionType.RawName),
             DebugSourceName
         );
     }
@@ -58,14 +58,14 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
         if(!type.IsStructure)
         {
-            return builder.WithDgnError($"Unknown structure type {type.Name}", Range).Build<BoundASTNode>();
+            return builder.WithDgnError($"Unknown structure type {type.RawName}", Range).Build<BoundASTNode>();
         }
 
         var args = Args.Values.ToList();
 
         if(type.Structure!.Fields.Count != args.Count)
         {
-            return builder.WithDgnError($"Incorrect number of fields for structure initializer of type {type.Name}", Range)
+            return builder.WithDgnError($"Incorrect number of fields for structure initializer of type {type.RawName}", Range)
                 .Build<BoundASTNode>();
         }
 
@@ -83,7 +83,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
                 if(!r) return Result.Error<BoundASTNode>
                 (
-                    Diagnostic.Error($"Incorrect type for field '{fname}' in struct initializer for struct {type.Name}", Range)
+                    Diagnostic.Error($"Incorrect type for field '{fname}' in struct initializer for struct {type.RawName}", Range)
                 );
 
                 return r;

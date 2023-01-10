@@ -15,7 +15,7 @@ public static class Expect
     }
 
     [Conditional("DEBUG"), MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static void ArgNonNullOrWhitespace(string? arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
+    public static void ArgHasContent(string? arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
     {
         if(arg is null or "")
         {
@@ -25,7 +25,7 @@ public static class Expect
     #endregion
     #region Inline
     [MethodImpl(MethodImplOptions.AggressiveInlining)]
-    public static T ValueIs<T>(object? arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
+    public static T Is<T>(object? arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
     {
         if(arg is not T t) 
         {

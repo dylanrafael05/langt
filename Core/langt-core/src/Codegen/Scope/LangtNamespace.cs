@@ -1,14 +1,12 @@
 namespace Langt.Codegen;
 
-public class LangtNamespace : LangtScope, INamedScoped
+// TODO: handle this! both a scope and resolution
+public class LangtNamespace : LangtScope, Resolution
 {
-    public string Name {get; init;}
-    
-    string INamed.DisplayName => Name;
-    string INamed.Documentation => "";
+    public LangtNamespace(LangtScope scope) : base(scope) 
+    {}
 
-    public LangtNamespace(string name) 
-    {
-        Name = name;
-    }
+    public required string Name {get; init;}
+    public string DisplayName => Name;
+    public string FullName => Resolution.GetFullName(this);
 }

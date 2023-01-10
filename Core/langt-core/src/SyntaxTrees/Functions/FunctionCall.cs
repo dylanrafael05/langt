@@ -113,7 +113,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             if(!builder)
             {
                 return builder.WithDgnError(
-                    $"Could not call a function pointer of type {funcType.Name} " +
+                    $"Could not call a function pointer of type {funcType.RawName} " +
                     $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.TransformedType ?? LangtType.Error).GetFullName()))}",
                     Range
                 ).Build<BoundASTNode>();

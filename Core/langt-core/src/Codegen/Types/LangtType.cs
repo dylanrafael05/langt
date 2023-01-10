@@ -4,9 +4,24 @@ using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.Codegen;
-public abstract record LangtType(string Name, string Documentation = "") : INamedScoped
+public abstract class LangtType : INamedScoped
 {
-    string INamed.DisplayName => Name;
+    public LangtType(string name, string documentation = "")
+    {
+        RawName = name;
+        Documentation = documentation;
+    }
+    public LangtType(string documentation = "")
+    {
+        RawName = "";
+        Documentation = documentation;
+    }
+
+    public virtual string RawName {get; init;}
+    public virtual string Name => RawName;
+    public virtual string FullName => ScopedImpl.GetFullName(this);
+    
+    public string Documentation {get; init;}
 
     public int? IntegerBitDepth {get; init;}
     public int? RealBitDepth {get; init;}
@@ -32,9 +47,15 @@ public abstract record LangtType(string Name, string Documentation = "") : IName
 
     public abstract LLVMTypeRef Lower(CodeGenerator context);
 
-    public record Wrapper(string Name, LLVMTypeRef LLVMType) : LangtType(Name)
+    public class Wrapper : LangtType
     {
-        public override LLVMTypeRef Lower(CodeGenerator context) => LLVMType;
+        private LLVMTypeRef llvm;
+        public Wrapper(string name, LLVMTypeRef llvm) : base(name)
+        {
+            this.llvm = llvm;
+        }
+        
+        public override LLVMTypeRef Lower(CodeGenerator context) => llvm;
         public override bool IsBuiltin => true;
     }
 
@@ -47,6 +68,7 @@ public abstract record LangtType(string Name, string Documentation = "") : IName
     [BuiltinType] public static readonly LangtType Int8   = new Wrapper("int8"  , LLVMTypeRef.Int8) {IntegerBitDepth = 8};
     [BuiltinType] public static readonly LangtType Bool   = new Wrapper("bool"  , LLVMTypeRef.Int1);
     [BuiltinType] public static readonly LangtType None   = new Wrapper("none"  , LLVMTypeRef.Void);
+    [BuiltinType] public static readonly LangtType Ptr    = new Wrapper("ptr", LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
 
     public static readonly LangtType[] IntegerTypes = {Int8, Int16, Int32, Int64};
     public static readonly LangtType[] RealTypes    = {Real16, Real32, Real64};
@@ -56,20 +78,19 @@ public abstract record LangtType(string Name, string Documentation = "") : IName
         Real64, Real32, Real16,
         Int64, Int32, Int16, Int8,
         Bool,
-        None
+        None,
+        Ptr
     };
 
     public static readonly LangtType Error = new Wrapper("error", LLVMTypeRef.Void);
 
     public bool IsError => ReferenceEquals(this, Error);
 
+    [Obsolete($"Use {nameof(LangtPointerType)}.{nameof(LangtPointerType.TryCreate)} instead")] 
     public static LangtType PointerTo(LangtType type)
-        => new LangtPointerType(type);
-    public static LangtType Function(LangtType returnType, params LangtType[] paramTypes)
-        => new LangtFunctionType(returnType, paramTypes);
-    public static LangtType Function(LangtType returnType, bool vararg, params LangtType[] paramTypes)
+        => null!;
+    // => new LangtPointerType(type);
+    public static LangtType Function(LangtType returnType, bool vararg = true, params LangtType[] paramTypes)
         => new LangtFunctionType(returnType, vararg, paramTypes);
-    public static LangtType FunctionVarargs(LangtType returnType, params LangtType[] paramTypes)
-        => new LangtFunctionType(returnType, true, paramTypes);
     // TODO: LangtType.Struct()
 }

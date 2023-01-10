@@ -21,7 +21,7 @@ public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, B
 
         lowerer.PushValue( 
             val.Type,
-            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
+            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.RawName),
             DebugSourceName
         );
     }
