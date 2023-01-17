@@ -2,15 +2,17 @@ using Langt.AST;
 
 namespace Langt.Codegen;
 
-public record LangtFunctionGroup(string RawName) : INamedScoped
+public class LangtFunctionGroup : Resolution
 {
-    string Codegen.Resolution.Documentation => "";
+    public LangtFunctionGroup(string name, IScope scope) : base(scope)
+    {
+        Name = name;
+    }
 
-    public string Name => CodeGenerator.DisplayableFunctionGroupName(RawName);
+    public override string Name {get;}
+    public override string DisplayName => CodeGenerator.DisplayableFunctionGroupName(Name);
 
     public record struct Resolution(LangtFunction Function, Result<BoundASTNode[]> OutputParameters, SignatureMatchLevel MatchLevel);
-
-    public LangtScope? HoldingScope { get; set; }
 
     private readonly List<LangtFunction> overloads = new();
     public IReadOnlyList<LangtFunction> Overloads => overloads;
@@ -23,7 +25,7 @@ public record LangtFunctionGroup(string RawName) : INamedScoped
 
         if(r) return Result.Error
         (
-            Diagnostic.Error($"Cannot redefine overload of function {this.GetFullName()} with signature {overload.Type.SignatureString}", range)
+            Diagnostic.Error($"Cannot redefine overload of function {FullName} with signature {overload.Type.SignatureString}", range)
         );
 
         overloads.Add(overload);
@@ -37,9 +39,9 @@ public record LangtFunctionGroup(string RawName) : INamedScoped
         if(resolves.Length == 0) 
         {
             return builder.WithDgnError(
-                $"Could not resolve any matching overloads for call to {this.GetFullName()}",
+                $"Could not resolve any matching overloads for call to {FullName}",
                 range
-            ).Build<Resolution>();
+            ).BuildError<Resolution>();
         }
 
         if(resolves.Length == 1)
@@ -56,9 +58,9 @@ public record LangtFunctionGroup(string RawName) : INamedScoped
             if(byLevel.Length != 1)
             {
                 return builder.WithDgnError(
-                    $"Could not resolve any one matching overload for call to {this.GetFullName()}, multiple overloads are valid",
+                    $"Could not resolve any one matching overload for call to {FullName}, multiple overloads are valid",
                     range
-                ).Build<Resolution>();
+                ).BuildError<Resolution>();
             }
             else
             {
@@ -79,7 +81,7 @@ public record LangtFunctionGroup(string RawName) : INamedScoped
 
         if(resolvesFirst.FirstOrDefault(p => p.Resolution.OutResult.HasErrors && !p.Resolution.OutResult.GetBindingOptions().TargetTypeDependent) is var p 
             && p is not null) 
-            return p.Resolution.OutResult.Cast<Resolution>();
+            return p.Resolution.OutResult.ErrorCast<Resolution>();
 
         var resolves = resolvesFirst
             .Where(r => !r.Resolution.OutResult.HasErrors)

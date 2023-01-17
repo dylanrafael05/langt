@@ -21,7 +21,7 @@ public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, B
 
         lowerer.PushValue( 
             val.Type,
-            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.RawName),
+            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
             DebugSourceName
         );
     }
@@ -50,13 +50,13 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         );
         builder.AddData(results);
 
-        if(!results) return builder.Build<BoundASTNode>();
+        if(!results) return builder.BuildError<BoundASTNode>();
 
         var (val, index) = results.Value;
 
         if(!val.TransformedType.IsPointer)
         {
-            return builder.WithDgnError("Cannot index a non-pointer", Range).Build<BoundASTNode>();
+            return builder.WithDgnError("Cannot index a non-pointer", Range).BuildError<BoundASTNode>();
         }
 
         return builder.Build<BoundASTNode>

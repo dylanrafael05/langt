@@ -4,38 +4,27 @@ namespace Langt.Codegen;
 
 public class LangtPointerType : LangtType
 {
-    private LangtPointerType() {}
-    private LangtType pointeeType = null!;
+    private LangtPointerType(LangtType ptrType) 
+    {
+        PointeeType = ptrType;
+    }
 
-    public override LangtType? PointeeType => pointeeType;
-    public override string RawName            => "*" + PointeeType!.RawName;
-    public override string Name     => "*" + PointeeType!.Name;
-    public override string FullName        => "*" + PointeeType!.FullName;
+    [NotNull] public override LangtType? PointeeType {get;}
+
+    public override string Name         => "*" + PointeeType.Name;
+    public override string DisplayName  => "*" + PointeeType.DisplayName;
+    public override string FullName     => "*" + PointeeType.FullName;
 
     public override LLVMTypeRef Lower(CodeGenerator context)
         => Ptr.Lower(context);
 
-    public static bool TryCreate(LangtType elem, [NotNullWhen(true)] out LangtPointerType? type)
+    public static Result<LangtPointerType> Create(LangtType elem, SourceRange range = default)
     {
         if(elem == None)
         {
-            type = null;
-            return false;
+            return Result.Error<LangtPointerType>(Diagnostic.Error($"Cannot have a pointer to none", range));
         }
-        else 
-        {
-            type = new() {pointeeType = elem};
-            return true;
-        }
-    }
-    public static LangtPointerType Create(LangtType elem)
-    {
-        Expect.That
-        (
-            TryCreate(elem, out var t), 
-            $"{nameof(LangtPointerType)}.{nameof(Create)} expects no errors to occur during type creation!"
-        );
 
-        return t!;
+        return Result.Success<LangtPointerType>(new(elem));
     }
 }

@@ -30,7 +30,7 @@ public record BoundWhileStatement(WhileStatement Source, BoundASTNode Condition,
         lowerer.Builder.BuildCondBr(c.LLVM, trueBB, breakBB);
 
         lowerer.Builder.PositionAtEnd(trueBB);
-        lowerer.CreateUnnamedScope(); // TODO: this does nothing! scopes should be applied only during the binding phase
+        lowerer.OpenScope(); // TODO: this does nothing! scopes should be applied only during the binding phase
             Block.Lower(lowerer);
             lowerer.Builder.BuildBr(condBB);
         lowerer.CloseScope();
@@ -59,7 +59,7 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
             Block.Bind(state)
         );
 
-        if(!results) return results.Cast<BoundASTNode>();
+        if(!results) return results.ErrorCast<BoundASTNode>();
 
         var (cond, blk) = results.Value;
         

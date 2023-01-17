@@ -18,14 +18,15 @@ public class LangtProject
         CodeGenerator = new(this);
     }
 
-    public CodeGenerator CodeGenerator {get; private init;}
-    public LangtScope GlobalScope {get; private init;} = new();
-    public List<LangtFile> Files {get; private init;} = new();
-    public DiagnosticCollection Diagnostics {get; private init;} = new();
-    public OrderedList<StaticReference> References {get; private init;} = new();
+    public CodeGenerator CodeGenerator {get;}
+    public LangtScope GlobalScope {get;} = new(null);
+    public List<LangtFile> Files {get;} = new();
+    public DiagnosticCollection Diagnostics {get;} = new();
+    public OrderedList<StaticReference> References {get;} = new();
 
-    public ILogger Logger {get; private init;}
-    public string LLVMModuleName {get; init;}
+    public ILogger Logger {get;}
+    public string LLVMModuleName {get;}
+    
     public LLVMModuleRef Module => CodeGenerator.Module;
 
     public void AddFileContents(FileInfo file)

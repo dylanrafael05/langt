@@ -4,50 +4,33 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public class LangtScope
+public class LangtScope : IScope
 {
-    public LangtScope(LangtScope? holdingScope)
+    public LangtScope(IScope? holdingScope)
     {
         HoldingScope = holdingScope;
     }
     
-    public LangtScope? HoldingScope {get;}
-
-    /// <summary>
-    /// Get the nearest namespace to the current scope
-    /// </summary>
-    public LangtNamespace? NearestNamespace 
-        => HoldingScope is LangtNamespace ns ? ns : HoldingScope?.NearestNamespace;
+    public IScope? HoldingScope {get;}
 
     public virtual bool IsNamespace => false;
     public bool IsGlobalScope => HoldingScope == null;
 
-    private readonly Dictionary<string, Resolution> namedItems = new();
-    public IReadOnlyDictionary<string, Resolution> NamedItems => namedItems;
-
-    public LangtScope CreateUnnamedSubScope() 
-    {
-        var scope = new LangtScope(this);
-        return scope;
-    }
-
-    // TODO: replace 'null' returns with Result.Error
-    public Result<Resolution> Resolve(string input,
-                                 SourceRange range,
-                                 bool propogate = true)
-        => Resolve<Resolution>(input, "item", range, propogate);
+    private readonly Dictionary<string, IResolution> namedItems = new();
+    public IReadOnlyDictionary<string, IResolution> NamedItems => namedItems;
 
     public virtual Result<TOut> Resolve<TOut>(string input,
                                               string outputType,
                                               SourceRange range,
-                                              bool propogate = true) where TOut: Resolution
+                                              bool propogate = true) where TOut: INamed
     {
         var builder = ResultBuilder.Empty();
 
         // Check if the item exists in the named items stored by this scope
-        if(namedItems.TryGetValue(input, out var r) && r is TOut t)
+        if(namedItems.TryGetValue(input, out var r))
         {
-            return builder.Build(t);
+            if(r is TOut t)                       return builder.Build(t);
+            if(r is IProxyResolution<TOut> proxy) return builder.Build(proxy.Inner);
         }
 
         Result<TOut>? result = null;
@@ -56,7 +39,7 @@ public class LangtScope
         if(propogate)
         {
             // Check the upper scope if it exists
-            result = HoldingScope?.Resolve<TOut>(input, outputType, range);
+            result = HoldingScope?.Resolve<TOut>(input, outputType, range, propogate);
         }
         
         if(result is null)
@@ -69,19 +52,10 @@ public class LangtScope
         }
 
         // Return the result, null or not
-        return result is null || builder.HasErrors ? builder.Build<TOut>() : builder.Build(result.Value.Value);
+        return result is null || builder.HasErrors ? builder.BuildError<TOut>() : builder.Build(result.Value.Value);
     }
 
-    public Result<LangtVariable> ResolveVariable(string name, SourceRange range, bool propogate = true) 
-        => Resolve<LangtVariable>(name, "variable", range, propogate: propogate);
-    public Result<LangtType> ResolveType(string name, SourceRange range, bool propogate = true) 
-        => Resolve<LangtType>(name, "type", range, propogate: propogate);
-    public Result<LangtFunctionGroup> ResolveFunctionGroup(string name, SourceRange range, bool propogate = true) 
-        => Resolve<LangtFunctionGroup>(name, "function", range, propogate: propogate);
-    public Result<LangtNamespace> ResolveNamespace(string name, SourceRange range, bool propogate = true) 
-        => Resolve<LangtNamespace>(name, "namespace", range, propogate: propogate);
-
-    public virtual Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange) where T : Resolution
+    public virtual Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange) where T : IResolution
     {
         var obj = constructor(this);
 
@@ -90,7 +64,7 @@ public class LangtScope
             return ResultBuilder
                 .Empty()
                 .WithDgnError($"Attempting to redefine name {obj.Name}", sourceRange)
-                .Build<T>();
+                .BuildError<T>();
         }
 
         namedItems.Add(obj.Name, obj);

@@ -1,4 +1,5 @@
 using Langt.Codegen;
+using Langt.Utility;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 
@@ -7,6 +8,12 @@ public class ProjectManager
 {
     public LangtProject Project {get; private set;} = new(new LSPLogger(), "__lsp");
     public DiagnosticCollection Diagnostics => Project.Diagnostics;
+
+    private Dictionary<DocumentUri, Source> uriMap = new();
+    private Dictionary<Source, DocumentUri> invUriMap = new();
+
+    public IReadOnlyDictionary<DocumentUri, Source> URIToSource => uriMap;
+    public IReadOnlyDictionary<Source, DocumentUri> SourceToURI => invUriMap;
 
     public bool ContainsFile(TextDocumentItem doc)
         => ContainsFile(doc.Uri);
@@ -20,7 +27,12 @@ public class ProjectManager
         foreach(var file in Project.Files)
         {
             if(docToExclude is not null && file.Source.Name == docToExclude.Uri.Path)
+            {
+                uriMap.Remove(docToExclude.Uri);
+                invUriMap.Remove(file.Source);
+
                 continue;
+            }
 
             newproj.AddFileContents(file.Source.Name, file.Source.Content);
         }
@@ -35,6 +47,11 @@ public class ProjectManager
         RebuildProject();
         Project.AddFileContents(doc.Uri.Path, content);
         Project.BindSyntaxTrees();
+
+        var source = Project.Files.Select(f => f.Source).First(s => s.Name == doc.Uri.Path);
+
+        uriMap.Add(doc.Uri, source);
+        invUriMap.Add(source, doc.Uri);
     }
 
     public void RemoveFile(TextDocumentIdentifier doc)
@@ -52,4 +69,9 @@ public class ProjectManager
 
     public LangtFile? GetFile(TextDocumentIdentifier doc) 
         => Project.Files.FirstOrDefault(f => f.Source.Name == doc.Uri.Path);
+
+    public StaticReference? GetReferenceAt(LangtFile file, VSPosition position)
+        => Project.References
+            .Where(k => k.Range.Source == file.Source)
+            .FirstOrDefault(r => r.Range.Contains(position.ToLangt()));
 }

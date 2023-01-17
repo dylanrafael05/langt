@@ -88,7 +88,7 @@ public class ResultBuilder : IModdable<ResultBuilder>, IResultlike
         => self.HasErrors;
 
     public Result Build() => Result.Blank().WithDataFrom(this);
-    public Result<T> Build<T>()
+    public Result<T> BuildError<T>()
     {
         if(!HasErrors)
         {

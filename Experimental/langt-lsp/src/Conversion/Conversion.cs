@@ -1,13 +1,3 @@
-using VSDiagnostic = OmniSharp.Extensions.LanguageServer.Protocol.Models.Diagnostic;
-using LangtDiagnostic = Langt.Diagnostic;
-using VSDiagnosticSeverity = OmniSharp.Extensions.LanguageServer.Protocol.Models.DiagnosticSeverity;
-using LangtDiagnosticSeverity = Langt.MessageSeverityType;
-using VSRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
-using LangtRange = Langt.SourceRange;
-using VSPosition = OmniSharp.Extensions.LanguageServer.Protocol.Models.Position;
-using LangtPosition = Langt.SourcePosition;
-using LangtRawPosition = Langt.SimplePosition;
-
 namespace Langt.LSP;
 
 public static class Conversion

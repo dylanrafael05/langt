@@ -21,12 +21,13 @@ public class LangtLanguageServer
     public static async Task<LanguageServer> BuildServerAsync() 
     {
         var server = await LanguageServer.From(
-            server => server
+            s => s
                 .WithInput(Console.OpenStandardInput())
                 .WithOutput(Console.OpenStandardOutput())
                 .WithLoggerFactory(new LoggerFactory())
                 .AddDefaultLoggingProvider()
                 .WithServices(Services)
+                .AddHandler<GotoDefinitionHandler>()
                 .AddHandler<TextDocumentHandler>()
                 .AddHandler<TokenHandler>()
                 .AddHandler<HoverHandler>()

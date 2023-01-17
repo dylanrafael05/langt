@@ -1,57 +1,34 @@
 namespace Langt.Codegen;
 
-public record LangtStructureType(string Name, string Documentation = "") : LangtType(Name, Documentation)
+public class LangtStructureType : LangtResolvableType
 {
-    public record struct ResolveFieldResult(ResolveFieldResult.ResultType Type)
-    {
-        public enum ResultType
-        {
-            Success,
-            NoneFound,
-            MoreThanOneFound
-        }
-
-        public static bool operator true(ResolveFieldResult t) 
-            => t.Type == ResultType.Success;
-        public static bool operator false(ResolveFieldResult t) 
-            => t.Type != ResultType.Success;
-
-        public static ResolveFieldResult Success => new(ResultType.Success);
-        public static ResolveFieldResult NoneFound => new(ResultType.NoneFound);
-        public static ResolveFieldResult MoreThanOneFound => new(ResultType.MoreThanOneFound);
-    }
+    public LangtStructureType(string name, IScope scope) : base(name, scope)
+    {}
 
     public IList<LangtStructureField> Fields {get; init;} = new List<LangtStructureField>();
-    public bool TryResolveField(string name, out LangtStructureField? field, out int index, out ResolveFieldResult result) 
+    public bool TryResolveField(string name, out LangtStructureField? field, out int index) 
     {
-        var f = Fields.Select((j, i) => (item: j, index: i)).Where(f => f.item.Name == name);
+        // Invariant
+        Expect.That(Fields.DistinctBy(f => f.Name).SequenceEqual(Fields), "Structs cannot have duplicate fields");
 
-        if(f.Count() is 0)
+        var f = Fields.Indexed().Where(f => f.Value.Name == name).ToArray();
+
+        if(f.Length is 0 or > 1)
         {
             field = null;
             index = -1;
-            result = ResolveFieldResult.NoneFound;
             return false;
         }
 
-        if(f.Count() > 1)
-        {
-            field = null;
-            index = -1;
-            result = ResolveFieldResult.MoreThanOneFound;
-            return false;
-        }
-
-        field = f.First().item;
-        index = f.First().index;
-        result = ResolveFieldResult.Success;
+        field = f.First().Value;
+        index = f.First().Index;
         return true;
     }
     public bool HasField(string name) => Fields.Count(f => f.Name == name) is 1;
 
     public override LLVMTypeRef Lower(CodeGenerator context)
     {
-        var s = context.LLVMContext.CreateNamedStruct(CodeGenerator.LangtIdentifierPrepend + this.GetFullName());
+        var s = context.LLVMContext.CreateNamedStruct(CodeGenerator.LangtIdentifierPrepend + FullName);
         s.StructSetBody(Fields.Select(f => context.LowerType(f.Type)).ToArray(), false);
 
         return s;

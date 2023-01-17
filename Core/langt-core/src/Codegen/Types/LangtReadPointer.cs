@@ -9,7 +9,7 @@ public class LangtReadPointer : TransformProvider
     public override bool CanPerform(LangtType input, LangtType result) => input.IsPointer && result == input.PointeeType!;
     public override LLVMValueRef Perform(LangtType input, LangtType result, CodeGenerator generator, LLVMValueRef value)
     {
-        return generator.Builder.BuildLoad2(generator.LowerType(input.PointeeType!), value, "read."+input.RawName);
+        return generator.Builder.BuildLoad2(generator.LowerType(input.PointeeType!), value, "read."+input.Name);
     }
 
     public override string Name => "readable *a->a";

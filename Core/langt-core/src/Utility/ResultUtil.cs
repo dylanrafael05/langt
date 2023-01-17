@@ -6,7 +6,7 @@ using Results.Interfaces;
 
 namespace Langt.Utility;
 
-public record StaticReference(SourceRange Range, INamedScoped Item, bool IsDefinition = false) : IComparable<StaticReference>
+public record StaticReference(SourceRange Range, IResolution Item, bool IsDefinition = false) : IComparable<StaticReference>
 {
     public int CompareTo(StaticReference? other)
         => other is null 
@@ -61,7 +61,7 @@ public static class ResultUtil
         => r.ModifyBindingOptions(b => b with {TargetTypeDependent = true});
     public static R AddStaticReference<R>(this R r, StaticReference reference) where R : IResultlike, IModdable<R>
         => r.ModifyBindingOptions(b => {b.Add(reference); return b;});
-    public static R AddStaticReference<R>(this R r, SourceRange reference, INamedScoped item, bool isDefinition = false) where R : IResultlike, IModdable<R>
+    public static R AddStaticReference<R>(this R r, SourceRange reference, IResolution item, bool isDefinition = false) where R : IResultlike, IModdable<R>
         => r.AddStaticReference(new(reference, item, isDefinition));
 
     public static ResultBuilder WithDgnError(this ResultBuilder builder, string message, SourceRange range)

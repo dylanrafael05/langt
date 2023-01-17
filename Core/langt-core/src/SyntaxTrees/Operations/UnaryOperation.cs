@@ -21,7 +21,7 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
 
         var builder = ResultBuilder.From(fr);
 
-        if(!fr) return builder.Build<BoundASTNode>();
+        if(!fr) return builder.BuildError<BoundASTNode>();
 
         var fo = fr.Value;
         var fp = fo.OutputParameters.Value.ToArray();

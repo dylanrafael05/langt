@@ -1,12 +1,15 @@
 namespace Langt.Codegen;
 
-public record LangtAliasType(string Name, string Documentation = "") : LangtType(Name, Documentation)
+public class LangtAliasType : LangtResolvableType
 {
-    public override LangtType? AliasBaseType => basetype;
-    private LangtType? basetype;
+    public override LangtType? AliasBaseType => baseType;
+    private LangtType? baseType;
 
-    public void SetBase(LangtType? basetype)
-        => this.basetype = basetype;
+    public LangtAliasType(string name, IScope scope) : base(name, scope)
+    {}
+
+    public void SetBase(LangtType? baseType)
+        => this.baseType = baseType;
     public override LLVMTypeRef Lower(CodeGenerator context)
-        => basetype?.Lower(context) ?? throw new Exception("Uninitialized or error alias type");
+        => baseType?.Lower(context) ?? throw new Exception("Uninitialized or error alias type");
 }

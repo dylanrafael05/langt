@@ -36,8 +36,8 @@ public record LangtConversion(TransformProvider TransformProvider)
 
                 Add(new DirectTransformProvider(to, from,
                     bitDepth(from) < bitDepth(to)
-                        ? (cg, v) => ext  (cg.Builder, v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
-                        : (cg, v) => trunc(cg.Builder, v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
+                        ? (cg, v) => ext  (cg.Builder, v, cg.LowerType(to), from.Name + ".to." + to.Name)
+                        : (cg, v) => trunc(cg.Builder, v, cg.LowerType(to), from.Name + ".to." + to.Name)
                 ), isImplicit: bitDepth(from) < bitDepth(to));
             }
         }
@@ -58,7 +58,7 @@ public record LangtConversion(TransformProvider TransformProvider)
         foreach(var (to, from) in realTypes.Choose(intTypes))
         {
             Add(new DirectTransformProvider(to, from, 
-                (cg, v) => cg.Builder.BuildSIToFP(v, cg.LowerType(to), from.RawName + ".to." + to.RawName)
+                (cg, v) => cg.Builder.BuildSIToFP(v, cg.LowerType(to), from.Name + ".to." + to.Name)
             ), isImplicit: true);
         }
 
@@ -69,18 +69,19 @@ public record LangtConversion(TransformProvider TransformProvider)
 
             string lroundName = "llvm.nearbyint." + fromName;
 
-            var lFuncType = new LangtFunctionType(from, from);
+            var lFuncType = LangtFunctionType.Create(new[] {from}, from).Expect();
 
+            // TODO: make accessing intrinsics easier
             Add(new DirectTransformProvider(to, from,
                 (cg, v) => cg.Builder.BuildFPToSI(
                     cg.Builder.BuildCall2(
                         cg.LowerType(lFuncType), 
                         cg.GetIntrinsic(lroundName, lFuncType), 
                         new[] {v}, 
-                        from.RawName + ".round"
+                        from.Name + ".round"
                     ),
                     cg.LowerType(to),
-                    from.RawName + ".to." + to.RawName
+                    from.Name + ".to." + to.Name
                 )
             ));
         }

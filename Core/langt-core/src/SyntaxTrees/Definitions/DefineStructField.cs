@@ -18,7 +18,7 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
     public Result<LangtStructureField> Field(ASTPassState state) 
     {
         var t = Type.Resolve(state);
-        if(!t) return t.Cast<LangtStructureField>();
+        if(!t) return t.ErrorCast<LangtStructureField>();
 
         return Result.Success(new LangtStructureField(Name.ContentStr, t.Value)).WithDataFrom(t);
     }

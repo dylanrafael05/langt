@@ -4,24 +4,34 @@ using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.Codegen;
-public abstract class LangtType : INamedScoped
+
+public abstract class LangtResolvableType : LangtType, IResolution
 {
-    public LangtType(string name, string documentation = "")
+    public LangtResolvableType(string name, IScope scope) : base(name)
     {
-        RawName = name;
-        Documentation = documentation;
-    }
-    public LangtType(string documentation = "")
-    {
-        RawName = "";
-        Documentation = documentation;
+        HoldingScope = scope;
     }
 
-    public virtual string RawName {get; init;}
-    public virtual string Name => RawName;
-    public virtual string FullName => ScopedImpl.GetFullName(this);
+    public required SourceRange? DefinitionRange {get; init;}
+    public IScope HoldingScope {get;}
+}
+
+public abstract class LangtType : INamed
+{
+    public LangtType(string name)
+    {
+        Name = name;
+    }
+    public LangtType()
+    {
+        Name = "";
+    }
+
+    public virtual string Name {get; init;}
+    public virtual string DisplayName => Name;
+    public virtual string FullName => Name;
     
-    public string Documentation {get; init;}
+    public virtual string? Documentation {get; init;} = null;
 
     public int? IntegerBitDepth {get; init;}
     public int? RealBitDepth {get; init;}
@@ -42,8 +52,6 @@ public abstract class LangtType : INamedScoped
     public virtual LangtType? AliasBaseType => null;
 
     public virtual bool IsBuiltin => false;
-    
-    public LangtScope? HoldingScope { get; set; }
 
     public abstract LLVMTypeRef Lower(CodeGenerator context);
 
@@ -85,12 +93,4 @@ public abstract class LangtType : INamedScoped
     public static readonly LangtType Error = new Wrapper("error", LLVMTypeRef.Void);
 
     public bool IsError => ReferenceEquals(this, Error);
-
-    [Obsolete($"Use {nameof(LangtPointerType)}.{nameof(LangtPointerType.TryCreate)} instead")] 
-    public static LangtType PointerTo(LangtType type)
-        => null!;
-    // => new LangtPointerType(type);
-    public static LangtType Function(LangtType returnType, bool vararg = true, params LangtType[] paramTypes)
-        => new LangtFunctionType(returnType, vararg, paramTypes);
-    // TODO: LangtType.Struct()
 }

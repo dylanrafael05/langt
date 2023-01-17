@@ -3,15 +3,15 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public class LangtVariable : NamedScopedBase
+public class LangtVariable : Resolution
 {
-    public LangtVariable(string name, LangtType type, string documentation = "") : base(documentation)
+    public LangtVariable(string name, LangtType type, IScope scope) : base(scope)
     {
         Name = name;
         Type = type;
     }
 
-    public override string Name {get; init;}
+    public override string Name {get;}
     public LangtType Type {get; init;}
 
     public bool IsWriteable {get; init;} = true;

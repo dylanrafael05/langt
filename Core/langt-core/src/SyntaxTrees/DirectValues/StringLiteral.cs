@@ -59,7 +59,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
                 if(err)
                 {
-                    return ResultBuilder.Empty().WithDgnError($"Unrecognized string escape sequence '\\{source[i+1]}'", Range).Build<BoundASTNode>();
+                    return ResultBuilder.Empty().WithDgnError($"Unrecognized string escape sequence '\\{source[i+1]}'", Range).BuildError<BoundASTNode>();
                 }
 
                 s += nc;
@@ -72,7 +72,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
         (
             new BoundStringLiteral(this, s) 
             {
-                RawExpressionType = LangtType.PointerTo(LangtType.Int8)
+                RawExpressionType = LangtPointerType.Create(LangtType.Int8).Expect()
             }
         );
     }

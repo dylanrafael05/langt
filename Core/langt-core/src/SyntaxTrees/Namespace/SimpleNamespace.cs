@@ -11,9 +11,9 @@ public record SimpleNamespace(ASTToken Name) : ASTNamespace
     {
         var builder = ResultBuilder.Empty();
 
-        var r = ResolveFrom(state.CG.Project.GlobalScope, Name.ContentStr, options.AllowNamesapceDefinitions);
+        var r = ResolveFrom(state.CG.Project.GlobalScope, Name.ContentStr, default, options.AllowNamespaceDefinitions);
         builder.AddData(r);
-        if(!r) return builder.Build<LangtNamespace>();
+        if(!r) return builder.BuildError<LangtNamespace>();
 
         builder.AddStaticReference(Name.Range, r.Value);
         return builder.Build(r.Value);

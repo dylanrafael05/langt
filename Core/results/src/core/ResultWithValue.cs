@@ -53,9 +53,9 @@ public struct Result<T> : IModdable<Result<T>>, IValuedResultlike<T>, IResultOpe
         return Result.Success(OrFrom(defaultValueProvider)!).WithMetadata(Metadata).WithMetadata(nmeta);
     }
 
-    public Result<TOther> Cast<TOther>()
+    public Result<TOther> ErrorCast<TOther>()
     {
-        if(!HasErrors) throw new InvalidOperationException($".{nameof(Cast)} received a non-error result");
+        if(!HasErrors) throw new InvalidOperationException($".{nameof(ErrorCast)} received a non-error result");
 
         return Result.Blank<TOther>().WithDataFrom(this);
     }
@@ -129,6 +129,17 @@ public struct Result<T> : IModdable<Result<T>>, IValuedResultlike<T>, IResultOpe
     {
         if(HasValue) return Result.Success(mapper(Value)).WithDataFrom(this);
         else         return Result.Blank<TOut>().WithDataFrom(this);
+    }
+    public Result<TOut> Map<TOut>(Func<T,Result<TOut>> mapper)
+    {
+        if(HasValue) return mapper(Value).WithDataFrom(this);
+        else return Result.Blank<TOut>().WithDataFrom(this);
+    }
+
+    public Result<TOut> As<TOut>()
+    {
+        if(HasValue) return Result.Success((TOut)(object)Value!).WithDataFrom(this);
+        else         return ErrorCast<TOut>();
     }
 
     public Result<TOut> Combine<TOther, TOut>(Result<TOther> other, Func<T, TOther, TOut> combinator)

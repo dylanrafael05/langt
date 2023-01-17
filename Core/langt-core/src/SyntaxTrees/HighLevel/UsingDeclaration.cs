@@ -13,9 +13,9 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 
         if(ns)
         {
-            state.CG.CurrentFile!.Scope.IncludedNamespaces.Add(ns.Value);
+            state.CG.CurrentFile!.IncludeNamespace(ns.Value);
         }
 
-        return Result.Wrap(ns);
+        return ns.Drop();
     }
 }

@@ -9,18 +9,35 @@ namespace Langt.AST;
 public abstract record ASTNamespace : ASTNode // TODO: permit only one namespace declaration per file; emit warnings for duplicate usings
 {
     public abstract Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions options = default);
-    protected Result<LangtNamespace> ResolveFrom(LangtScope from, string name, [NotNullWhen(true)] bool allowDefinitions = false)
+    protected Result<LangtNamespace> ResolveFrom(IScope from, string name, SourceRange nameRange, [NotNullWhen(true)] bool allowDefinitions = false)
     {
+        var builder = ResultBuilder.Empty();
+
         var nsResult = from.ResolveNamespace(name, Range);
+        builder.AddData(nsResult);
 
         if(!nsResult)
         {
             if(allowDefinitions)
             {
-                var ns = new LangtNamespace(name);
-                var dr = from.DefineNamespace(ns, Range);
+                var dr = from.Define
+                (
+                    (s, r) => new LangtNamespace(s, name) 
+                    {
+                        DefinitionRange = r
+                    }, 
+
+                    Range,
+                    nameRange,
+
+                    builder,
+
+                    out var ns
+                );
+
+                builder.AddData(dr);
                 
-                return Result.Success(ns).WithDataFrom(dr);
+                return builder.Build(ns!);
             }
         }
 

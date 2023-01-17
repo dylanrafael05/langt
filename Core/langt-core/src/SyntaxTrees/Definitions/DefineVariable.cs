@@ -40,13 +40,13 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
         {
             var tn = Type.Resolve(state);
             builder.AddData(tn);
-            if(!tn) return builder.Build<BoundASTNode>();
+            if(!tn) return builder.BuildError<BoundASTNode>();
 
             varT = tn.Value;
             
             var bn = Value.BindMatchingExprType(state, varT);
             builder.AddData(bn);
-            if(!bn) return builder.Build<BoundASTNode>();
+            if(!bn) return builder.BuildError<BoundASTNode>();
 
             boundValue = bn.Value;
         }
@@ -55,24 +55,35 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
             var bn = Value.Bind(state);
             builder.AddData(bn);
 
-            if(!bn) return builder.Build<BoundASTNode>();
+            if(!bn) return builder.BuildError<BoundASTNode>();
 
             boundValue = bn.Value;
 
             varT = boundValue.NaturalType ?? boundValue.TransformedType;
         }
-        
-        var variable = new LangtVariable(Identifier.ContentStr, varT, Let.Documentation);
-        builder.AddStaticReference(Identifier.Range, variable, true);
 
-        var couldDef = state.CG.ResolutionScope.DefineVariable(variable, Range);
+        var couldDef = state.CG.ResolutionScope.Define
+        (
+            (s, r) => new LangtVariable(Identifier.ContentStr, varT, s) 
+            {
+                DefinitionRange = r,
+                Documentation = Let.Documentation
+            }, 
+            
+            sourceRange: Range,
+            nameRange:   Identifier.Range,
+
+            builder,
+
+            out var variable
+        );
         builder.AddData(couldDef);
 
-        if(!couldDef) return builder.Build<BoundASTNode>();
+        if(!couldDef) return builder.BuildError<BoundASTNode>();
         
         return builder.Build<BoundASTNode>
         (
-            new BoundVariableDefinition(this, variable, boundValue)
+            new BoundVariableDefinition(this, variable!, boundValue)
             {
                 RawExpressionType = LangtType.None
             }

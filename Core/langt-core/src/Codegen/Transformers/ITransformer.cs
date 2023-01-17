@@ -12,7 +12,7 @@ public interface ITransformer
 {
     LangtType Input {get;}
     LangtType Output {get;}
-    string Name => Input.RawName + "->" + Output.RawName;
+    string Name => Input.Name + "->" + Output.Name;
 
     LLVMValueRef Perform(CodeGenerator generator, LLVMValueRef value);
 }

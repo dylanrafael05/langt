@@ -1,9 +1,7 @@
 ; ModuleID = 'HelloWorld.lgt'
 source_filename = "HelloWorld.lgt"
 
-%"<langt>::test" = type {}
-
-@str = private unnamed_addr constant [19 x i8] c"I'm ALIIIIIIIVE!!!\00", align 1
+%"<langt>::test" = type { i32 }
 
 define i8 @"<langt>::op_neg(int8)"(i8 %0) local_unnamed_addr {
 entry:
@@ -3749,15 +3747,12 @@ entry:
   ret i1 %1
 }
 
-declare void @printf(ptr, ...) local_unnamed_addr
-
-define void @"<langt>::main()"() local_unnamed_addr {
-entry:
-  call void (ptr, ...) @printf(ptr noundef nonnull @str)
-  ret void
-}
-
 define %"<langt>::test" @"<langt>::make_test()"() local_unnamed_addr {
 entry:
-  ret %"<langt>::test" undef
+  ret %"<langt>::test" zeroinitializer
+}
+
+define %"<langt>::test" @"<langt>::m()"() local_unnamed_addr {
+entry:
+  ret %"<langt>::test" { i32 1 }
 }

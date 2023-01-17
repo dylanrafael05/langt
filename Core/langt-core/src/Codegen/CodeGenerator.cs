@@ -13,39 +13,39 @@ public class CodeGenerator : IProjectDependency
     public const string LangtIdentifierPrepend = "<langt>::";
     public static Dictionary<OperatorSpec, string> MagicNames {get;} = new() 
     {
-        {new(OperatorType.Binary, TokenType.Plus),    "op_add"},
-        {new(OperatorType.Binary, TokenType.Minus),   "op_sub"},
-        {new(OperatorType.Binary, TokenType.Star),    "op_mul"},
-        {new(OperatorType.Binary, TokenType.Slash),   "op_div"},
-        {new(OperatorType.Binary, TokenType.Percent), "op_mod"},
+        [new(OperatorType.Binary, TokenType.Plus        )] = "op_add"          ,
+        [new(OperatorType.Binary, TokenType.Minus       )] = "op_sub"          ,
+        [new(OperatorType.Binary, TokenType.Star        )] = "op_mul"          ,
+        [new(OperatorType.Binary, TokenType.Slash       )] = "op_div"          ,
+        [new(OperatorType.Binary, TokenType.Percent     )] = "op_mod"          ,
         
-        {new(OperatorType.Binary, TokenType.DoubleEquals), "op_equal"},
-        {new(OperatorType.Binary, TokenType.NotEquals),    "op_not_equal"},
-        {new(OperatorType.Binary, TokenType.LessThan),     "op_less"},
-        {new(OperatorType.Binary, TokenType.LessEqual),    "op_less_equal"},
-        {new(OperatorType.Binary, TokenType.GreaterThan),  "op_greater"},
-        {new(OperatorType.Binary, TokenType.GreaterEqual), "op_greater_equal"},
+        [new(OperatorType.Binary, TokenType.DoubleEquals)] = "op_equal"        ,
+        [new(OperatorType.Binary, TokenType.NotEquals   )] = "op_not_equal"    ,
+        [new(OperatorType.Binary, TokenType.LessThan    )] = "op_less"         ,
+        [new(OperatorType.Binary, TokenType.LessEqual   )] = "op_less_equal"   ,
+        [new(OperatorType.Binary, TokenType.GreaterThan )] = "op_greater"      ,
+        [new(OperatorType.Binary, TokenType.GreaterEqual)] = "op_greater_equal",
 
-        {new(OperatorType.Unary, TokenType.Minus), "op_neg"},
-        {new(OperatorType.Unary, TokenType.Not),   "op_not"},
+        [new(OperatorType.Unary , TokenType.Minus       )] = "op_neg"         ,
+        [new(OperatorType.Unary , TokenType.Not         )] = "op_not"         ,
     };
     public static Dictionary<string, string> MagicNameToDescription {get;} = new()
     {
-        {"op_add", "operator +"},
-        {"op_sub", "operator -"},
-        {"op_mul", "operator *"},
-        {"op_div", "operator /"},
-        {"op_mod", "operator %"},
+        ["op_add"          ] = "operator +",
+        ["op_sub"          ] = "operator -",
+        ["op_mul"          ] = "operator *",
+        ["op_div"          ] = "operator /",
+        ["op_mod"          ] = "operator %",
 
-        {"op_equal",         "operator =="},
-        {"op_not_equal",     "operator !="},
-        {"op_less",          "operator <" },
-        {"op_less_equal",    "operator <="},
-        {"op_greater",       "operator >" },
-        {"op_greater_equal", "operator >="},
+        ["op_equal"        ] = "operator ==",
+        ["op_not_equal"    ] = "operator !=",
+        ["op_less"         ] = "operator <" ,
+        ["op_less_equal"   ] = "operator <=",
+        ["op_greater"      ] = "operator >" ,
+        ["op_greater_equal"] = "operator >=",
 
-        {"op_neg", "operator unary -"},
-        {"op_not", "operator not"}
+        ["op_neg"          ] = "operator unary -",
+        ["op_not"          ] = "operator not",
     };
 
     public static string DisplayableFunctionGroupName(string name) 
@@ -65,12 +65,12 @@ public class CodeGenerator : IProjectDependency
     /// <summary>
     /// The scope in which resolution is currently taking place.
     /// </summary>
-    public LangtScope ResolutionScope {get; private set;}
+    public IScope ResolutionScope {get; private set;}
     /// <summary>
     /// The scope that the AST is currently inside of.
     /// </summary>
     /// <value></value>
-    public LangtScope CurrentScope {get; private set;}
+    public IScope CurrentScope {get; private set;}
     /// <summary>
     /// Whether or not the resolution scope is the same as the current scope.
     /// </summary>
@@ -133,7 +133,7 @@ public class CodeGenerator : IProjectDependency
         // TYPES //
         foreach(var field in typeof(LangtType).GetFields().Where(f => Attribute.IsDefined(f, typeof(BuiltinTypeAttribute))))
         { 
-            Project.GlobalScope.DefineType((LangtType)field.GetValue(null)!, SourceRange.Default).Expect();
+            Project.GlobalScope.DefineProxy((LangtType)field.GetValue(null)!, SourceRange.Default).Expect();
         }
         
         foreach(var conv in LangtConversion.Builtin)
@@ -143,7 +143,7 @@ public class CodeGenerator : IProjectDependency
 
         foreach(var op in MagicNames.Values)
         {
-            Project.GlobalScope.DefineFunctionGroup(new LangtFunctionGroup(op), SourceRange.Default).Expect();
+            Project.GlobalScope.Define(s => new LangtFunctionGroup(op, s), SourceRange.Default).Expect();
         }
 
         BuiltinOperators.Initialize(this);
@@ -163,10 +163,15 @@ public class CodeGenerator : IProjectDependency
     {
         var opfn = GetOperator(new(OperatorType.Unary, op));
 
-        var ftype = new LangtFunctionType(r, false, new[] {x});
+        var ftype = LangtFunctionType.Create(new[] {x}, r).Expect();
 
-        var lfn = CreateNewFunction(opfn.RawName, false, ftype);
-        var fn = new LangtFunction(opfn, ftype, new[] {"__x"}, lfn);
+        var lfn = CreateNewLLVMFunction(opfn.Name, false, ftype);
+        var fn = new LangtFunction(opfn)
+        {
+            Type           = ftype,
+            ParameterNames = new[] {"__x"},
+            LLVMFunction   = lfn
+        };
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
@@ -180,14 +185,19 @@ public class CodeGenerator : IProjectDependency
     }
     public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r, BinaryOpDefiner definer)
     {
-        // Logger.Note($"Defining op {a.GetFullName()} {op} {b.GetFullName()}");
+        // Logger.Note($"Defining op {a.FullName} {op} {b.FullName}");
         
         var opfn = GetOperator(new(OperatorType.Binary, op));
 
-        var ftype = new LangtFunctionType(r, false, new[] {a, b});
+        var ftype = LangtFunctionType.Create(new[] {a, b}, r).Expect();
 
-        var lfn = CreateNewFunction(opfn.RawName, false, ftype);
-        var fn = new LangtFunction(opfn, ftype, new[] {"__a", "__b"}, lfn);
+        var lfn = CreateNewLLVMFunction(opfn.Name, false, ftype);
+        var fn = new LangtFunction(opfn)
+        { 
+            Type           = ftype,
+            ParameterNames = new[] {"__a", "__b"},
+            LLVMFunction   = lfn
+        };
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
@@ -235,7 +245,7 @@ public class CodeGenerator : IProjectDependency
         }
     }
 
-    public LLVMValueRef CreateNewFunction(string name, bool isExtern, LangtFunctionType type) 
+    public LLVMValueRef CreateNewLLVMFunction(string name, bool isExtern, LangtFunctionType type) 
     {
         return Module.AddFunction
         (
@@ -255,7 +265,7 @@ public class CodeGenerator : IProjectDependency
     {
         Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
 
-        CurrentFile!.Scope.HoldingScope = ns;
+        CurrentFile!.RebaseScope(ns);
         CurrentNamespace = ns;
     }
 
@@ -271,11 +281,11 @@ public class CodeGenerator : IProjectDependency
         }
     }
 
-    public LangtScope CreateUnnamedScope()
-        => ResolutionScope = ResolutionScope.CreateUnnamedSubScope();
+    public IScope OpenScope()
+        => ResolutionScope = new LangtScope(ResolutionScope);
     public void CloseScope()
     {
-        ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close a scope; the current scope is the global scope!");
+        ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close scope; the current scope is the global scope!");
     }
 
 
@@ -284,14 +294,14 @@ public class CodeGenerator : IProjectDependency
         => unnamedValues.Push(value);
     public void PushValue(LangtType type, LLVMValueRef value, string debugSource)
     {
-        Logger.Debug($"\tProduced one value from {debugSource}: type {type.GetFullName()}, value {value.Name}", "lowering");
+        Logger.Debug($"\tProduced one value from {debugSource}: type {type.FullName}, value {value.Name}", "lowering");
         unnamedValues.Push(new(type, value));
     }
 
     public LangtValue PopValue(string source)
     {
         var s = PopValueNoDebug();
-        Project.Logger.Debug($"     Consumed one value from {source}; type {s.Type.RawName}, value {s.LLVM.Name}", "lowering");
+        Project.Logger.Debug($"     Consumed one value from {source}; type {s.Type.Name}, value {s.LLVM.Name}", "lowering");
         return s;
     }
     public LangtValue PopValueNoDebug()
@@ -315,7 +325,7 @@ public class CodeGenerator : IProjectDependency
         }
         else foreach(var s in unnamedValues)
         {
-            res += "\r\n          : type " + s.Type.RawName + ", value " + s.LLVM.Name;
+            res += "\r\n          : type " + s.Type.Name + ", value " + s.LLVM.Name;
         }
 
         Logger.Debug(res, "lowering");
@@ -346,8 +356,8 @@ public class CodeGenerator : IProjectDependency
             if(conv is null)
             {
                 return ResultBuilder.Empty()
-                    .WithDgnError($"Could not find a conversion from {from.GetFullName()} to {to.GetFullName()}", range)
-                    .Build<LangtConversion>()
+                    .WithDgnError($"Could not find a conversion from {from.FullName} to {to.FullName}", range)
+                    .BuildError<LangtConversion>()
                 ;
             }
         }
@@ -375,7 +385,7 @@ public class CodeGenerator : IProjectDependency
     {
         if(isExtern) return name;
         return LangtIdentifierPrepend 
-            + (currentNamespace is null ? "" : currentNamespace.GetFullName() + "::") 
+            + (currentNamespace is null ? "" : currentNamespace.FullName + "::") 
             + name 
             + LangtFunctionType.GetFullSignatureString(isVararg, paramTypes);
     }

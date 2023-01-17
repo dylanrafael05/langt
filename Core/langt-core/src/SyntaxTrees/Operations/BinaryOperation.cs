@@ -107,7 +107,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
             );
             builder.AddData(results);
 
-            if(!results) return builder.Build<BoundASTNode>();
+            if(!results) return builder.BuildError<BoundASTNode>();
 
             var (l, r) = results.Value;
 
@@ -124,7 +124,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
 
         builder.AddData(fr);
 
-        if(!fr) return builder.Build<BoundASTNode>();
+        if(!fr) return builder.BuildError<BoundASTNode>();
 
         var fo = fr.Value;
         var fp = fo.OutputParameters.Value.ToArray();

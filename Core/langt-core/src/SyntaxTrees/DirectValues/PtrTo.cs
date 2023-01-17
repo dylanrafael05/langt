@@ -36,7 +36,7 @@ public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
             Range
         );
 
-        if(!vResult) return vResult.Cast<BoundASTNode>();
+        if(!vResult) return vResult.ErrorCast<BoundASTNode>();
 
         return Result.Success<BoundASTNode>(new BoundPtrTo(this, vResult.Value));
     }

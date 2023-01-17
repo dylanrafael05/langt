@@ -37,7 +37,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 
         var resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range);
         builder.AddData(resolution);
-        if(!resolution) return builder.Build<BoundASTNode>();
+        if(!resolution) return builder.BuildError<BoundASTNode>();
 
         builder.AddStaticReference(Range, resolution.Value);
 

@@ -18,6 +18,9 @@ public record SimpleType(ASTToken Name) : ASTType
         var t = state.CG.ResolutionScope.ResolveType(Name.ContentStr, Range);
         if(!t) return t;
 
-        return t.AddStaticReference(Range, t.Value);
+        if(t.Value is IResolution r) 
+            t = t.AddStaticReference(Range, r);
+
+        return t;
     }
 }

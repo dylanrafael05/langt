@@ -4,7 +4,7 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtScope? Scope) : BoundASTNode(Source)
+public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope? Scope) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundNodes};
     public bool HasScope => Scope is not null;
@@ -36,7 +36,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
         }
     }
 
-    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, LangtScope? scope = null)
+    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, IScope? scope = null)
     {
         var builder = ResultBuilder.Empty();
         var returns = false;
@@ -67,7 +67,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, LangtSc
             boundNotes.Add(bast);
         }
 
-        if(!builder) return builder.Build<BoundASTNode>();
+        if(!builder) return builder.BuildError<BoundASTNode>();
         
         return builder.Build<BoundASTNode>
         (
@@ -102,7 +102,7 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var scope = options.PredefinedBlockScope ?? state.CG.CreateUnnamedScope();
+        var scope = options.PredefinedBlockScope ?? state.CG.OpenScope();
 
         var r = BoundGroup.BindFromNodes(this, Statements, state, scope);
 

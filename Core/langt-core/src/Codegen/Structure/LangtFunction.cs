@@ -2,9 +2,9 @@ using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.Codegen;
 
-public class LangtFunction : NamedBase
+public class LangtFunction : Resolution
 {
-    public LangtFunction(LangtFunctionGroup group)
+    public LangtFunction(LangtFunctionGroup group) : base(group.HoldingScope)
     {
         Group = group;
     }
@@ -15,9 +15,5 @@ public class LangtFunction : NamedBase
     public required string[] ParameterNames {get; init;}
     public required LLVMValueRef LLVMFunction {get; init;}
 
-    public override string Name => Group.RawName;
-
-    public LangtScope HoldingScope => Group.HoldingScope;
-    public SourceRange? DefinitionRange {get; init;}
-    public string Documentation {get; init;} = "";
+    public override string Name => Group.Name;
 }

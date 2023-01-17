@@ -114,9 +114,9 @@ public static class ResultExtensions
         => MergeData(new Result<(T1, T2, T3, T4, T5, T6)>((r1.PossibleValue.Item1, r1.PossibleValue.Item2, r1.PossibleValue.Item3, r1.PossibleValue.Item4, r1.PossibleValue.Item5, r2.PossibleValue!)), r1, r2);
 
     public static Result<(T1, T2)> Attach<T1, T2>(this Result<T1> r1, T2 v)
-        => r1.HasErrors ? r1.Cast<(T1, T2)>() : Result.Success<(T1, T2)>((r1.Value, v)).WithDataFrom(r1);
+        => r1.HasErrors ? r1.ErrorCast<(T1, T2)>() : Result.Success<(T1, T2)>((r1.Value, v)).WithDataFrom(r1);
     public static Result<(T1, T2, T3)> Attach<T1, T2, T3>(this Result<(T1, T2)> r1, T3 v)
-        => r1.HasErrors ? r1.Cast<(T1, T2, T3)>() : Result.Success<(T1, T2, T3)>((r1.Value.Item1, r1.Value.Item2, v)).WithDataFrom(r1);
+        => r1.HasErrors ? r1.ErrorCast<(T1, T2, T3)>() : Result.Success<(T1, T2, T3)>((r1.Value.Item1, r1.Value.Item2, v)).WithDataFrom(r1);
     public static Result<(T1, T2, T3, T4)> Attach<T1, T2, T3, T4>(this Result<(T1, T2, T3)> r1, T4 v)
-        => r1.HasErrors ? r1.Cast<(T1, T2, T3, T4)>() : Result.Success<(T1, T2, T3, T4)>((r1.Value.Item1, r1.Value.Item2, r1.Value.Item3, v)).WithDataFrom(r1);
+        => r1.HasErrors ? r1.ErrorCast<(T1, T2, T3, T4)>() : Result.Success<(T1, T2, T3, T4)>((r1.Value.Item1, r1.Value.Item2, r1.Value.Item3, v)).WithDataFrom(r1);
 }

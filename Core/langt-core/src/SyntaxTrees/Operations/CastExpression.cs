@@ -41,7 +41,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         );
         var builder = ResultBuilder.From(results);
 
-        if(!results) return builder.Build<BoundASTNode>();
+        if(!results) return builder.BuildError<BoundASTNode>();
 
         var (val, boundType) = results.Value;
 
@@ -50,7 +50,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         var cv = state.CG.ResolveConversion(type, val.TransformedType, Range);
         builder.AddData(cv);
 
-        if(!cv) return builder.Build<BoundASTNode>();
+        if(!cv) return builder.BuildError<BoundASTNode>();
         var conversion = cv.Value;
 
         // TODO: make RawExpressionType required or a parameter

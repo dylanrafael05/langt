@@ -23,10 +23,21 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
     {
         var builder = ResultBuilder.Empty();
 
-        var t = new LangtStructureType(Name.ContentStr, Struct.Documentation);
-        builder.AddStaticReference(Name.Range, t, true);
+        var dt = state.CG.ResolutionScope.Define
+        (
+            (s, r) => new LangtStructureType(Name.ContentStr, s)
+            {
+                DefinitionRange = r,
+                Documentation = Struct.Documentation
+            }, 
 
-        var dt = state.CG.ResolutionScope.DefineType(t, Range);
+            sourceRange: Range,
+            nameRange:   Name.Range,
+
+            builder,
+
+            out var t
+        );
         builder.AddData(dt);
 
         if(!dt) return dt;
@@ -51,7 +62,7 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
             if(StructureType!.HasField(sf.Name))
             {
-                return ResultBuilder.Empty().WithDgnError($"Cannot redefine field {sf.Name}", Range).Build();
+                return builder.WithDgnError($"Cannot redefine field {sf.Name}", Range).Build();
             }
 
             StructureType.Fields.Add(sf);

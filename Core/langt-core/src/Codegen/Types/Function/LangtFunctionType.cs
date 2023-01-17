@@ -9,14 +9,44 @@ namespace Langt.Codegen;
 // * and have them take in a source range.
 // * Create "forcing" variants to allow for pre-built types.
 
-public class LangtFunctionType: LangtType
+public class LangtFunctionType : LangtType
 {
-    public LangtType ReturnType {get; private init;}
-    public bool IsVararg {get; private init;}
-    public LangtType[] ParameterTypes {get; private init;}
+    private LangtFunctionType(LangtType ret, LangtType[] param, bool varg) 
+    {
+        ReturnType = ret;
+        ParameterTypes = param;
+        IsVararg = varg;
+    }
 
-    public override string RawName => GetName(ReturnType, ParameterTypes, IsVararg);
-    public override string FullName => RawName;
+    public static Result<LangtFunctionType> Create(LangtType[] parameterTypes,
+                                                   LangtType returnType,
+                                                   SourceRange range = default,
+                                                   string[]? parameterNames = null,
+                                                   bool isVararg = false,
+                                                   string? externType = null)
+    {
+        if(externType is null && isVararg)
+        {
+            return Result.Error<LangtFunctionType>(Diagnostic.Error($"Cannot define a variable argument function that is not extern C", range));
+        }
+
+        for(var i = 0; i < parameterTypes.Length; i++)
+        {
+            if(parameterTypes[i] == None) 
+            {
+                return Result.Error<LangtFunctionType>(Diagnostic.Error($"Parameter {parameterNames?[i] ?? "(unnamed)"} cannot have type 'none'", range));
+            }
+        }
+
+        return Result.Success<LangtFunctionType>(new(returnType, parameterTypes, isVararg));
+    }
+
+    public LangtType ReturnType {get; private init;}
+    public LangtType[] ParameterTypes {get; private init;}
+    public bool IsVararg {get; private init;}
+
+    public override string Name => GetName(ReturnType, ParameterTypes, IsVararg);
+    public override string FullName => Name;
 
     public record struct MatchSignatureResult(Result<BoundASTNode[]> OutResult, SignatureMatchLevel Level);
     public class MutableMatchSignatureInput
@@ -73,9 +103,6 @@ public class LangtFunctionType: LangtType
     }
 
     public string SignatureString => GetFullSignatureString(IsVararg, ParameterTypes);
-    
-    public LangtFunctionType(LangtType returnType, params LangtType[] parameterTypes) : this(returnType, false, parameterTypes)
-    {}
 
     public override LLVMTypeRef Lower(CodeGenerator context)
         => LLVMTypeRef.CreateFunction(

@@ -12,11 +12,11 @@ public record NestedNamespace(ASTNamespace Namespace, ASTToken Dot, ASTToken Ide
 
         var ns = Namespace.Resolve(state, options);
         builder.AddData(ns);
-        if(!ns) return builder.Build<LangtNamespace>();
+        if(!ns) return builder.BuildError<LangtNamespace>();
 
-        var r = ResolveFrom(ns.Value, Identifier.ContentStr, options.AllowNamesapceDefinitions);
+        var r = ResolveFrom(ns.Value, Identifier.ContentStr, Identifier.Range, options.AllowNamespaceDefinitions);
         builder.AddData(r);
-        if(!r) return builder.Build<LangtNamespace>();
+        if(!r) return builder.BuildError<LangtNamespace>();
 
         var res = r.Value;
         builder.AddStaticReference(Identifier.Range, res);

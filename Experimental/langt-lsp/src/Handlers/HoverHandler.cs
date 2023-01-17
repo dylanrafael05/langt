@@ -24,22 +24,20 @@ public class HoverHandler : HoverHandlerBase
 
         if(file is null) return Task.FromResult<Hover?>(null);
 
-        var currentReference = proj.Project.References
-            .Where(r => r.Range.Source == file.Source)
-            .FirstOrDefault(r => r.Range.Contains(request.Position.ToLangt()));
+        var currentReference = proj.GetReferenceAt(file, request.Position);
 
         var contentStr = currentReference?.Item switch
         {
             LangtVariable lv when !lv.IsParameter
-                => $"let {lv.Name} {lv.Type.GetFullName()}",
+                => $"let {lv.Name} {lv.Type.FullName}",
             LangtVariable lv
-                => $"{lv.Name} {lv.Type.GetFullName()}",
+                => $"{lv.Name} {lv.Type.FullName}",
             LangtType lt when lt is LangtStructureType 
-                => $"struct {lt.GetFullName()}",
+                => $"struct {lt.FullName}",
             LangtType lt when lt is LangtAliasType 
-                => $"alias {lt.GetFullName()} = {lt.AliasBaseType.GetFullName()}",
+                => $"alias {lt.FullName} = {lt.AliasBaseType!.FullName}",
             LangtFunction lf
-                => $"let {lf.GetFullName()}({string.Join(", ", lf.ParameterNames.Select((n, i)=>n + " " + lf.Type.ParameterTypes[i].GetFullName()))}) {lf.Type.ReturnType.GetFullName()}",
+                => $"let {lf.FullName}({string.Join(", ", lf.ParameterNames.Select((n, i)=>n + " " + lf.Type.ParameterTypes[i].FullName))}) {lf.Type.ReturnType.FullName}",
             
             _ => null
         };
@@ -51,7 +49,7 @@ public class HoverHandler : HoverHandlerBase
             Range = currentReference!.Range.ToVS(),
             Contents = new MarkedStringsOrMarkupContent(
                 new MarkedString("langt", contentStr),
-                currentReference.Item.Documentation
+                currentReference.Item.Documentation ?? ""
             )
         });
     }

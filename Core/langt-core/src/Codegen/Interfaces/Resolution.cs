@@ -1,35 +1,39 @@
 namespace Langt.Codegen;
 
 // TODO: continue generalization of resolutions to remove previous interfaces
-public abstract class Resolution
+public abstract class Resolution : IResolution
 {   
     public abstract string Name {get;}
     public virtual string DisplayName => Name;
-    public virtual string FullName => GetFullName(this);
+    public virtual string FullName => IResolution.GetFullNameDefault(this);
 
-    public Resolution(LangtScope holdingScope) 
-    {
-        HoldingScope = holdingScope;
-    }
-    
-    public LangtScope HoldingScope {get;}
+    public IScope HoldingScope {get;}
     
     public SourceRange? DefinitionRange {get; init;}
     public string? Documentation {get; init;}
 
-    public static string GetFullName(Resolution? named) 
+    public Resolution(IScope holdingScope) 
     {
-        if(named is null) return "";
-
-        var name = named.DisplayName;
-
-        if(named is not IScoped scoped)  return name;
-        if(!scoped.HoldingScope.HasName) return name;
-
-        var upperName = GetFullName(scoped.HoldingScope);
-
-        if(string.IsNullOrEmpty(upperName)) return name;
-
-        return upperName + "::" + name;
+        HoldingScope = holdingScope;
     }
+}
+
+public class ProxyResolution<T> : IProxyResolution<T> where T : INamed
+{
+    public ProxyResolution(T inner, IScope holdingScope) 
+    {
+        Inner = inner;
+        HoldingScope = holdingScope;
+    }
+
+    public T Inner {get;}
+
+    public IScope HoldingScope {get;}
+
+    public SourceRange? DefinitionRange {get; init;}
+    public string? Documentation {get; init;}
+
+    public string Name => Inner.Name;
+    public string DisplayName => Inner.DisplayName;
+    public string FullName => Inner.FullName;
 }

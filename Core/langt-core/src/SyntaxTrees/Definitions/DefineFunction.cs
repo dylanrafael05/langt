@@ -38,6 +38,8 @@ public record FunctionDefinition(ASTToken Let,
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Open, ArgSpec, VarargSpec, Close, Type, Body};
 
+    public SourceRange DefinitionRange = SourceRange.CombineFrom(Let, Close);
+
     public override void Dump(VisitDumper visitor)
     {
         visitor.PutString("Defining function " + Identifier.Range.Content.ToString());
@@ -63,13 +65,16 @@ public record FunctionDefinition(ASTToken Let,
                 Range,
                 propogate: false
             )
-            .Or(null)
+            .OrDefault()
         ;
 
         if(FunctionGroup is null)
         {
-            FunctionGroup = new(Identifier.ContentStr);
-            return state.CG.ResolutionScope.DefineFunctionGroup(FunctionGroup, Range); 
+            return state.CG.ResolutionScope.Define
+            (
+                s => new LangtFunctionGroup(Identifier.ContentStr, s), Range, 
+                f => FunctionGroup = f
+            ); 
         }
         else
         {
@@ -103,18 +108,32 @@ public record FunctionDefinition(ASTToken Let,
             argc++;
         }
 
-        var fnType = new LangtFunctionType(retType, VarargSpec is not null, ArgTypes!);
-
-        var lf = state.CG.CreateNewFunction(Identifier.ContentStr, Let.Type is TokenType.Extern, fnType);
-        
-        Function = new LangtFunction
+        var fnres = LangtFunctionType.Create
         (
-            FunctionGroup!,
-            fnType,
-            ArgSpec.Values.Select(v => v.Name.ContentStr).ToArray(), 
-            lf,
-            Let.Documentation
+            ArgTypes!, 
+            retType, 
+            range: DefinitionRange,
+            parameterNames: ArgSpec.Values.Select(k => k.Name.ContentStr).ToArray(),
+            isVararg: VarargSpec is not null,
+            externType: (Let.Type is TokenType.Extern ? "C" : "")
         );
+        builder.AddData(fnres);
+
+        if(!builder) return builder.Build();
+
+        var fnType = fnres.Value;
+
+        var lf = state.CG.CreateNewLLVMFunction(Identifier.ContentStr, Let.Type is TokenType.Extern, fnType);
+        
+        Function = new LangtFunction(FunctionGroup!)
+        {
+            Type            = fnType,
+            ParameterNames  = ArgSpec.Values.Select(v => v.Name.ContentStr).ToArray(),
+            LLVMFunction    = lf,
+
+            Documentation   = Let.Documentation,
+            DefinitionRange = SourceRange.CombineFrom(Let, Type)
+        };
 
         var afr = FunctionGroup!.AddFunctionOverload(Function, Range);
         builder.AddData(afr);
@@ -139,7 +158,7 @@ public record FunctionDefinition(ASTToken Let,
         Result<BoundASTNode> bodyResult;
 
         state.CG.CurrentFunction = Function;
-        var scope = state.CG.CreateUnnamedScope();
+        var scope = state.CG.OpenScope();
         {
             DefineParametersInScope(builder, scope);
 
@@ -152,8 +171,7 @@ public record FunctionDefinition(ASTToken Let,
                 bodyResult = Body!.BindMatchingExprType(state, Function.Type.ReturnType);
             }
 
-            builder.AddData(bodyResult);
-            if(!bodyResult) return builder.Build<BoundASTNode>();
+            if(!builder.WithData(bodyResult)) return builder.BuildError<BoundASTNode>();
         }
         state.CG.CloseScope();
         state.CG.CurrentFunction = previousFunction;
@@ -164,7 +182,7 @@ public record FunctionDefinition(ASTToken Let,
         );
     }
 
-    private void DefineParametersInScope(ResultBuilder builder, LangtScope scope)
+    private void DefineParametersInScope(ResultBuilder builder, IScope scope)
     {
         var count = 0u;
         foreach(var argspec in ArgSpec.Values)
@@ -173,13 +191,20 @@ public record FunctionDefinition(ASTToken Let,
 
             if(t is null) continue;
 
-            var variable = new LangtVariable(argspec.Name.ContentStr, t)
-            {
-                ParameterNumber = count
-            };
+            var defineResult = scope.Define
+            (
+                s => new LangtVariable(argspec.Name.ContentStr, t, s)
+                {
+                    ParameterNumber = count
+                }, 
+                Range, 
+                out var variable
+            );
 
-            builder.AddData(scope.DefineVariable(variable, Range).Forgive());
-            builder.AddStaticReference(argspec.Name.Range, variable, true);
+            builder.AddData(defineResult);
+
+            if(variable is not null)
+                builder.AddStaticReference(argspec.Name.Range, variable, true);
 
             count++;
         }

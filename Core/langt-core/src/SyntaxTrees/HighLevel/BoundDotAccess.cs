@@ -6,7 +6,7 @@ public record BoundStaticAccess(ASTNode Source, BoundASTNode Left, ASTNode Right
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left};
 
-    public BoundStaticAccess(ASTNode Source, BoundASTNode Left, ASTNode Right, INamedScoped Resolution) : this(Source, Left, Right)
+    public BoundStaticAccess(ASTNode Source, BoundASTNode Left, ASTNode Right, IResolution Resolution) : this(Source, Left, Right)
     {
         HasResolution = true;
         this.Resolution = Resolution;
@@ -34,7 +34,7 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
                 lowerer.LowerType(s.Type.PointeeType!), 
                 s.LLVM,
                 (uint)FieldIndex!.Value,
-                s.Type.PointeeType!.RawName + "." + Field!.Name
+                s.Type.PointeeType!.Name + "." + Field!.Name
             ),
             DebugSourceName
         );

@@ -35,13 +35,13 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
             if(left.Resolution is not LangtNamespace ns) 
             {
                 return builder.WithDgnError($"Cannot access a static member of something that is not a namespace", Range)
-                    .Build<BoundASTNode>();
+                    .BuildError<BoundASTNode>();
             }
 
             var resolutionResult = ns.Resolve(Right.ContentStr, Range);
             builder.AddData(resolutionResult);
 
-            if(!builder) return builder.Build<BoundASTNode>();
+            if(!builder) return builder.BuildError<BoundASTNode>();
 
             return builder.Build<BoundASTNode>
             (
@@ -55,21 +55,21 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         if(!left.IsLValue || !left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)
         {
             return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
-                .Build<BoundASTNode>();
+                .BuildError<BoundASTNode>();
 
             // TODO: modify this to include namespace getters! (how will that work?)
         }
 
-        if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index, out _))
+        if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index))
         {
-            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.RawName}", Range)
-                .Build<BoundASTNode>();
+            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range)
+                .BuildError<BoundASTNode>();
         }
 
         result.Field = field;
         result.FieldIndex = index;
 
-        result.RawExpressionType = LangtType.PointerTo(result.Field!.Type);
+        result.RawExpressionType = LangtPointerType.Create(result.Field!.Type).Expect();
 
         return builder.Build<BoundASTNode>(result);
     }

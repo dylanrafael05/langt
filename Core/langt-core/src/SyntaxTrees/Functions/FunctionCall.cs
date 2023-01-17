@@ -73,7 +73,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             var resolveResult = functionGroup.ResolveOverload(givenArgs, Range, state);
             builder.AddData(resolveResult);
 
-            if(!resolveResult) return builder.Build<BoundASTNode>();
+            if(!resolveResult) return builder.BuildError<BoundASTNode>();
 
             var resolution = resolveResult.Value;
             builder.AddData(resolution.OutputParameters);
@@ -113,10 +113,10 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             if(!builder)
             {
                 return builder.WithDgnError(
-                    $"Could not call a function pointer of type {funcType.RawName} " +
-                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.TransformedType ?? LangtType.Error).GetFullName()))}",
+                    $"Could not call a function pointer of type {funcType.Name} " +
+                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.TransformedType ?? LangtType.Error).FullName))}",
                     Range
-                ).Build<BoundASTNode>();
+                ).BuildError<BoundASTNode>();
             }
 
             return builder.Build<BoundASTNode>
@@ -129,7 +129,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         }
         else 
         {
-            return builder.WithDgnError("Cannot call a non-functional expression", Range).Build<BoundASTNode>();
+            return builder.WithDgnError("Cannot call a non-functional expression", Range).BuildError<BoundASTNode>();
         }
     }
 }

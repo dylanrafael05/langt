@@ -27,7 +27,7 @@ public record BoundIfStatement(IfStatement Source, BoundASTNode Condition, Bound
         lowerer.Builder.BuildCondBr(c.LLVM, trueBB, falseBB);
 
         lowerer.Builder.PositionAtEnd(trueBB);
-        lowerer.CreateUnnamedScope();
+        lowerer.OpenScope();
             Block.Lower(lowerer);
             if(!Block.Returns) lowerer.Builder.BuildBr(endBB);
         lowerer.CloseScope();
@@ -35,7 +35,7 @@ public record BoundIfStatement(IfStatement Source, BoundASTNode Condition, Bound
         lowerer.Builder.PositionAtEnd(falseBB);
         if(Else is not null)
         {
-            lowerer.CreateUnnamedScope();
+            lowerer.OpenScope();
                 Else.Lower(lowerer);
             lowerer.CloseScope();
         }
@@ -67,7 +67,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
         );
         var builder = ResultBuilder.From(results);
 
-        if(!results) return builder.Build<BoundASTNode>();
+        if(!results) return builder.BuildError<BoundASTNode>();
 
         var (cond, block) = results.Value;
 
@@ -78,7 +78,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
             var e = Else.Bind(state);
             builder.AddData(e);
 
-            if(!e) return builder.Build<BoundASTNode>();
+            if(!e) return builder.BuildError<BoundASTNode>();
 
             boundElse = e.Value;
         }

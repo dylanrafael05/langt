@@ -12,14 +12,16 @@ public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier)
 
         var nr = Namespace.Resolve(state);
         builder.AddData(nr);
-        if(!nr) return builder.Build<LangtType>();
+        if(!nr) return builder.BuildError<LangtType>();
 
         var ns = nr.Value;
         var tr = ns!.ResolveType(Identifier.ContentStr, Range);
         builder.AddData(tr);
-        if(!tr) return builder.Build<LangtType>();
+        if(!tr) return builder.BuildError<LangtType>();
 
-        builder.AddStaticReference(Identifier.Range, tr.Value);
+        if(tr.Value is IResolution r)
+            builder.AddStaticReference(Identifier.Range, r);
+        
         return builder.Build(tr.Value);
     }
 }   
