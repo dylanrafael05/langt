@@ -1,5 +1,5 @@
-; ModuleID = 'HelloWorld.lgt'
-source_filename = "HelloWorld.lgt"
+; ModuleID = '../../Examples/HelloWorld.lgt'
+source_filename = "../../Examples/HelloWorld.lgt"
 
 @str = private unnamed_addr constant [12 x i8] c"Hello World\00", align 1
 @str.1 = private unnamed_addr constant [6 x i8] c"hello\00", align 1
@@ -3749,40 +3749,6 @@ entry:
 }
 
 declare void @printf(ptr, ...) local_unnamed_addr
-
-define { [8 x i8], i8 } @"<langt>sys::maybe_int()"() local_unnamed_addr {
-entry:
-  %0 = alloca { [8 x i8], i8 }, align 8
-  store i64 0, ptr %0, align 8
-  %1 = getelementptr inbounds { [8 x i8], i8 }, ptr %0, i64 0, i32 1
-  store i8 0, ptr %1, align 8
-  %.unpack.elt3 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 1
-  %.unpack.unpack4 = load i8, ptr %.unpack.elt3, align 1
-  %2 = insertvalue [8 x i8] [i8 0, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef, i8 undef], i8 %.unpack.unpack4, 1
-  %.unpack.elt5 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 2
-  %.unpack.unpack6 = load i8, ptr %.unpack.elt5, align 2
-  %3 = insertvalue [8 x i8] %2, i8 %.unpack.unpack6, 2
-  %.unpack.elt7 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 3
-  %.unpack.unpack8 = load i8, ptr %.unpack.elt7, align 1
-  %4 = insertvalue [8 x i8] %3, i8 %.unpack.unpack8, 3
-  %.unpack.elt9 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 4
-  %.unpack.unpack10 = load i8, ptr %.unpack.elt9, align 4
-  %5 = insertvalue [8 x i8] %4, i8 %.unpack.unpack10, 4
-  %.unpack.elt11 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 5
-  %.unpack.unpack12 = load i8, ptr %.unpack.elt11, align 1
-  %6 = insertvalue [8 x i8] %5, i8 %.unpack.unpack12, 5
-  %.unpack.elt13 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 6
-  %.unpack.unpack14 = load i8, ptr %.unpack.elt13, align 2
-  %7 = insertvalue [8 x i8] %6, i8 %.unpack.unpack14, 6
-  %.unpack.elt15 = getelementptr inbounds [8 x i8], ptr %0, i64 0, i64 7
-  %.unpack.unpack16 = load i8, ptr %.unpack.elt15, align 1
-  %.unpack17 = insertvalue [8 x i8] %7, i8 %.unpack.unpack16, 7
-  %8 = insertvalue { [8 x i8], i8 } undef, [8 x i8] %.unpack17, 0
-  %.elt1 = getelementptr inbounds { [8 x i8], i8 }, ptr %0, i64 0, i32 1
-  %.unpack2 = load i8, ptr %.elt1, align 8
-  %9 = insertvalue { [8 x i8], i8 } %8, i8 %.unpack2, 1
-  ret { [8 x i8], i8 } %9
-}
 
 define void @"<langt>sys::main()"() local_unnamed_addr {
 entry:
