@@ -47,6 +47,6 @@ public class LangtFileScope : LangtScope
         , range).BuildError<TOut>();
     }
 
-    public override Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange)
+    public override Result<T> Define<T>(Func<IScope, T> constructor, SourceRange sourceRange)
         => HoldingScope!.Define(constructor, sourceRange);
 }

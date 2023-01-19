@@ -10,14 +10,17 @@ namespace Langt.AST;
 public record BoundVariableReference(BoundASTNode BoundSource, LangtVariable Variable) : BoundASTNode(BoundSource.ASTSource)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundSource};
-    
-    public override bool IsLValue => Variable.IsWriteable;
+
+    public override LangtType Type => LangtReferenceType.Create(Variable.Type).Expect();
+
+    public override IResolution? Resolution => Variable;
+    public override bool HasResolution => true;
 
     public override void LowerSelf(CodeGenerator generator)
     {
         generator.PushValue
         ( 
-            RawExpressionType, 
+            Type, 
             Variable!.UnderlyingValue!.LLVM,
             DebugSourceName
         );

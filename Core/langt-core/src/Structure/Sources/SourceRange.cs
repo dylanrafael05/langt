@@ -9,8 +9,8 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
     public SourcePosition Start => new(CharStart, LineStart, ColumnStart, Source);
     public SourcePosition End => new(CharEnd, LineEnd, ColumnEnd, Source);
 
-    public bool IsDefault => CharStart == -1;
-    public static SourceRange Default => new(-1, -1, -1, -1, -1, -1, new("", ""));
+    public bool IsDefault => Source is null;
+    public static SourceRange Default => default;
 
     public int Length => CharEnd - CharStart;
 

@@ -73,7 +73,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
         (
             new BoundGroup(source, boundNotes!, scope)
             {
-                RawExpressionType = LangtType.None,
+                Type = LangtType.None,
                 Returns = returns
             }
         );

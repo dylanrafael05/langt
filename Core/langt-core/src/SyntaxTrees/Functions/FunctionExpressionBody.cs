@@ -33,7 +33,7 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
         (
             k => new BoundFunctionExpressionBody(this, k)
             {
-                RawExpressionType = k.TransformedType, 
+                Type = k.Type, 
                 Returns = true
             }
         );

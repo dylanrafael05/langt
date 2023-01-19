@@ -22,8 +22,6 @@ public class TokenHandler : SemanticTokensHandlerBase
         this.proj = proj;
     }
 
-    public static STM Builtin => new("builtin");
-
     protected override SemanticTokensRegistrationOptions CreateRegistrationOptions(SemanticTokensCapability capability, ClientCapabilities clientCapabilities)
     {
         var s = new SemanticTokensRegistrationOptions()
@@ -32,7 +30,7 @@ public class TokenHandler : SemanticTokensHandlerBase
             Legend = new SemanticTokensLegend()
             {
                 TokenTypes     = capability.TokenTypes,
-                TokenModifiers = new(capability.TokenModifiers.Append(Builtin))
+                TokenModifiers = new(capability.TokenModifiers.Concat(SemanticToken.NewModifiers))
             },
             Full = new SemanticTokensCapabilityRequestFull
             {
@@ -64,7 +62,8 @@ public class TokenHandler : SemanticTokensHandlerBase
                 LangtVariable v when v.IsParameter  => SemanticToken.From(STT.Parameter),
                 LangtVariable v when !v.IsParameter => SemanticToken.From(STT.Variable),
                 LangtType t when t.IsStructure      => SemanticToken.From(STT.Struct),
-                LangtType t when t.IsBuiltin        => SemanticToken.From(STT.Type, Builtin),
+                LangtType t when t.IsAlias          => SemanticToken.From(STT.Type, SemanticToken.Alias),
+                LangtType t when t.IsBuiltin        => SemanticToken.From(STT.Type, SemanticToken.Builtin),
                 LangtNamespace                      => SemanticToken.From(STT.Namespace),
                 _                                   => SemanticToken.None
             };

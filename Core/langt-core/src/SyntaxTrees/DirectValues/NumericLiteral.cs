@@ -14,16 +14,16 @@ public record BoundNumericLiteral(NumericLiteral Source, ulong? IntegerValue, do
         if(DoubleValue.HasValue)
         {
             lowerer.PushValue( 
-                RawExpressionType,
-                LLVMValueRef.CreateConstReal(lowerer.LowerType(RawExpressionType), DoubleValue!.Value),
+                Type,
+                LLVMValueRef.CreateConstReal(lowerer.LowerType(Type), DoubleValue!.Value),
                 DebugSourceName
             );
         }
         else
         {
             lowerer.PushValue(
-                RawExpressionType,
-                LLVMValueRef.CreateConstInt(lowerer.LowerType(RawExpressionType), IntegerValue!.Value),
+                Type,
+                LLVMValueRef.CreateConstInt(lowerer.LowerType(Type), IntegerValue!.Value),
                 DebugSourceName
             );
         }
@@ -67,7 +67,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
         (
             new BoundNumericLiteral(this, intVal, dblVal)
             {
-                RawExpressionType = exprType,
+                Type = exprType,
                 NaturalType = natType
             }
         );

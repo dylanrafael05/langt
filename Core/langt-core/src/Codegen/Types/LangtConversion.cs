@@ -88,7 +88,7 @@ public record LangtConversion(TransformProvider TransformProvider)
 
         // Pointer conversions //
         Add(new FunctionalTransformProvider(
-            (t1, t2) => t1.IsPointer && t2.IsPointer && t1.PointeeType != t2.PointeeType,
+            (t1, t2) => t1.IsPointer && t2.IsPointer && t1.ElementType != t2.ElementType,
             (_, _, _, v) => v,
             "*a->*b"
         ));

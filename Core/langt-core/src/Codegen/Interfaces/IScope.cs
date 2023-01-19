@@ -6,5 +6,5 @@ public interface IScope
     IReadOnlyDictionary<string, IResolution> NamedItems {get;}
 
     Result<TOut> Resolve<TOut>(string input, string outputType, SourceRange range, bool propogate = false) where TOut : INamed;
-    Result<TIn> Define<TIn>(Func<LangtScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolution;
+    Result<TIn> Define<TIn>(Func<IScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolution;
 }

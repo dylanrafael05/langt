@@ -7,7 +7,6 @@ namespace Langt.AST;
 public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, BoundASTNode Index) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value, Index};
-    public override bool IsLValue => true;
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
@@ -17,7 +16,7 @@ public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, B
         Index.Lower(lowerer);
         var index = lowerer.PopValue(DebugSourceName);
 
-        var pointeeType = lowerer.LowerType(Value.TransformedType.PointeeType!);
+        var pointeeType = lowerer.LowerType(Value.Type.ElementType!);
 
         lowerer.PushValue( 
             val.Type,
@@ -54,7 +53,7 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
 
         var (val, index) = results.Value;
 
-        if(!val.TransformedType.IsPointer)
+        if(!val.Type.IsPointer)
         {
             return builder.WithDgnError("Cannot index a non-pointer", Range).BuildError<BoundASTNode>();
         }
@@ -63,7 +62,7 @@ public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, 
         (
             new BoundIndexExpression(this, val, index) 
             {
-                RawExpressionType = val.TransformedType
+                Type = LangtReferenceType.Create(val.Type.ElementType).Expect()
             }
         );
     }

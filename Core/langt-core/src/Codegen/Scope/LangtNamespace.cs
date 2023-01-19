@@ -7,7 +7,7 @@ public class LangtNamespace : Resolution, IScope
 
     public override string Name {get;}
 
-    public LangtNamespace(LangtScope scope, string name) : base(scope) 
+    public LangtNamespace(IScope scope, string name) : base(scope) 
     {
         innerScope = new(scope);
         Name = name;
@@ -17,6 +17,6 @@ public class LangtNamespace : Resolution, IScope
 
     public Result<TOut> Resolve<TOut>(string input, string outputType, SourceRange range, bool propogate = false) where TOut : INamed
         => innerScope.Resolve<TOut>(input, outputType, range, propogate);
-    public Result<TIn> Define<TIn>(Func<LangtScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolution
-        => innerScope.Define(constructor, sourceRange);
+    public Result<TIn> Define<TIn>(Func<IScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolution
+        => innerScope.Define(_ => constructor(this), sourceRange);
 }

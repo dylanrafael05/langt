@@ -154,6 +154,25 @@ public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function
     }
 }
 
+public record BoundTransform(BoundASTNode Source, ITransformer Transform) : BoundASTNode(Source.ASTSource)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Source};
+
+    public override LangtType Type => Transform.Output;
+
+    public override void LowerSelf(CodeGenerator generator)
+    {
+        Source.Lower(generator);
+        var pre = generator.PopValue(DebugSourceName);
+
+        generator.PushValue
+        (
+            Transform.Output, 
+            Transform.Perform(generator, pre.LLVM),
+            DebugSourceName
+        );
+    }
+}
 
 
 public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>, IElement<VisitDumper>
@@ -174,32 +193,26 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// be dereferenced or be assigned to if it constitutes a pointer?
     /// TODO: remove in favor of a LangtLValueType or LangtPointerType.IsLValue
     /// </summary>
-    public virtual bool IsLValue => false;
-
-    /// <summary>
-    /// Whether or not the current AST node has an unknown type, since it has not been 
-    /// assigned a valid target type.
-    /// </summary>
-    public bool HasValidDownflow {get; set;} = false;
+    [Obsolete("Use LangtReferenceType instead", true)] public virtual bool IsLValue => false;
     
     /// <summary>
-    /// What is the direct type (unaffected by transformers) of this AST node. Should be
-    /// equal to <see cref="LangtType.Error"/> if this node is not an expression.
+    /// What is the direct type of this AST node. Should be
+    /// equal to <see cref="LangtType.None"/> if this node is not an expression.
     /// </summary>
-    public LangtType RawExpressionType {get; set;} = LangtType.None;
+    public virtual LangtType Type {get; init;} = LangtType.None;
     /// <summary>
     /// What is the inferabble type of this AST node; what type should be used for type
-    /// inference of this expression if it is distinct from <see cref="RawExpressionType"/>.
+    /// inference of this expression if it is distinct from <see cref="Type"/>.
     /// Should be equal to <see langword="null"/> if this node is not an expression, or
     /// there is no distinction between the type to be inferred or the expression type itself. 
     /// </summary>
-    public LangtType? NaturalType {get; set;} = null;
+    public LangtType? NaturalType {get; init;} = null;
     /// <summary>
     /// What is the final, or fully transformed, type of this node.
     /// Found using all the <see cref="ITransformer"/> instances which have been applied to
     /// this AST node.
     /// </summary>
-    public LangtType TransformedType => AppliedTransformers.Count > 0 ? AppliedTransformers[^1].Output : RawExpressionType;
+    [Obsolete("Use BoundTransform instead", true)] public LangtType TransformedType => AppliedTransformers.Count > 0 ? AppliedTransformers[^1].Output : Type;
 
     /// <summary>
     /// Whether or not this AST node contains a return statement.
@@ -237,12 +250,12 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// The list of transformers currently applied to this AST node, in reverse order 
     /// of their application.
     /// </summary>
-    public List<ITransformer> AppliedTransformers {get; init;} = new();
+    [Obsolete("Use BoundTransform instead", true)] public List<ITransformer> AppliedTransformers {get; init;} = new();
 
     /// <summary>
     /// Apply the given transform to this AST node.
     /// </summary>
-    public void ApplyTransform(ITransformer transformer)
+    [Obsolete("Use BoundTransform instead", true)] public void ApplyTransform(ITransformer transformer)
     {
         AppliedTransformers.Add(transformer);
     }
@@ -252,13 +265,14 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// </summary>
     /// <seealso cref="IsLValue"/>
     /// <seealso cref="LangtType.IsPointer"/>
-    public void TryDeferenceLValue()
+    public BoundASTNode TryDeferenceLValue()
     {
-        if(!IsLValue) return;
-        ApplyTransform(LangtReadPointer.Transformer(TransformedType));
+        if(!Type.IsReference) return this;
+        
+        return new BoundTransform(this, DerefenceTransform.For(Type));
     }
 
-    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType type, out bool coerced)
+    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target, out bool coerced)
     {
         coerced = false;
 
@@ -269,7 +283,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
             // Attempt to handle function references
             if(Resolution is LangtFunctionGroup fg)
             {
-                if(!type.IsFunctionPtr)
+                if(!target.IsFunctionPtr)
                 {
                     return builder
                         .WithDgnError("Cannot target type a function reference to a non-functional type", Range)
@@ -277,7 +291,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
                         .AsTargetTypeDependent();
                 }
 
-                var funcType = (LangtFunctionType)type.PointeeType!;
+                var funcType = (LangtFunctionType)target.ElementType!;
 
                 var fr = fg.ResolveExactOverload(funcType.ParameterTypes, funcType.IsVararg, Range);
                 builder.AddData(fr);
@@ -293,18 +307,18 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         }
 
         // Fail if expression has type of 'none'
-        if(TransformedType == LangtType.None) return builder
+        if(Type == LangtType.None) return builder
             .WithDgnError($"Expression must have a value", Range)
             .BuildError<BoundASTNode>();
 
         // Return here if types match
-        if(type == TransformedType) return builder.Build(this);
+        if(target == Type) return builder.Build(this);
         
         // Beyond this point, coersion takes place
         coerced = true;
 
         // Attempt to find a conversion
-        var convResult = state.CG.ResolveConversion(type, TransformedType, Range);
+        var convResult = state.CG.ResolveConversion(target, Type, Range);
         if(!convResult) return builder.WithData(convResult).BuildError<BoundASTNode>()
                         .AsTargetTypeDependent();
 
@@ -314,16 +328,15 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         if(!conv.IsImplicit)
         {
             return builder
-                .WithDgnError($"Could not find conversion from {TransformedType.FullName} to {type.FullName} (an explicit conversion exists)", Range)
+                .WithDgnError($"Could not find conversion from {Type.FullName} to {target.FullName} (an explicit conversion exists)", Range)
                 .BuildError<BoundASTNode>()
                 .AsTargetTypeDependent()
             ;
         }
 
         // Return with conversion
-        var res = this with {}; //TODO: explicit copy function should be implemented just in case
-        res.ApplyTransform(conv.TransformProvider.TransformerFor(TransformedType, type));
-        return builder.Build(res)
+        var res = new BoundTransform(this, conv.TransformProvider.TransformerFor(Type, target));
+        return builder.Build<BoundASTNode>(res)
             .AsTargetTypeDependent();
     }
 
@@ -339,18 +352,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         }
 
         LowerSelf(generator);
-
-        if(AppliedTransformers.Count > 0)
-        {
-            var v = generator.PopValueNoDebug();
-            foreach(var trans in AppliedTransformers)
-            {
-                generator.Project.Logger.Debug("     Applying transformation " + trans.Name + " . . . ", "lowering");
-                v = new(trans.Output, trans.Perform(generator, v.LLVM));
-            }
-            generator.PushValueNoDebug(v);
-        }
-        
         generator.LogStack(DebugSourceName);
     }
 }
@@ -398,8 +399,10 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     protected virtual Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options) 
         => Result.Success(new BoundASTWrapper(this) as BoundASTNode);
 
-    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions options = default) 
+    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions? optionsMaybe = null) 
     {
+        var options = optionsMaybe ?? new();
+
         var result = BindSelf(state, options);
         if(!result) return result;
 
@@ -408,29 +411,21 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         // NOTE: does not bind to a variable reference if target type dependent; is this correct?
         if(!result.GetBindingOptions().TargetTypeDependent && bast.HasResolution && bast.Resolution is LangtVariable v) 
         {
-            bast = new BoundVariableReference(bast, v)
-            {
-                RawExpressionType = LangtPointerType.Create(v.Type).Expect(),
-                HasResolution = true,
-                Resolution = v
-            };
-
+            bast = new BoundVariableReference(bast, v);
             v.UseCount++;
         }
 
-        if(options.AutoDeferenceLValue) bast.TryDeferenceLValue();
+        if(options.AutoDeferenceLValue) 
+            bast = bast.TryDeferenceLValue();
 
         return result.Map(_ => bast);
     }
 
-    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions options = default)
+    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions? optionsMaybe = null)
     {
+        var options = optionsMaybe ?? new();
+
         coerced = false;
-        
-        //TODO: check that errors are not caused by type checking to report as internal
-        //this can be done by adding a 'public record TargetTypeError(Diagnostic Diagnostic) : IResultError'
-        //or by making diagnostics passed by along with some record
-        //'public record DiagnosticResultError(Diagnostic Diagnostic, bool IsTargetTypeError) : IResultError'
 
         var binding = Bind(state, options with 
         {
@@ -448,108 +443,8 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
         if(!nbast) return builder.BuildError<BoundASTNode>();
         return builder.Build(nbast.Value);
     }
-    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions options = default)
-        => BindMatchingExprType(state, type, out _, options);
-
-    // /// <summary>
-    // /// Perform the initial steps of type checking.
-    // /// Errors in this step should generally be considered fatal or unavoidable.
-    // /// The given "target type" from the state may be null.
-    // /// </summary>
-    // protected virtual void InitialTypeCheckSelf(TypeCheckState state) 
-    // {
-    //     state.Error("Cannot yet type-check node of type " + GetType().Name, Range);
-    // }
-    
-    // protected virtual void ResetTargetTypeData(TypeCheckState state) 
-    // {}
-    // /// <summary>
-    // /// Perform the final steps of type checking.
-    // /// This method, under certain circumstances where multiple type-checks must occur 
-    // /// (function overload resolution namely).
-    // /// </summary>
-    // protected virtual void TargetTypeCheckSelf(TypeCheckState state, LangtType? targetType)
-    // {}
-    // /// <summary>
-    // /// Finalize the type check.
-    // /// </summary>
-    // protected virtual void FinalTypeCheckSelf(TypeCheckState state)
-    // {}
-
-    // private void TypeCheckInternal(TypeCheckState state, LangtType? targetType)
-    // {
-    //     InitialTypeCheck(state);
-    //     TargetTypeCheck(state, targetType);
-    //     FinalTypeCheck(state);
-    // }
-
-    // public void InitialTypeCheck(TypeCheckState state)
-    // {
-    //     InitialTypeCheckSelf(state);
-    // }
-    // public void TargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    // {
-    //     ResetTargetTypeData(state);
-    //     TargetTypeCheckSelf(state, targetType);
-    // }
-    // public void FinalTypeCheck(TypeCheckState state)
-    // {
-    //     FinalTypeCheckSelf(state);
-    //     if(state.TryRead) TryRead();
-    //     FinalizedTypeChecking = true;
-    // }
-    
-    // public void TypeCheck(TypeCheckState state, LangtType? targetType = null) 
-    // {
-    //     state = state with {Noisy=true};
-
-    //     TypeCheckInternal(state, targetType);
-    // }
-    // 
-    // 
-    // public bool TryTargetTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    // {
-    //     try 
-    //     {
-    //         TargetTypeCheck(state with {Noisy=false}, targetType);
-    //     }
-    //     catch(TypeCheckException)
-    //     {
-    //         return false;
-    //     }
-
-    //     return true;
-    // }
-    // public bool TryTypeCheck(TypeCheckState state, LangtType? targetType = null)
-    // {
-    //     state = state with {Noisy=false};
-
-    //     if(!BlockLike && ContainsInvalid)
-    //     {
-    //         return true; // TODO: is this valid?
-    //     }
-
-    //     return TryPass(s => TypeCheckInternal(s, targetType), state);
-    // }
-
-    // public static bool TryPass<T>(Action<T> f, T state) where T: ASTPassState 
-    // {
-    //     try 
-    //     {
-    //         f(state);
-    //         return true;
-    //     }
-    //     catch(ASTPassException)
-    //     {
-    //         return false;
-    //     }
-    // }
-
-    /*public static void HandleError(ResultException exc, ASTPassState state) //TODO: how will non-errors be handled?
-    {
-        var (msg, range) = ((string, SourceRange))exc.Error;
-        state.CG.Diagnostics.Error(msg, range);
-    }*/
+    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions? optionsMaybe = null)
+        => BindMatchingExprType(state, type, out _, optionsMaybe);
 
     public virtual void Dump(VisitDumper visitor)
     {

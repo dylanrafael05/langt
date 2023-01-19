@@ -20,7 +20,7 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
     public LangtStructureField? Field {get; set;}
     public int? FieldIndex {get; set;}
 
-    public override bool IsLValue => true;
+    public override LangtType Type => LangtReferenceType.Create(Field!.Type).Expect();
 
     public override void LowerSelf(CodeGenerator lowerer)
     {
@@ -29,12 +29,12 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
         var s = lowerer.PopValue(DebugSourceName);
 
         lowerer.PushValue( 
-            RawExpressionType,
+            Type,
             lowerer.Builder.BuildStructGEP2(
-                lowerer.LowerType(s.Type.PointeeType!), 
+                lowerer.LowerType(s.Type.ElementType!), 
                 s.LLVM,
                 (uint)FieldIndex!.Value,
-                s.Type.PointeeType!.Name + "." + Field!.Name
+                s.Type.ElementType!.Name + "." + Field!.Name
             ),
             DebugSourceName
         );

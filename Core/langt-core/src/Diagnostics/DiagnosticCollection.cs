@@ -48,7 +48,7 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     public void Add(Diagnostic item)
     {
         items.Add(item);
-        items = items.OrderBy(i => i.Range.Source.Name).ThenBy(i => i.Range.CharStart).ToList();
+        items = items.OrderBy(i => i.Range.Source?.Name).ThenBy(i => i.Range.CharStart).ToList();
 
         if(item.Severity.SeverityType >= MessageSeverity.Error.SeverityType) ErrorCount++;
     }

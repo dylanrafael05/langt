@@ -13,10 +13,10 @@ public interface IResolution : INamed
 
         if(item is not IResolution scoped)  
             return name;
-        if(scoped.HoldingScope is not IResolution holding)     
+        if(scoped.HoldingScope is not INamed holding)     
             return name;
 
-        var upperName = GetFullNameDefault(holding);
+        var upperName = holding.FullName;
 
         if(string.IsNullOrEmpty(upperName)) return name;
 

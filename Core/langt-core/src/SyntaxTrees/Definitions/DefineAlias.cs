@@ -12,17 +12,25 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
     {
         var builder = ResultBuilder.Empty();
         
-        var dr = state.CG.ResolutionScope.Define(s => new LangtAliasType(Name.ContentStr, s) 
-        {
-            Documentation = Alias.Documentation,
-            DefinitionRange = Range
-        }, Range);
+        var dr = state.CG.ResolutionScope.Define
+        (
+            s => new LangtAliasType(Name.ContentStr, s) 
+            {
+                Documentation = Alias.Documentation,
+                DefinitionRange = Range
+            }, 
+            
+            Range, 
+            Name.Range, 
+            
+            builder,
+            
+            out var t
+        );
+
         builder.AddData(dr);
-        if(!dr) return dr.Drop();
-
-        var t = dr.Value;
-
-        builder.AddStaticReference(Name.Range, t);
+        if(!dr) return dr;
+        
         AliasType = t;
 
         return Result.Success();

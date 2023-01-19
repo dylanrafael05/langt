@@ -30,7 +30,7 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
         (
             new BoundFunctionCall(this, fo.Function, fp)
             {
-                RawExpressionType = fo.Function.Type.ReturnType
+                Type = fo.Function.Type.ReturnType
             }
         );
     }

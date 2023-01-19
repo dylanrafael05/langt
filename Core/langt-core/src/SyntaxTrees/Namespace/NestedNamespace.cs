@@ -6,8 +6,10 @@ public record NestedNamespace(ASTNamespace Namespace, ASTToken Dot, ASTToken Ide
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 
-    public override Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions options)
+    public override Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions? optionsMaybe)
     {
+        var options = optionsMaybe ?? new();
+
         var builder = ResultBuilder.Empty();
 
         var ns = Namespace.Resolve(state, options);

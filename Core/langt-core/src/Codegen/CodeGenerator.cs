@@ -60,6 +60,7 @@ public class CodeGenerator : IProjectDependency
     public LLVMContextRef LLVMContext {get; private init;}
     public LLVMModuleRef Module {get; private init;}
     public LLVMBuilderRef Builder {get; private init;}
+    // public LLVMDIBuilderRef DIBuilder {get; private init;}
 
     public LangtFunction? CurrentFunction {get; set;}
     /// <summary>
@@ -121,6 +122,7 @@ public class CodeGenerator : IProjectDependency
         Module      = LLVMContext.CreateModuleWithName(project.LLVMModuleName);
 
         Builder = LLVMContext.CreateBuilder();
+        // DIBuilder = Module.CreateDIBuilder();
         
         ResolutionScope = CurrentScope = project.GlobalScope;
         CurrentFile = null;
@@ -131,9 +133,9 @@ public class CodeGenerator : IProjectDependency
     public void Initialize()
     {
         // TYPES //
-        foreach(var field in typeof(LangtType).GetFields().Where(f => Attribute.IsDefined(f, typeof(BuiltinTypeAttribute))))
+        foreach(var bt in LangtType.BuiltinTypes)
         { 
-            Project.GlobalScope.DefineProxy((LangtType)field.GetValue(null)!, SourceRange.Default).Expect();
+            Project.GlobalScope.DefineProxy(bt, SourceRange.Default).Expect();
         }
         
         foreach(var conv in LangtConversion.Builtin)
@@ -266,6 +268,8 @@ public class CodeGenerator : IProjectDependency
         Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
 
         CurrentFile!.RebaseScope(ns);
+        
+        ResolutionScope = CurrentFile.Scope;
         CurrentNamespace = ns;
     }
 

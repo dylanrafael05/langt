@@ -40,6 +40,9 @@ public enum TokenType
 
     Colon,
 
+    RangeIncl,
+    RangeExcl,
+
     OpenBlock,
     CloseBlock,
 
@@ -66,6 +69,7 @@ public enum TokenType
     Alias,
 
     As,
+    Is,
     
     Ampersand,
 
@@ -82,6 +86,9 @@ public enum TokenType
     Dot,
     Comma,
     Ellipsis,
+    DoubleColon,
+
+    Pipe,
 
     EndOfFile,
 }

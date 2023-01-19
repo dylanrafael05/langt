@@ -7,41 +7,40 @@ public static class ScopeExtensions
         return scope.Define<IProxyResolution<T>>(s => new ProxyResolution<T>(item, s), range).Drop();
     }
 
-    public static Result Define<TIn>(this IScope scope, Func<LangtScope, TIn> constructor, SourceRange sourceRange, out TIn? result) where TIn : IResolution
+    public static Result Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, out TIn? result) where TIn : IResolution
     {
         var s = scope.Define(constructor, sourceRange);
         result = s.OrDefault();
         return s.Drop();
     }
-    public static Result Define<TIn>(this IScope scope, Func<LangtScope, TIn> constructor, SourceRange sourceRange, Action<TIn?> handler) where TIn : IResolution
+    public static Result Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, Action<TIn?> handler) where TIn : IResolution
     {
         var s = scope.Define(constructor, sourceRange);
         handler(s.OrDefault());
         return s.Drop();
     }
 
-    public static Result Define<TIn>(this IScope scope, Func<LangtScope, SourceRange, TIn> constructor, SourceRange sourceRange, SourceRange nameRange, ResultBuilder builder, out TIn? result) where TIn : IResolution
+    public static Result<TIn> Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, SourceRange nameRange, ResultBuilder builder) where TIn : IResolution
     {
-        var s = scope.Define(s => constructor(s, nameRange), sourceRange);
-        result = s.OrDefault();
+        var s = scope.Define(constructor, sourceRange);
 
         if(s.HasValue)
         {
             builder.AddStaticReference(nameRange, s.Value, true);
         }
 
+        return s;
+    }
+    public static Result Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, SourceRange nameRange, ResultBuilder builder, out TIn? result) where TIn : IResolution
+    {
+        var s = scope.Define(constructor, sourceRange, nameRange, builder);
+        result = s.OrDefault();
         return s.Drop();
     }
-    public static Result Define<TIn>(this IScope scope, Func<LangtScope, SourceRange, TIn> constructor, SourceRange sourceRange, SourceRange nameRange, ResultBuilder builder, Action<TIn?> handler) where TIn : IResolution
+    public static Result Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, SourceRange nameRange, ResultBuilder builder, Action<TIn?> handler) where TIn : IResolution
     {
-        var s = scope.Define(s => constructor(s, nameRange), sourceRange);
+        var s = scope.Define(constructor, sourceRange, nameRange, builder);
         handler(s.OrDefault());
-
-        if(s.HasValue)
-        {
-            builder.AddStaticReference(nameRange, s.Value, true);
-        }
-
         return s.Drop();
     }
     

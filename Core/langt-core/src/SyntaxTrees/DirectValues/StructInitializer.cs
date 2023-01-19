@@ -18,17 +18,17 @@ public record BoundStructInitializer(StructInitializer Source, BoundASTNode[] Bo
             llvmArgs.Add(lowerer.PopValue(DebugSourceName).LLVM);
         }
 
-        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(RawExpressionType), RawExpressionType.Name+".builder");
+        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(Type), Type.Name+".builder");
 
         for(int i = 0; i < llvmArgs.Count; i++)
         {
-            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(RawExpressionType), structBuild, (uint)i, RawExpressionType.Name+".builder.element."+i);
+            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(Type), structBuild, (uint)i, Type.Name+".builder.element."+i);
             lowerer.Builder.BuildStore(llvmArgs[i], fptr);
         }
 
         lowerer.PushValue( 
-            RawExpressionType,
-            lowerer.Builder.BuildLoad2(lowerer.LowerType(RawExpressionType), structBuild, RawExpressionType.Name),
+            Type,
+            lowerer.Builder.BuildLoad2(lowerer.LowerType(Type), structBuild, Type.Name),
             DebugSourceName
         );
     }
@@ -97,7 +97,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
         (
             new BoundStructInitializer(this, results.Value.ToArray())
             {
-                RawExpressionType = type
+                Type = type
             }
         );
 

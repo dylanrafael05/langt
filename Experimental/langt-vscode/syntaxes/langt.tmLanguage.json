@@ -54,7 +54,7 @@
 			"patterns": [
 				{
 					"name": "keyword.control.langt",
-					"match": "\\b(if|while|else|return|for|extern)\\b"
+					"match": "\\b(if|while|else|return|for)\\b"
 				},
 				{
 					"name": "keyword.control.operatordef.langt",
@@ -66,11 +66,11 @@
 				},
 				{
 					"name": "keyword.other.langt",
-					"match": "\\b(let|const|final|struct|alias|type|enum|namespace|using|trait|prop|some|where|private)\\b"
+					"match": "\\b(let|extern|const|final|struct|alias|type|enum|namespace|using|trait|prop|some|where|private|true|false)\\b"
 				},
 				{
 					"name": "keyword.other.type.langt",
-					"match": "\\b(u?int(8|16|32|64)|real(16|32|64)|bool|char|none|fn)\\b"
+					"match": "\\b(u?int(8|16|32|64)|real(16|32|64)|bool|char|none|fn|ptr)\\b"
 				}
 			]
 		},

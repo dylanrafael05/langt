@@ -5,6 +5,42 @@ using Langt.Utility;
 
 namespace Langt.AST;
 
+public record StaticAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode 
+{
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
+
+    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    {
+        // Get all input results
+        var iptResult = Left.Bind(state, new TypeCheckOptions {AutoDeferenceLValue = false});
+        if(!iptResult) return iptResult;
+
+        // Create output result builder from input
+        var builder = ResultBuilder.Empty().WithData(iptResult);
+
+        // Deconstruct and get values
+        var left = iptResult.Value;
+        var hasResolution = left.HasResolution;
+
+        if(!hasResolution || left.Resolution is not LangtNamespace ns)
+        {
+            return builder.WithDgnError($"'::' access requires a namespace to access from.", Range)
+                .BuildError<BoundASTNode>();
+        }
+
+        var resolutionResult = ns.Resolve(Right.ContentStr, Range);
+        builder.AddData(resolutionResult);
+
+        if(!builder) return builder.BuildError<BoundASTNode>();
+
+        return builder.Build<BoundASTNode>
+        (
+            new BoundStaticAccess(this, left, Right, resolutionResult.Value)
+        )
+        .AddStaticReference(Right.Range, resolutionResult.Value);
+    }
+}
+
 public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
@@ -30,29 +66,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         var left = iptResult.Value;
         var hasResolution = left.HasResolution;
 
-        if (hasResolution && left.Resolution is not LangtVariable)
-        {
-            if(left.Resolution is not LangtNamespace ns) 
-            {
-                return builder.WithDgnError($"Cannot access a static member of something that is not a namespace", Range)
-                    .BuildError<BoundASTNode>();
-            }
-
-            var resolutionResult = ns.Resolve(Right.ContentStr, Range);
-            builder.AddData(resolutionResult);
-
-            if(!builder) return builder.BuildError<BoundASTNode>();
-
-            return builder.Build<BoundASTNode>
-            (
-                new BoundStaticAccess(this, left, Right, resolutionResult.Value)
-            )
-                .AddStaticReference(Right.Range, resolutionResult.Value);
-        }
-
-        var result = new BoundStructFieldAccess(this, left);
-
-        if(!left.IsLValue || !left.TransformedType.IsPointer || left.TransformedType.PointeeType is not LangtStructureType structureType)
+        if(!left.Type.IsReference || left.Type.ElementType is not LangtStructureType structureType)
         {
             return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
                 .BuildError<BoundASTNode>();
@@ -66,10 +80,11 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
                 .BuildError<BoundASTNode>();
         }
 
-        result.Field = field;
-        result.FieldIndex = index;
-
-        result.RawExpressionType = LangtPointerType.Create(result.Field!.Type).Expect();
+        var result = new BoundStructFieldAccess(this, left)
+        {
+            Field = field,
+            FieldIndex = index
+        };
 
         return builder.Build<BoundASTNode>(result);
     }

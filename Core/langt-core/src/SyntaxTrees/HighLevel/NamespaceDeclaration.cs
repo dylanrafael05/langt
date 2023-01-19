@@ -22,14 +22,14 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
 
     public override Result RefineDefinitions(ASTPassState state)
     {
-        state.CG.SetCurrentNamespace(LNamespace!);
+        if(LNamespace is not null) state.CG.SetCurrentNamespace(LNamespace!);
 
         return Result.Success();
     }
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        state.CG.SetCurrentNamespace(LNamespace!);
+        if(LNamespace is not null) state.CG.SetCurrentNamespace(LNamespace!);
 
         return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
     }

@@ -2,7 +2,7 @@ using Langt.Codegen;
 
 namespace Langt.AST;
 
-public record DotType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier): ASTType
+public record NestedType(ASTNamespace Namespace, ASTToken Dot, ASTToken Identifier): ASTType
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Dot, Identifier};
 

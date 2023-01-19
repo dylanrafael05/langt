@@ -26,5 +26,5 @@ public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue
         => visitor.PutString(Tok.ToString());
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
-        => Result.Success<BoundASTNode>(new BoundBooleanLiteral(this) {RawExpressionType = LangtType.Bool});
+        => Result.Success<BoundASTNode>(new BoundBooleanLiteral(this) {Type = LangtType.Bool});
 }

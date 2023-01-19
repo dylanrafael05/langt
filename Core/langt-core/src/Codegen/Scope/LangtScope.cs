@@ -55,7 +55,7 @@ public class LangtScope : IScope
         return result is null || builder.HasErrors ? builder.BuildError<TOut>() : builder.Build(result.Value.Value);
     }
 
-    public virtual Result<T> Define<T>(Func<LangtScope, T> constructor, SourceRange sourceRange) where T : IResolution
+    public virtual Result<T> Define<T>(Func<IScope, T> constructor, SourceRange sourceRange) where T : IResolution
     {
         var obj = constructor(this);
 

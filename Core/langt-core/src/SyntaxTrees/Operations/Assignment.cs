@@ -40,12 +40,12 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 
         var left = leftResult.Value;
         
-        if(!left.TransformedType.IsPointer || !left.IsLValue)
+        if(!left.Type.IsReference)
         {
             return builder.WithDgnError($"Cannot assign to a non-assignable value", Range).BuildError<BoundASTNode>();
         }
 
-        var rightResult = Right.BindMatchingExprType(state, left.TransformedType.PointeeType!);
+        var rightResult = Right.BindMatchingExprType(state, left.Type.ElementType!);
         builder.AddData(rightResult);
         if(!rightResult) return builder.BuildError<BoundASTNode>();
 
@@ -55,7 +55,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         (
             new BoundAssignment(this, left, right)
             {
-                RawExpressionType = LangtType.None
+                Type = LangtType.None
             }
         );
     }

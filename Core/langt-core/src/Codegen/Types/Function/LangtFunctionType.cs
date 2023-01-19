@@ -90,16 +90,16 @@ public class LangtFunctionType : LangtType
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
     {
-        return GetFullSignatureString(varg, param) + ret.FullName;
+        return GetFullSignatureString(varg, param) + " " + ret.FullName;
     }
 
     public static string GetFullSignatureString(bool isVararg = false, params LangtType[] paramTypes)
     {
-        return "("+string.Join(",", paramTypes.Select(p => p.FullName)) + (isVararg ? ",..." : "")+")";
+        return "("+string.Join(", ", paramTypes.Select(p => p.FullName)) + (isVararg ? ", ..." : "")+")";
     }
     public static string GetSignatureString(bool isVararg, params LangtType[] paramTypes)
     {
-        return "("+string.Join(",", paramTypes.Select(p => p.FullName)) + (isVararg ? ",..." : "")+")";
+        return "("+string.Join(", ", paramTypes.Select(p => p.FullName)) + (isVararg ? ", ..." : "")+")";
     }
 
     public string SignatureString => GetFullSignatureString(IsVararg, ParameterTypes);

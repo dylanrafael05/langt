@@ -29,9 +29,9 @@ public class HoverHandler : HoverHandlerBase
         var contentStr = currentReference?.Item switch
         {
             LangtVariable lv when !lv.IsParameter
-                => $"let {lv.Name} {lv.Type.FullName}",
+                => $"let {lv.FullName} {lv.Type.FullName}",
             LangtVariable lv
-                => $"{lv.Name} {lv.Type.FullName}",
+                => $"{lv.FullName} {lv.Type.FullName}",
             LangtType lt when lt is LangtStructureType 
                 => $"struct {lt.FullName}",
             LangtType lt when lt is LangtAliasType 

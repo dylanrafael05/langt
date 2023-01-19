@@ -368,7 +368,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         }
         else if(ns is NestedNamespace nested)
         {
-            return new DotType(nested.Namespace, nested.Dot, nested.Identifier);
+            return new NestedType(nested.Namespace, nested.Dot, nested.Identifier);
         }
         
         throw new Exception("Unknown namespace type " + ns.GetType().Name);
@@ -378,7 +378,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         ASTNamespace n = new SimpleNamespace(Require(TT.Identifier));
 
-        while(CurrentType is TT.Dot)
+        while(CurrentType is TT.DoubleColon)
         {
             n = new NestedNamespace(n, Grab(), Require(TT.Identifier));
         }
@@ -513,7 +513,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var ret = PrimaryExpression(state);
 
-        while(CurrentType is TT.OpenParen or TT.OpenIndex or TT.Dot)
+        while(CurrentType is TT.OpenParen or TT.OpenIndex or TT.Dot or TT.DoubleColon)
         {
             if(CurrentType is TT.OpenParen)
             {
@@ -537,6 +537,13 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
                 var iden = Require(TT.Identifier);
 
                 ret = new DotAccess(ret, dot, iden);
+            }
+            else if(CurrentType is TT.DoubleColon)
+            {
+                var dot = Grab();
+                var iden = Require(TT.Identifier);
+
+                ret = new StaticAccess(ret, dot, iden);
             }
         }
 

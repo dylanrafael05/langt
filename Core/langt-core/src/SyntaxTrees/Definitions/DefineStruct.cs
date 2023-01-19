@@ -25,14 +25,14 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
         var dt = state.CG.ResolutionScope.Define
         (
-            (s, r) => new LangtStructureType(Name.ContentStr, s)
+            s => new LangtStructureType(Name.ContentStr, s)
             {
-                DefinitionRange = r,
+                DefinitionRange = Range,
                 Documentation = Struct.Documentation
             }, 
 
-            sourceRange: Range,
-            nameRange:   Name.Range,
+            Range,
+            Name.Range,
 
             builder,
 

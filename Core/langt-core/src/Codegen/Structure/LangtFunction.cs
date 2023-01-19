@@ -16,4 +16,6 @@ public class LangtFunction : Resolution
     public required LLVMValueRef LLVMFunction {get; init;}
 
     public override string Name => Group.Name;
+    public override string DisplayName => Group.DisplayName;
+    public override string FullName => Group.FullName;
 }

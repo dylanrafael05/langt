@@ -159,6 +159,10 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         '.' => (Next.Nullable(), Get(2).Nullable()) switch
         {
             ('.', '.') => Grab(3, TT.Ellipsis),
+
+            ('.', '=') => Grab(2, TT.RangeIncl),
+            ('.', _  ) => Grab(2, TT.RangeExcl),
+
             _          => Grab(1, TT.Dot),
         },
 
@@ -173,6 +177,12 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         {
             '=' => Grab(2, TT.LessEqual),
             _   => Grab(1, TT.LessThan)
+        },
+
+        ':' => Next.Nullable() switch
+        {
+            ':' => Grab(2, TT.DoubleColon),
+            _   => Grab(1, TT.Colon)
         },
         
         ',' => Grab(1, TT.Comma),
@@ -192,9 +202,8 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         '{' => Grab(1, TT.OpenBlock),
         '}' => Grab(1, TT.CloseBlock),
 
-        ':' => Grab(1, TT.Colon),
-
         '&' => Grab(1, TT.Ampersand),
+        '|' => Grab(1, TT.Pipe),
 
         '\'' => Next.Nullable() switch
         {
@@ -271,6 +280,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         "select"    => TT.Select,
 
         "as"        => TT.As,
+        "is"        => TT.Is,
 
         "return"    => TT.Return,
 

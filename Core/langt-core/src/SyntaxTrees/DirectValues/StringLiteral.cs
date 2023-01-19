@@ -14,7 +14,7 @@ public record BoundStringLiteral(StringLiteral Source, string Value) : BoundASTN
         var res = generator.Builder.BuildGlobalStringPtr(Value, "str");
 
         generator.PushValue( 
-            RawExpressionType,
+            Type,
             res,
             DebugSourceName
         );
@@ -72,7 +72,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
         (
             new BoundStringLiteral(this, s) 
             {
-                RawExpressionType = LangtPointerType.Create(LangtType.Int8).Expect()
+                Type = LangtPointerType.Create(LangtType.Int8).Expect()
             }
         );
     }

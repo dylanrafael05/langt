@@ -59,19 +59,19 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
 
             boundValue = bn.Value;
 
-            varT = boundValue.NaturalType ?? boundValue.TransformedType;
+            varT = boundValue.NaturalType ?? boundValue.Type;
         }
 
         var couldDef = state.CG.ResolutionScope.Define
         (
-            (s, r) => new LangtVariable(Identifier.ContentStr, varT, s) 
+            s => new LangtVariable(Identifier.ContentStr, varT, s) 
             {
-                DefinitionRange = r,
+                DefinitionRange = Range,
                 Documentation = Let.Documentation
             }, 
             
-            sourceRange: Range,
-            nameRange:   Identifier.Range,
+            Range,
+            Identifier.Range,
 
             builder,
 
@@ -85,7 +85,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
         (
             new BoundVariableDefinition(this, variable!, boundValue)
             {
-                RawExpressionType = LangtType.None
+                Type = LangtType.None
             }
         );
     }

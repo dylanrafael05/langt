@@ -97,13 +97,13 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             (
                 new BoundFunctionCall(this, resolution.Function, boundArgs)
                 {
-                    RawExpressionType = resolution.Function.Type.ReturnType
+                    Type = resolution.Function.Type.ReturnType
                 }
             );
         }
-        else if(fn.TransformedType.IsFunctionPtr)
+        else if(fn.Type.IsFunctionPtr)
         {
-            var funcType = (LangtFunctionType)fn.TransformedType.PointeeType!;
+            var funcType = (LangtFunctionType)fn.Type.ElementType!;
 
             var smatch = funcType.MatchSignature(state, Range, givenArgs);
             builder.AddData(smatch.OutResult);
@@ -114,7 +114,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             {
                 return builder.WithDgnError(
                     $"Could not call a function pointer of type {funcType.Name} " +
-                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.TransformedType ?? LangtType.Error).FullName))}",
+                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.Type ?? LangtType.Error).FullName))}",
                     Range
                 ).BuildError<BoundASTNode>();
             }
@@ -123,7 +123,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             (
                 new BoundFunctionPointerCall(this, fn, boundArgs, funcType)
                 {
-                    RawExpressionType = funcType.ReturnType
+                    Type = funcType.ReturnType
                 }
             );
         }

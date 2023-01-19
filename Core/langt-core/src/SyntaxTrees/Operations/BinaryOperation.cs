@@ -133,7 +133,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         (
             new BoundFunctionCall(this, fo.Function, fp)
             {
-                RawExpressionType = fo.Function.Type.ReturnType
+                Type = fo.Function.Type.ReturnType
             }
         );
     }

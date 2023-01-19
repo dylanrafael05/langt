@@ -7,8 +7,10 @@ public record SimpleNamespace(ASTToken Name) : ASTNamespace
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name};
 
-    public override Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions options)
+    public override Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions? optionsMaybe)
     {
+        var options = optionsMaybe ?? new();
+
         var builder = ResultBuilder.Empty();
 
         var r = ResolveFrom(state.CG.Project.GlobalScope, Name.ContentStr, default, options.AllowNamespaceDefinitions);

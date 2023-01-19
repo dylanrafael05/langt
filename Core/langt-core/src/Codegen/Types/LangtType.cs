@@ -13,10 +13,10 @@ public abstract class LangtResolvableType : LangtType, IResolution
     }
 
     public required SourceRange? DefinitionRange {get; init;}
-    public IScope HoldingScope {get;}
+    public new IScope HoldingScope {get;}
 }
 
-public abstract class LangtType : INamed
+public abstract class LangtType : INamed, IEquatable<LangtType>
 {
     public LangtType(string name)
     {
@@ -39,21 +39,62 @@ public abstract class LangtType : INamed
     public bool IsInteger => IntegerBitDepth != null;
     public bool IsReal => RealBitDepth != null;
 
-    public virtual LangtType? PointeeType => null;
-    public bool IsPointer => PointeeType != null;
+    [MemberNotNullWhen(true, nameof(ElementType))] public bool IsPointer => this is LangtPointerType;
+    [MemberNotNullWhen(true, nameof(ElementType))] public bool IsReference => this is LangtReferenceType;
+    public virtual LangtType? ElementType => null;
 
-    public bool IsStructure => this is LangtStructureType;
+    [MemberNotNullWhen(true, nameof(Structure))] public bool IsStructure => this is LangtStructureType;
     public LangtStructureType? Structure => this as LangtStructureType;
 
-    public bool IsFunction => this is LangtFunctionType;
-    public bool IsFunctionPtr => IsPointer && PointeeType!.IsFunction;
+    [MemberNotNullWhen(true, nameof(Function))] public bool IsFunction => this is LangtFunctionType;
+    public LangtFunctionType? Function => this as LangtFunctionType;
+    public bool IsFunctionPtr => IsPointer && ElementType!.IsFunction;
 
-    public bool IsAlias => this is LangtAliasType;
+    [MemberNotNullWhen(true, nameof(AliasBaseType))] public bool IsAlias => this is LangtAliasType;
     public virtual LangtType? AliasBaseType => null;
+
+    [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsResolution => this is IResolution;
+    public IScope? HoldingScope => (this as IResolution)?.HoldingScope;
 
     public virtual bool IsBuiltin => false;
 
     public abstract LLVMTypeRef Lower(CodeGenerator context);
+
+
+    public bool Equals(LangtType? other) 
+    {
+        if(other is null) return false;
+
+        //* Expects builtins are uniquely named
+        if(IsBuiltin)   return other.IsBuiltin && Name == other.Name;
+        if(IsPointer)   return other.IsPointer && ElementType == other.ElementType;
+        if(IsReference) return other.IsReference && ElementType == other.ElementType;
+        
+        //* Expects these to be the only requirements for function type equality
+        if(IsFunction) return other.IsFunction
+                           && Function.ReturnType == other.Function.ReturnType
+                           && Function.ParameterTypes.SequenceEqual(other.Function.ParameterTypes)
+                           && Function.IsVararg == other.Function.IsVararg;
+
+        //* Expects that scopes cannot hold duplicates
+        if(IsResolution) return HoldingScope == other.HoldingScope
+                             && Name == other.Name;
+
+        throw new NotImplementedException($"Cannot check equality for types {GetType().FullName} and {other.GetType().FullName}");
+    }
+
+    public sealed override bool Equals(object? obj)
+        => obj is LangtType lt && Equals(lt);
+
+    // TODO: reimpl? optimize FullName?
+    public override int GetHashCode()
+        => FullName.GetHashCode();
+
+    public static bool operator ==(LangtType? a, LangtType? b) 
+        => a is null ? b is null : a.Equals(b);
+    public static bool operator !=(LangtType? a, LangtType? b) 
+        => !(a == b);
+
 
     public class Wrapper : LangtType
     {
@@ -67,16 +108,16 @@ public abstract class LangtType : INamed
         public override bool IsBuiltin => true;
     }
 
-    [BuiltinType] public static readonly LangtType Real64 = new Wrapper("real64", LLVMTypeRef.Double) {RealBitDepth = 64};
-    [BuiltinType] public static readonly LangtType Real32 = new Wrapper("real32", LLVMTypeRef.Float) {RealBitDepth = 32};
-    [BuiltinType] public static readonly LangtType Real16 = new Wrapper("real16", LLVMTypeRef.Half) {RealBitDepth = 16};
-    [BuiltinType] public static readonly LangtType Int64  = new Wrapper("int64" , LLVMTypeRef.Int64) {IntegerBitDepth = 64};
-    [BuiltinType] public static readonly LangtType Int32  = new Wrapper("int32" , LLVMTypeRef.Int32) {IntegerBitDepth = 32};
-    [BuiltinType] public static readonly LangtType Int16  = new Wrapper("int16" , LLVMTypeRef.Int16) {IntegerBitDepth = 16};
-    [BuiltinType] public static readonly LangtType Int8   = new Wrapper("int8"  , LLVMTypeRef.Int8) {IntegerBitDepth = 8};
-    [BuiltinType] public static readonly LangtType Bool   = new Wrapper("bool"  , LLVMTypeRef.Int1);
-    [BuiltinType] public static readonly LangtType None   = new Wrapper("none"  , LLVMTypeRef.Void);
-    [BuiltinType] public static readonly LangtType Ptr    = new Wrapper("ptr", LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
+    public static readonly LangtType Real64 = new Wrapper("real64", LLVMTypeRef.Double) {RealBitDepth = 64};
+    public static readonly LangtType Real32 = new Wrapper("real32", LLVMTypeRef.Float)  {RealBitDepth = 32};
+    public static readonly LangtType Real16 = new Wrapper("real16", LLVMTypeRef.Half)   {RealBitDepth = 16};
+    public static readonly LangtType Int64  = new Wrapper("int64" , LLVMTypeRef.Int64)  {IntegerBitDepth = 64};
+    public static readonly LangtType Int32  = new Wrapper("int32" , LLVMTypeRef.Int32)  {IntegerBitDepth = 32};
+    public static readonly LangtType Int16  = new Wrapper("int16" , LLVMTypeRef.Int16)  {IntegerBitDepth = 16};
+    public static readonly LangtType Int8   = new Wrapper("int8"  , LLVMTypeRef.Int8)   {IntegerBitDepth = 08};
+    public static readonly LangtType Bool   = new Wrapper("bool"  , LLVMTypeRef.Int1);
+    public static readonly LangtType None   = new Wrapper("none"  , LLVMTypeRef.Void);
+    public static readonly LangtType Ptr    = new Wrapper("ptr"   , LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
 
     public static readonly LangtType[] IntegerTypes = {Int8, Int16, Int32, Int64};
     public static readonly LangtType[] RealTypes    = {Real16, Real32, Real64};

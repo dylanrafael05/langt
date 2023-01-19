@@ -38,6 +38,10 @@ public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
 
         if(!vResult) return vResult.ErrorCast<BoundASTNode>();
 
-        return Result.Success<BoundASTNode>(new BoundPtrTo(this, vResult.Value));
+        return Result.Success<BoundASTNode>(new BoundPtrTo(this, vResult.Value)
+        {
+            Type = LangtPointerType.Create(vResult.Value.Type.ElementType!)
+                .Expect("Errors should not occur while getting a pointer to a variable")
+        });
     }
 }
