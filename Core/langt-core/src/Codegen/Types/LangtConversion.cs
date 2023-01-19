@@ -105,6 +105,21 @@ public record LangtConversion(TransformProvider TransformProvider)
             "a->(alias a)"
         ));
 
+        Add(new FunctionalTransformProvider(
+            (t1, t2) => t2.IsOption && t2.OptionTypes.Contains(t1),
+            (i, o, cg, v) =>
+            {
+                var s = cg.Builder.BuildAlloca(cg.LowerType(o));
+                cg.Builder.BuildStore(v, s);
+                
+                var t = cg.Builder.BuildStructGEP2(cg.LowerType(o), s, LangtOptionType.TagLocation);
+                cg.Builder.BuildStore(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (ulong)o.OptionTypeMap![i]), t);
+
+                return cg.Builder.BuildLoad2(cg.LowerType(o), s);
+            },
+            "a->a|..."
+        ), true);
+
         // foreach(var b in Builtin)
         // {
         //     Messages.Info((b.IsImplicit ? "Implicit" 

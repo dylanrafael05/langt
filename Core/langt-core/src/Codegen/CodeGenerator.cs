@@ -10,7 +10,10 @@ namespace Langt.Codegen;
 
 public class CodeGenerator : IProjectDependency
 {
-    public const string LangtIdentifierPrepend = "<langt>::";
+    public LLVMContextRef Context {get;}
+    public LLVMTargetDataRef Target {get;}
+
+    public const string LangtIdentifierPrepend = "<langt>";
     public static Dictionary<OperatorSpec, string> MagicNames {get;} = new() 
     {
         [new(OperatorType.Binary, TokenType.Plus        )] = "op_add"          ,
@@ -56,8 +59,6 @@ public class CodeGenerator : IProjectDependency
 
 
     public LangtProject Project {get; init;}
-
-    public LLVMContextRef LLVMContext {get; private init;}
     public LLVMModuleRef Module {get; private init;}
     public LLVMBuilderRef Builder {get; private init;}
     // public LLVMDIBuilderRef DIBuilder {get; private init;}
@@ -116,12 +117,14 @@ public class CodeGenerator : IProjectDependency
 
     public CodeGenerator(LangtProject project)
     {
+        Context = LLVMContextRef.Global;
+
         Project = project;
+        Module  = Context.CreateModuleWithName(project.LLVMModuleName);
 
-        LLVMContext = LLVMContextRef.Global;
-        Module      = LLVMContext.CreateModuleWithName(project.LLVMModuleName);
+        Target = LLVMTargetDataRef.FromStringRepresentation(Module.DataLayout);
 
-        Builder = LLVMContext.CreateBuilder();
+        Builder = Context.CreateBuilder();
         // DIBuilder = Module.CreateDIBuilder();
         
         ResolutionScope = CurrentScope = project.GlobalScope;
@@ -177,7 +180,7 @@ public class CodeGenerator : IProjectDependency
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
-        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        var bb = Context.AppendBasicBlock(fn.LLVMFunction, "entry");
         Builder.PositionAtEnd(bb);
 
         Builder.BuildRet
@@ -185,6 +188,15 @@ public class CodeGenerator : IProjectDependency
             definer(Builder, lfn.GetParam(0))
         );
     }
+
+    public ulong Sizeof(LangtType type)
+    {
+        if(type == LangtType.None) return 0;
+
+        var l = LowerType(type);
+        return Target.StoreSizeOfType(l);
+    }
+
     public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r, BinaryOpDefiner definer)
     {
         // Logger.Note($"Defining op {a.FullName} {op} {b.FullName}");
@@ -203,7 +215,7 @@ public class CodeGenerator : IProjectDependency
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
 
-        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        var bb = Context.AppendBasicBlock(fn.LLVMFunction, "entry");
         Builder.PositionAtEnd(bb);
 
         Builder.BuildRet
@@ -214,7 +226,7 @@ public class CodeGenerator : IProjectDependency
 
     public void BuildFunction(LangtFunction fn, BoundASTNode body)
     {
-        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
+        var bb = Context.AppendBasicBlock(fn.LLVMFunction, "entry");
         Builder.PositionAtEnd(bb);
 
         var pf = CurrentFunction;
@@ -268,7 +280,7 @@ public class CodeGenerator : IProjectDependency
         Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
 
         CurrentFile!.RebaseScope(ns);
-        
+
         ResolutionScope = CurrentFile.Scope;
         CurrentNamespace = ns;
     }

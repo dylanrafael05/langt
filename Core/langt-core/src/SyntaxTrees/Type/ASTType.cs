@@ -13,9 +13,9 @@ public abstract record ASTType() : ASTNode //TODO: implement distinction between
     public abstract Result<LangtType> Resolve(ASTPassState state);
 }
 
-public record FunctionPtrType(ASTToken Star, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
+public record FunctionPtrType(ASTToken Star, ASTToken Fn, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Star, Open, Arguments, Ellipsis, Close, ReturnType};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Star, Fn, Open, Arguments, Ellipsis, Close, ReturnType};
 
     public override Result<LangtType> Resolve(ASTPassState state)
     {

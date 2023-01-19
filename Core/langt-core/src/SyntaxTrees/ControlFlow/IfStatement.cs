@@ -17,9 +17,9 @@ public record BoundIfStatement(IfStatement Source, BoundASTNode Condition, Bound
             throw new Exception();
         }
 
-        var trueBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.ontrue");
-        var falseBB = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.else"  ); 
-        var endBB   = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.end"   );
+        var trueBB  = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.ontrue");
+        var falseBB = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.else"  ); 
+        var endBB   = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.If.Range.CharStart+".if.end"   );
 
         Condition.Lower(lowerer);
         var c = lowerer.PopValue(DebugSourceName);

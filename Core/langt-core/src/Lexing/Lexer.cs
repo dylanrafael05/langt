@@ -290,6 +290,8 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         "namespace" => TT.Namespace,
         "using"     => TT.Using,
 
+        "fn"        => TT.Fn,
+
         _           => TT.Identifier
     };
 

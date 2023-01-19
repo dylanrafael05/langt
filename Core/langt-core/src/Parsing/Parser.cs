@@ -342,36 +342,61 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public ASTType Type(ParserState state)
     {
-        if(CurrentType is TT.Star) 
+        ASTType result;
+
+        if(CurrentType is TT.OpenParen)
+        {
+            Grab();
+            result = Type(state);
+            Require(TT.CloseParen);
+        }
+        else if(CurrentType is TT.Star) 
         {
             var star = Grab();
 
-            if(CurrentType is TT.OpenParen)
+            if(CurrentType is TT.Fn)
             {
-                var open = Grab();
+                var fn = Grab();
+                var open = Require(TT.OpenParen);
                 var argspecs = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.CloseParen, false);
                 var ellipsis = CurrentType is TT.Ellipsis ? Grab() : null;
                 var close = Require(TT.CloseParen);
 
                 var ret = Type(state);
 
-                return new FunctionPtrType(star, open, argspecs, ellipsis, close, ret);
+                result = new FunctionPtrType(star, fn, open, argspecs, ellipsis, close, ret);
             }
-
-            return new PointerType(star, Type(state));
+            else 
+            {
+                result = new PointerType(star, Type(state));
+            }
         }
-
-        var ns = Namespace(state);
-        if(ns is SimpleNamespace simple) 
+        else 
         {
-            return new SimpleType(simple.Name);
+            var ns = Namespace(state);
+            if(ns is SimpleNamespace simple) 
+            {
+                result = new SimpleType(simple.Name);
+            }
+            else if(ns is NestedNamespace nested)
+            {
+                result = new NestedType(nested.Namespace, nested.Dot, nested.Identifier);
+            }
+            else 
+            { 
+                throw new Exception("Unknown namespace type " + ns.GetType().Name);
+            }
         }
-        else if(ns is NestedNamespace nested)
+
+        if(CurrentType is TT.Pipe)
         {
-            return new NestedType(nested.Namespace, nested.Dot, nested.Identifier);
+            var pipe = Grab();
+            var next = Type(state);
+
+            result = new OptionType(result, pipe, next);
         }
-        
-        throw new Exception("Unknown namespace type " + ns.GetType().Name);
+
+        return result;
     }
 
     public ASTNamespace Namespace(ParserState state)

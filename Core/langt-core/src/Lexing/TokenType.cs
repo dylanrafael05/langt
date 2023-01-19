@@ -39,6 +39,7 @@ public enum TokenType
     Not,
 
     Colon,
+    Fn,
 
     RangeIncl,
     RangeExcl,

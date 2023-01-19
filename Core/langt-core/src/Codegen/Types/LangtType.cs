@@ -53,6 +53,12 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
     [MemberNotNullWhen(true, nameof(AliasBaseType))] public bool IsAlias => this is LangtAliasType;
     public virtual LangtType? AliasBaseType => null;
 
+
+    [MemberNotNullWhen(true, nameof(OptionTypes)), MemberNotNullWhen(true, nameof(OptionTypeMap))] 
+    public bool IsOption => this is LangtOptionType;
+    public virtual IReadOnlySet<LangtType>? OptionTypes => null;
+    public virtual IReadOnlyDictionary<LangtType, int>? OptionTypeMap => null;
+
     [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsResolution => this is IResolution;
     public IScope? HoldingScope => (this as IResolution)?.HoldingScope;
 
@@ -80,11 +86,17 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
         if(IsResolution) return HoldingScope == other.HoldingScope
                              && Name == other.Name;
 
+        if(IsOption) return other.IsOption 
+                         && OptionTypes.SetEquals(other.OptionTypes);
+
         throw new NotImplementedException($"Cannot check equality for types {GetType().FullName} and {other.GetType().FullName}");
     }
 
     public sealed override bool Equals(object? obj)
         => obj is LangtType lt && Equals(lt);
+
+    public sealed override string ToString()
+        => FullName;
 
     // TODO: reimpl? optimize FullName?
     public override int GetHashCode()

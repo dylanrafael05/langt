@@ -168,7 +168,7 @@ public record FunctionDefinition(ASTToken Let,
             }
             else 
             {
-                bodyResult = Body!.BindMatchingExprType(state, Function.Type.ReturnType);
+                bodyResult = Body!.Bind(state, new TypeCheckOptions {TargetType = Function.Type.ReturnType});
             }
 
             if(!builder.WithData(bodyResult)) return builder.BuildError<BoundASTNode>();

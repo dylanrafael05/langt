@@ -13,7 +13,7 @@ public sealed class CLILogger : ILogger
         = new Dictionary<string, StringBuilder>();
 
     public static string GetLogFile(string flag)
-        => Path.Combine(Path.GetDirectoryName(Assembly.GetExecutingAssembly().Location)!, $"__log.{flag}.txt");
+        => Path.Combine(Environment.CurrentDirectory!, $"__log.{flag}.txt");
 
     public void Init() 
     {

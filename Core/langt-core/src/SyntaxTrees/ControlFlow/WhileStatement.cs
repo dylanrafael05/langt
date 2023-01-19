@@ -17,9 +17,9 @@ public record BoundWhileStatement(WhileStatement Source, BoundASTNode Condition,
             throw new Exception();
         }
 
-        var condBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.cond" );
-        var trueBB  = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.true" ); 
-        var breakBB = lowerer.LLVMContext.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.break");
+        var condBB  = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.cond" );
+        var trueBB  = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.true" ); 
+        var breakBB = lowerer.Context.AppendBasicBlock(lowerer.CurrentFunction!.LLVMFunction, Source.While.Range.CharStart+".while.break");
 
         lowerer.Builder.BuildBr(condBB);
         lowerer.Builder.PositionAtEnd(condBB);

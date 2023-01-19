@@ -26,7 +26,7 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var e = Expression.Bind(state);
+        var e = Expression.BindMatchingExprType(state, options.TargetType!);
         if(!e) return e;
 
         return e.Map<BoundASTNode>

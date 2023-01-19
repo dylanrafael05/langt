@@ -15,20 +15,20 @@ public record BoundAndExpression(BinaryOperation Source, BoundASTNode Left, Boun
         Left.Lower(generator);
         var l = generator.PopValue(DebugSourceName);
 
-        var start  = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.start");
-        var onTrue = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.true");
-        var end    = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.end");
+        var start  = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.start");
+        var onTrue = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.true");
+        var end    = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.end");
 
         generator.Builder.PositionAtEnd(start);
 
-            generator.Builder.BuildSelect(l.LLVM, onTrue.AsValue(), end.AsValue());
+            generator.Builder.BuildSelect(l, onTrue.AsValue(), end.AsValue());
 
         generator.Builder.PositionAtEnd(onTrue);
 
             Right.Lower(generator);
             var r = generator.PopValue(DebugSourceName);
             
-            var real = generator.Builder.BuildAnd(l.LLVM, r.LLVM, "and");
+            var real = generator.Builder.BuildAnd(l, r, "and");
 
         generator.Builder.PositionAtEnd(end);
             
@@ -53,9 +53,9 @@ public record BoundOrExpression(BinaryOperation Source, BoundASTNode Left, Bound
         Left.Lower(generator);
         var l = generator.PopValue(DebugSourceName);
 
-        var start   = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.start");
-        var onFalse = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.false");
-        var end     = generator.LLVMContext.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".and.end");
+        var start   = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".or.start");
+        var onFalse = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".or.false");
+        var end     = generator.Context.AppendBasicBlock(generator.CurrentFunction!.LLVMFunction, Source.Operator.Range.CharStart+".or.end");
 
         generator.Builder.PositionAtEnd(start);
 
