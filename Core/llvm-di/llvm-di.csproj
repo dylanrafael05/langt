@@ -1,0 +1,15 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <TargetFramework>net7.0</TargetFramework>
+    <RootNamespace>LLVM.DI</RootNamespace>
+    <LangVersion>preview</LangVersion>
+    <EnablePreviewFeatures>true</EnablePreviewFeatures>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <Nullable>enable</Nullable>
+    <PackageReference Include="libLLVM" Version="15.0.0" />
+    <PackageReference Include="LLVMSharp" Version="15.0.0-beta1" />
+    <PackageReference Include="LLVMSharp.Interop" Version="15.0.0-beta1" />
+  </PropertyGroup>
+
+</Project>

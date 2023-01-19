@@ -1,6 +1,8 @@
+using Langt.AST;
 using Langt.Optimization;
 using Langt.Structure.Visitors;
 using Langt.Utility;
+using Langt.Utility.Collections;
 
 namespace Langt.Codegen;
 
@@ -10,15 +12,22 @@ public class LangtProject
     {
         Logger = logger;
         LLVMModuleName = llvmModuleName;
+
+        logger.Init();
+
+        CodeGenerator = new(this);
     }
 
-    public LangtScope GlobalScope {get; private init;} = new();
-    public List<LangtFile> Files {get; private init;} = new();
-    public DiagnosticCollection Diagnostics {get; private init;} = new();
+    public CodeGenerator CodeGenerator {get;}
+    public LangtScope GlobalScope {get;} = new(null);
+    public List<LangtFile> Files {get;} = new();
+    public DiagnosticCollection Diagnostics {get;} = new();
+    public OrderedList<StaticReference> References {get;} = new();
 
-    public ILogger Logger {get; private init;}
-    public string LLVMModuleName {get; init;}
-    public LLVMModuleRef? Module {get; private set;}
+    public ILogger Logger {get;}
+    public string LLVMModuleName {get;}
+    
+    public LLVMModuleRef Module => CodeGenerator.Module;
 
     public void AddFileContents(FileInfo file)
         => AddFileContents(file.FullName, File.ReadAllText(file.FullName));
@@ -26,58 +35,61 @@ public class LangtProject
     {
         if(Files.Any(f => f.Source.Name == name))
         {
-            Logger.Error($"Attempting to add source {name} twice!");
+            Logger.Fatal($"Attempting to add source {name} twice!");
         }
         
         Files.Add(new(this, new(content, name)));
     }
 
-    public bool Build() 
+    private void HandleResult(IResultlike r) 
+    {
+        Diagnostics.AddResult(r);
+        References.AddRange(r.GetBindingOptions().References);
+    }
+
+    public void BindSyntaxTrees()
+    {
+        var startState = GeneralPassState.Start(CodeGenerator);
+
+        Logger.Note("Handling definitions . . . ");
+        foreach(var f in Files)
+        {
+            CodeGenerator.Open(f);
+            HandleResult(
+                f.AST.HandleDefinitions(startState)
+            );
+        }
+
+        Logger.Note("Refining definitions . . . ");
+        foreach(var f in Files)
+        {
+            CodeGenerator.Open(f);
+            HandleResult(
+                f.AST.RefineDefinitions(startState)
+            );
+        }
+        
+        Logger.Note("Performing binding . . . ");
+        foreach(var f in Files)
+        {  
+            CodeGenerator.Open(f);
+            var r = f.AST.Bind(startState);  
+            HandleResult(r);
+
+            if(!r) continue;
+            f.BoundAST = r.Value;
+        }
+    }
+
+    public bool Compile(bool optimize) 
     {
 #if DEBUG
         try
         {
 #endif
-        var cg = new CodeGenerator(this);
-        LLVMUtil.PrimeLLVM();
-
         Logger.Note("Building . . . ");
-        
-        Logger.Note("Initializing . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.Initialize(cg);
-        }
 
-        Logger.Note("Defining types . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.DefineTypes(cg);
-        }
-
-        Logger.Note("Implementing types . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.ImplementTypes(cg);
-        }
-        
-        Logger.Note("Defining functions . . . ");
-        foreach(var f in Files)
-        {
-            cg.Open(f);
-            f.CompilationUnit.DefineFunctions(cg);
-        }
-        
-        Logger.Note("Type checking . . . ");
-        foreach(var f in Files)
-        {  
-            cg.Open(f);
-            f.CompilationUnit.TypeCheck(cg);
-        }
-
+        BindSyntaxTrees();
 
         if(Diagnostics.AnyErrors)
         {
@@ -89,24 +101,28 @@ public class LangtProject
         Logger.Note("Lowering . . . ");
         foreach(var f in Files)
         {
-            cg.Open(f);
-            f.CompilationUnit.Lower(cg);
+            CodeGenerator.Open(f);
+            f.BoundAST!.Lower(CodeGenerator);
         }
 
 #if DEBUG
-        //. Logger.Note("Pre-optimization dump:\n\r" + cg.Module.PrintToString().ReplaceLineEndings());
-        if(!cg.Verify()) return false;
+        Logger.Debug("Pre-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
+        if(!CodeGenerator.Verify()) return false;
 #endif
         
-        Logger.Note("Optimizing . . . ");
-        Optimizer.Optimize(cg);
+        if(optimize)
+        {
+            Logger.Note("Optimizing . . . ");
+            Optimizer.Optimize(CodeGenerator);
 
 #if DEBUG
-        if(!cg.Verify()) return false;
+            if(!CodeGenerator.Verify()) return false;
 #endif
 
-        Logger.Note("Done building!");
-        Module = cg.Module;
+            Logger.Note("Done building!");
+
+            Logger.Debug("Post-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
+        }
 
         return true;
 

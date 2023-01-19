@@ -1,10 +1,11 @@
 namespace Langt;
 
-public record struct Diagnostic(DiagnosticSeverity Severity, string Message, SourceRange Range)
+public record struct Diagnostic(MessageSeverity Severity, string Message, SourceRange Range) : IResultMetadata, IResultError
 {
-    /// <summary>
-    /// Get a unique (or as unique as possible) key for sorting this item.
-    /// </summary>
-    /// <returns></returns>
-    public double SortingKey => (Range.Source.Name.GetHashCode() % 1000) + ((Range.CharStart + 1) / (double)(Range.Source.Content.Length + 3));
+    public static Diagnostic Error(string message, SourceRange range) => new(MessageSeverity.Error, message, range);
+    public static Diagnostic Warning(string message, SourceRange range) => new(MessageSeverity.Warning, message, range);
+    public static Diagnostic Note(string message, SourceRange range) => new(MessageSeverity.Note, message, range);
+
+    public IResultMetadata? TryDemote()
+        => this;
 }

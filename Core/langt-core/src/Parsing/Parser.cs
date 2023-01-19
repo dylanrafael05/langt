@@ -17,18 +17,18 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public LangtProject Project {get; init;}
     public string CurrentTypeName => CurrentType?.GetReadableName() ?? "null token";
 
-    public static readonly OperatorSpec[] Operators = new OperatorSpec[] 
+    public static readonly ParseOperatorSpec[] Operators = new ParseOperatorSpec[] 
     {
-        new(OperatorType.UnaryPrefix    , TT.Not),
-        new(OperatorType.LeftRecursive  , TT.Or),
-        new(OperatorType.LeftRecursive  , TT.And),
-        new(OperatorType.LeftRecursive  , TT.DoubleEquals, TT.GreaterThan, TT.GreaterEqual, TT.LessEqual, TT.LessThan, TT.NotEquals),
-        new(OperatorType.LeftRecursive  , TT.Plus, TT.Minus),
-        new(OperatorType.RightRecursive , TT.Star, TT.Slash),
-        new(OperatorType.RightRecursive , TT.Percent),
+        new(ParseOperatorType.UnaryPrefix    , TT.Not),
+        new(ParseOperatorType.LeftRecursive  , TT.Or),
+        new(ParseOperatorType.LeftRecursive  , TT.And),
+        new(ParseOperatorType.LeftRecursive  , TT.DoubleEquals, TT.GreaterThan, TT.GreaterEqual, TT.LessEqual, TT.LessThan, TT.NotEquals),
+        new(ParseOperatorType.LeftRecursive  , TT.Plus, TT.Minus),
+        new(ParseOperatorType.RightRecursive , TT.Star, TT.Slash),
+        new(ParseOperatorType.RightRecursive , TT.Percent),
     };
-    public TT? CurrentType
-        => Current.Nullable()?.Type;
+
+    public TT? CurrentType => Current.Nullable()?.Type;
 
     private Parser(LexResult tokens, LangtProject project)
     {
@@ -38,8 +38,39 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     }
 
     public SourceRange Range => Current.Value.Range;
+    private List<Token> Prefix {get; set;} = new();
 
-    public int PassLineBreaks() => PassAll(t => t.Type is TT.LineBreak);
+    public int PassLineBreaks(bool prefix)
+    {
+        // Initialize; clear prefix if necessary
+        if(prefix) Prefix.Clear();
+        var linecount = 0;
+
+        // Loop while "whitespace" is present
+        while(CurrentType is TT.LineBreak or TT.Comment or TT.BlockComment)
+        {
+            if(CurrentType is TT.LineBreak)
+            {
+                linecount++;
+
+                // Clear prefix if more than one line break separates comments
+                if(prefix && Next.Nullable()?.Type is TT.LineBreak) Prefix.Clear();
+            }
+            else if(prefix) 
+            {
+                Prefix.Add(Current!.Value);
+            }
+            else 
+            {
+                break;
+            }
+
+            Pass();
+        }
+
+        return linecount;
+    }
+
     public ASTNode RecoverPoint(Func<ASTNode> pass)
     {
         try {return pass();}
@@ -51,7 +82,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
             Pass();
             PassAll(c => c.Type is not (TT.LineBreak or TT.EndOfFile or TT.CloseBlock or TT.CloseIndex or TT.CloseParen or TT.Comma));
-            PassLineBreaks();
+            PassLineBreaks(false);
 
             return new ASTInvalid(r);
         }
@@ -60,14 +91,18 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public ASTToken Grab() 
     {
         var v = Current.Value;
-        index++;
-        return new(v);
+        Pass();
+
+        var result = new ASTToken(new List<Token>(Prefix), v);
+        Prefix.Clear();
+
+        return result;
     }
 
     public ASTToken Require(
         Predicate<TT?> pred, 
         string? particularError = null, 
-        [CallerMemberName] string? passname = "!") // TODO: improve errors generated here with a 'context' string
+        [CallerMemberName] string? passname = "!")
     {
         if(Current.Exists && pred(CurrentType)) return Grab();
         
@@ -89,15 +124,16 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public Block Block(ParserState state, ParsePass pass)
     {
-        PassLineBreaks();
-
+        PassLineBreaks(false);
         var open = Require(TT.OpenBlock);
+        PassLineBreaks(false);
 
         IEnumerable<ASTNode> Inner() 
         {
             while(Current.Exists && CurrentType is not TT.CloseBlock)
             {
                 yield return pass(state);
+                PassLineBreaks(false);
             }
         }
 
@@ -120,11 +156,9 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         return new(new List<ASTNode>(Inner()));
     }
 
-    // TODO: reimplement dumping via a visitor
-
     public ASTNode Statement(ParserState state) => RecoverPoint(() =>
     {
-        PassLineBreaks();
+        PassLineBreaks(true);
 
         ASTNode s;
 
@@ -137,8 +171,9 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
                 TT.While => WhileStatement(state),
                 TT.Return => Return(state),
 
-                // TODO; this might mess up internal state of parser
-                _ => Assignment(state)
+                _ => Assignment(state) is var a && (a is Assignment || a is FunctionCall) 
+                    ? a 
+                    : throw ParserException.Error("Statements must be a variable declaration, control flow statement, function call, or assignment")
             };
         }
         else 
@@ -157,7 +192,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             };
         }
 
-        if(PassLineBreaks() == 0 && CurrentType is not (TT.EndOfFile or TT.CloseBlock))
+        if(PassLineBreaks(false) == 0 && CurrentType is not (TT.EndOfFile or TT.CloseBlock))
         {
             throw ParserException.Error($"Expected terminator for statement" + (CurrentType.HasValue ? $", got {CurrentTypeName}" : ""));
         }
@@ -195,16 +230,16 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var structTok = Require(TT.Struct);
         var name = Require(TT.Identifier);
-        PassLineBreaks();
+        PassLineBreaks(false);
         var open = Require(TT.OpenBlock);
-        PassLineBreaks();
+        PassLineBreaks(false);
         var fields = SeparatedCollection<DefineStructField>(
             state,
             s => new(Require(TT.Identifier), Type(s)),
             t => t is TT.Comma,
             t => t is TT.CloseBlock
         );
-        PassLineBreaks();
+        PassLineBreaks(false);
         var close = Require(TT.CloseBlock);
 
         return new(structTok, name, open, fields, close);                
@@ -236,7 +271,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             var eq = Require(TT.EqualsSign);
             var val = Expression(state);
 
-            return new DefineVariable(let, iden, type, eq, val);
+            return new VariableDefinition(let, iden, type, eq, val);
         }
         else
         {
@@ -257,13 +292,13 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
             if(let.Type is not TT.Extern)
             {
-                PassLineBreaks();
-                if(CurrentType is TT.EqualsSign) body = new FunctionExpressionBody(Grab(), Expression(newState));
+                PassLineBreaks(false);
+                if(CurrentType is TT.ArrowRight) body = new FunctionExpressionBody(Grab(), Expression(newState));
                 else if(CurrentType is TT.OpenBlock) body = new FunctionBlockBody(Block(newState, Statement));
                 else throw ParserException.Error("Expected start of function body but got " + CurrentTypeName);
             }
 
-            return new DefineFunction(let, iden, open, args, vargs, close, type, body);
+            return new FunctionDefinition(let, iden, open, args, vargs, close, type, body);
         }
     }
 
@@ -271,12 +306,12 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var ifTok = Require(TT.If);
         var value = Expression(state);
-        PassLineBreaks();
+        PassLineBreaks(false);
         var body = Block(state, Statement);
 
         ElseStatement? elseStatement = null;
 
-        PassLineBreaks();
+        PassLineBreaks(false);
 
         if(CurrentType is TT.Else)
         {
@@ -299,7 +334,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var whileTok = Require(TT.While);
         var value = Expression(state);
-        PassLineBreaks();
+        PassLineBreaks(false);
         var body = Block(state, Statement);
 
         return new(whileTok, value, body);
@@ -307,40 +342,68 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public ASTType Type(ParserState state)
     {
-        if(CurrentType is TT.Star) 
-        {
-            return new PointerType(Grab(), Type(state));
-        }
-        else if(CurrentType is TT.OpenParen)
-        {
-            var open = Grab();
-            var argspecs = SeparatedCollection(state, ArgumentSpec, t => t is TT.Comma, t => t is TT.CloseParen, false);
-            var ellipsis = CurrentType is TT.Ellipsis ? Grab() : null;
-            var close = Require(TT.CloseParen);
+        ASTType result;
 
-            var ret = Type(state);
-
-            return new FunctionPtrType(open, argspecs, ellipsis, close, ret);
-        }
-
-        var ns = Namespace(state);
-        if(ns is SimpleNamespace simple) 
+        if(CurrentType is TT.OpenParen)
         {
-            return new SimpleType(simple.Name);
+            Grab();
+            result = Type(state);
+            Require(TT.CloseParen);
         }
-        else if(ns is NestedNamespace nested)
+        else if(CurrentType is TT.Star) 
         {
-            return new DotType(nested.Namespace, nested.Dot, nested.Identifier);
+            var star = Grab();
+
+            if(CurrentType is TT.Fn)
+            {
+                var fn = Grab();
+                var open = Require(TT.OpenParen);
+                var argspecs = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.CloseParen, false);
+                var ellipsis = CurrentType is TT.Ellipsis ? Grab() : null;
+                var close = Require(TT.CloseParen);
+
+                var ret = Type(state);
+
+                result = new FunctionPtrType(star, fn, open, argspecs, ellipsis, close, ret);
+            }
+            else 
+            {
+                result = new PointerType(star, Type(state));
+            }
         }
-        
-        throw new Exception("Unknown namespace type " + ns.GetType().Name);
+        else 
+        {
+            var ns = Namespace(state);
+            if(ns is SimpleNamespace simple) 
+            {
+                result = new SimpleType(simple.Name);
+            }
+            else if(ns is NestedNamespace nested)
+            {
+                result = new NestedType(nested.Namespace, nested.Dot, nested.Identifier);
+            }
+            else 
+            { 
+                throw new Exception("Unknown namespace type " + ns.GetType().Name);
+            }
+        }
+
+        if(CurrentType is TT.Pipe)
+        {
+            var pipe = Grab();
+            var next = Type(state);
+
+            result = new OptionType(result, pipe, next);
+        }
+
+        return result;
     }
 
     public ASTNamespace Namespace(ParserState state)
     {
         ASTNamespace n = new SimpleNamespace(Require(TT.Identifier));
 
-        while(CurrentType is TT.Dot)
+        while(CurrentType is TT.DoubleColon)
         {
             n = new NestedNamespace(n, Grab(), Require(TT.Identifier));
         }
@@ -369,17 +432,17 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         return pass(state);
     });
 
-    public ParsePass OperatorPass(OperatorSpec spec, ParsePass nextPass)
+    public ParsePass OperatorPass(ParseOperatorSpec spec, ParsePass nextPass)
         => s => Operator(s, spec, nextPass);
 
-    public ASTNode Operator(ParserState state, OperatorSpec spec, ParsePass nextPass)
+    public ASTNode Operator(ParserState state, ParseOperatorSpec spec, ParsePass nextPass)
         => spec.Type switch 
         {
-            OperatorType.LeftRecursive => BinaryOperatorLeft(state, spec.TokenTypes, nextPass),
-            OperatorType.RightRecursive => BinaryOperatorRight(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.LeftRecursive => BinaryOperatorLeft(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.RightRecursive => BinaryOperatorRight(state, spec.TokenTypes, nextPass),
 
-            OperatorType.UnaryPrefix => UnaryPrefix(state, spec.TokenTypes, nextPass),
-            OperatorType.UnaryPostfix => UnaryPostfix(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.UnaryPrefix => UnaryPrefix(state, spec.TokenTypes, nextPass),
+            ParseOperatorType.UnaryPostfix => UnaryPostfix(state, spec.TokenTypes, nextPass),
 
             var t => throw new Exception("Unrecognized operator type " + t)
         };
@@ -475,7 +538,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var ret = PrimaryExpression(state);
 
-        while(CurrentType is TT.OpenParen or TT.OpenIndex or TT.Dot)
+        while(CurrentType is TT.OpenParen or TT.OpenIndex or TT.Dot or TT.DoubleColon)
         {
             if(CurrentType is TT.OpenParen)
             {
@@ -500,6 +563,13 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
                 ret = new DotAccess(ret, dot, iden);
             }
+            else if(CurrentType is TT.DoubleColon)
+            {
+                var dot = Grab();
+                var iden = Require(TT.Identifier);
+
+                ret = new StaticAccess(ret, dot, iden);
+            }
         }
 
         return ret;
@@ -512,7 +582,10 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         TT.OpenParen => ParentheticExpression(state),
         TT.Ampersand => PtrTo(state),
 
-        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), //TODO: see lower todo
+        TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), 
+            //TODO: this does not account for types in namespaces!
+            //TODO: refactor to allow for struct creation using static references.
+            //TODO: do so by having common types (static '::' access) have corresponding 'wrapper' types
         TT.Identifier => new Identifier(Grab()),
         TT.Integer or TT.Decimal
             => new NumericLiteral(Grab()),
@@ -526,10 +599,10 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public StructInitializer StructCreate(ParserState state)
     {
-        var type = Type(state); // TODO: ENSURE THIS IS A TYPE BEFORE PARSING!
+        var type = Type(state);
         var open = Require(TT.OpenBlock);
         var args = SeparatedCollection(state, Expression, t => t is TT.Comma, t => t is TT.CloseBlock);
-        var close = Require(TT.CloseBlock);
+        var close = Require(TT.CloseBlock, "expected matching '}' for earlier '{'");
 
         return new(type, open, args, close);
     }
@@ -538,7 +611,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var open = Grab();
         var expr = Expression(state);
-        var close = Require(TT.CloseParen);
+        var close = Require(TT.CloseParen, "expected matching ')' for earlier '('");
 
         return new ParentheticExpression(open, expr, close);
     }
@@ -558,7 +631,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             {
                 b.Add(Grab());
                 
-                if(lineBreaksAfterSep) PassLineBreaks();
+                if(lineBreaksAfterSep) PassLineBreaks(true);
 
                 b.Add(pass(state)!);
             }

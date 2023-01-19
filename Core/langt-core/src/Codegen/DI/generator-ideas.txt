@@ -1,0 +1,6 @@
+REGEX for fn defs:
+[^\s]+\s+LLVMDIBuilder(\w+)\((\w+\s+[\*]?\w+\s*,?\s*)+\)
+
+SOURCE:
+https://llvm.org/doxygen/group__LLVMCCoreDebugInfo.html#gaf293a26d4fd886befce34f6ce2a3bdf1
+DebugInfo.cpp

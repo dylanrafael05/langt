@@ -28,7 +28,7 @@ public abstract class LookaheadListStream<T>
         while(Current.Exists && pred(Current!)) 
         {
             count++;
-            index++;
+            Pass();
         }
         return count;
     }
@@ -38,7 +38,7 @@ public abstract class LookaheadListStream<T>
         while(Current.Exists && pred()) 
         {
             index++;
-            count++;
+            Pass();
         }
         return count;
     }

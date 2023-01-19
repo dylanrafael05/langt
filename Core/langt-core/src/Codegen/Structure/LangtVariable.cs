@@ -3,9 +3,18 @@ using Langt.Codegen;
 
 namespace Langt.Codegen;
 
-public record LangtVariable(string Name, LangtType Type) : INamedScoped
+public class LangtVariable : Resolution
 {
-    public bool IsWriteable {get; init;}
+    public LangtVariable(string name, LangtType type, IScope scope) : base(scope)
+    {
+        Name = name;
+        Type = type;
+    }
+
+    public override string Name {get;}
+    public LangtType Type {get; init;}
+
+    public bool IsWriteable {get; init;} = true;
     public uint? ParameterNumber {get; init;}
 
     public int UseCount {get; set;} = 0;
@@ -13,15 +22,6 @@ public record LangtVariable(string Name, LangtType Type) : INamedScoped
     public bool IsParameter => ParameterNumber is not null;
     public LangtValue? UnderlyingValue {get; private set;}
 
-    public LangtScope? HoldingScope { get; set; }
-
     public void Attach(LLVMValueRef value)
         => UnderlyingValue = new(Type, value);
-    
-    protected virtual bool PrintMembers(StringBuilder stringBuilder)
-    {
-        stringBuilder.Append($"Name = {Name}, Type = {Type}, ");
-        stringBuilder.Append($"IsWriteable = {IsWriteable}, ParameterNumber = {ParameterNumber}");
-        return true;
-    }
 }

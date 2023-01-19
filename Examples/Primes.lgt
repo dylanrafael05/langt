@@ -17,7 +17,7 @@ let is_prime(x int32) PrimeResult
     while i < upper
     {
         i = i + 1
-
+        
         if x % i == 0 
         {
             return PrimeResult {false, i}

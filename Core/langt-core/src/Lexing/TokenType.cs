@@ -10,6 +10,8 @@ public enum TokenType
     Type,
     Struct,
 
+    ArrowRight,
+
     Let,
     Extern,
 
@@ -37,6 +39,10 @@ public enum TokenType
     Not,
 
     Colon,
+    Fn,
+
+    RangeIncl,
+    RangeExcl,
 
     OpenBlock,
     CloseBlock,
@@ -59,10 +65,12 @@ public enum TokenType
 
     String,
     Char,
+    AsciiChar,
 
     Alias,
 
     As,
+    Is,
     
     Ampersand,
 
@@ -70,8 +78,8 @@ public enum TokenType
     Using,
 
     LineBreak,
-    Whitespace,
     Comment,
+    BlockComment,
 
     OpenParen,
     CloseParen,
@@ -79,6 +87,9 @@ public enum TokenType
     Dot,
     Comma,
     Ellipsis,
+    DoubleColon,
+
+    Pipe,
 
     EndOfFile,
 }

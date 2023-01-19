@@ -1,0 +1,3 @@
+- [ ] Come up with a better way to recover from errors in parsing
+- [ ] Handle type errors with LangtType.Error; this should make it possible to bind functions with erroneous signatures
+- [ ] Rest of roadmap

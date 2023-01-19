@@ -7,11 +7,40 @@
 		},
 		{
 			"name": "constant.numeric",
-			"match": "\\d+(\\.\\d+)?"
+			"match": "(0x[0123456789abcdefABCDEF][0123456789abcdefABCDEF_]*|\\d(\\d|_)*(\\.(\\d|_)+)?)"
 		},
 		{
 			"name": "variable",
-			"match": "\\b[\\w_$][\\w\\d_$]*"
+			"match": "\\b[\\w_\\$][\\w\\d_\\$]*"
+		},
+		{
+			"name": "comment.block",
+			"begin": "#\\[\\(",
+			"end": "\\)\\]",
+			"patterns": [
+				{
+					"name": "comment.block.inner",
+					"begin": "\\[",
+					"end": "\\]"
+				}
+			],
+			"contentName": "comment.block.documentation"
+		},
+		{
+			"name": "comment.block",
+			"begin": "#\\[",
+			"end": "\\]",
+			"patterns": [
+				{
+					"name": "comment.block.inner",
+					"begin": "\\[",
+					"end": "\\]"
+				}
+			]
+		},
+		{
+			"name": "comment.line",
+			"match": "#.*+[\\n\\r]"
 		},
 		{
 			"include": "#strings"
@@ -20,6 +49,9 @@
 			"name": "comment",
 			"begin": "#",
 			"end": "[\\n\\r]"
+		},
+		{
+			"include": "#character"
 		}
 	],
 	"repository": {
@@ -27,19 +59,23 @@
 			"patterns": [
 				{
 					"name": "keyword.control.langt",
-					"match": "\\b(if|while|else|return)\\b"
+					"match": "\\b(if|while|else|return|for)\\b"
 				},
 				{
-					"name": "constant.language",
-					"match": "\\b(true|false)\\b"
+					"name": "keyword.control.operatordef.langt",
+					"match": "\\bop_(add|sub|mul|div|mod|equal|not_equal|less|less_equal|greater|greater_equal|neg|not)\\b"
 				},
 				{
 					"name": "keyword.other.langt",
-					"match": "\\b(let|extern|struct|alias|namespace|using|and|or|not|as)\\b"
+					"match": "\\b(and|or|not|as|is)\\b"
+				},
+				{
+					"name": "keyword.other.langt",
+					"match": "\\b(let|extern|const|final|struct|alias|type|enum|namespace|using|trait|prop|some|where|private|true|false)\\b"
 				},
 				{
 					"name": "keyword.other.type.langt",
-					"match": "\\b(int(8|16|32|64)|real(32|64)|bool|none)\\b"
+					"match": "\\b(u?int(8|16|32|64)|real(16|32|64)|bool|char|none|fn|ptr)\\b"
 				}
 			]
 		},
@@ -49,10 +85,28 @@
 			"end": "\"",
 			"patterns": [
 				{
-					"name": "constant.character.escape.langt",
-					"match": "\\\\."
+					"include": "#escape"
 				}
 			]
+		},
+		"character": {
+			"name": "string.quoted.single",
+			"begin": "'",
+			"patterns": [
+				{
+					"include": "#escape"
+				}
+			],
+			"end": "'(a)?",
+			"endCaptures": {
+				"1": {
+					"name": "keyword.other.ascii.langt"
+				}
+			}
+		},
+		"escape": {
+			"name": "constant.character.escape.langt",
+			"match": "\\\\."
 		}
 	},
 	"scopeName": "source.lgt"

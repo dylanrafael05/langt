@@ -1,0 +1,28 @@
+{
+    // Use IntelliSense to learn about possible attributes.
+    // Hover to view descriptions of existing attributes.
+    // For more information, visit: https://go.microsoft.com/fwlink/?linkid=830387
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "run with deferred arguments",
+            "type": "coreclr",
+            "request": "launch",
+            "preLaunchTask": "build-cli",
+            "program": "${workspaceFolder}/Core/langt-cli/bin/Debug/net7.0/win-x64/langt-cli.dll",
+            "args": ["defer", "--loop"],
+            "cwd": "${workspaceFolder}/Examples",
+            "console": "integratedTerminal",
+            "stopAtEntry": false
+        },
+        {
+            "name": "extension",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/Experimental/langt-vscode"
+            ],
+            "preLaunchTask": "build-ext"
+        }
+    ]
+}

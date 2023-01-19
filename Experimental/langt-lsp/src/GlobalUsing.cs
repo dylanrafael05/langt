@@ -1,0 +1,12 @@
+global using IMLogger = Microsoft.Extensions.Logging.ILogger;
+global using STT = OmniSharp.Extensions.LanguageServer.Protocol.Models.SemanticTokenType;
+global using STM = OmniSharp.Extensions.LanguageServer.Protocol.Models.SemanticTokenModifier;
+global using VSDiagnostic = OmniSharp.Extensions.LanguageServer.Protocol.Models.Diagnostic;
+global using LangtDiagnostic = Langt.Diagnostic;
+global using VSDiagnosticSeverity = OmniSharp.Extensions.LanguageServer.Protocol.Models.DiagnosticSeverity;
+global using LangtDiagnosticSeverity = Langt.MessageSeverityType;
+global using VSRange = OmniSharp.Extensions.LanguageServer.Protocol.Models.Range;
+global using LangtRange = Langt.SourceRange;
+global using VSPosition = OmniSharp.Extensions.LanguageServer.Protocol.Models.Position;
+global using LangtPosition = Langt.SourcePosition;
+global using LangtRawPosition = Langt.SimplePosition;

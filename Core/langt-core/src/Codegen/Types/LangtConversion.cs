@@ -8,7 +8,7 @@ public record LangtConversion(TransformProvider TransformProvider)
 {
     public bool IsImplicit {get; init;}
 
-    public static List<LangtConversion> Builtin = new();
+    public static readonly List<LangtConversion> Builtin = new();
 
     static LangtConversion()
     {
@@ -17,19 +17,8 @@ public record LangtConversion(TransformProvider TransformProvider)
             Builtin.Add(new(provider) {IsImplicit = isImplicit});
         }
 
-        var types = new[] 
-        {
-            LangtType.Int8,
-            LangtType.Int16,
-            LangtType.Int32,
-            LangtType.Int64,
-
-            LangtType.Real32,
-            LangtType.Real64,
-        };
-
-        var intTypes = types.Where(t => t.IsInteger);
-        var realTypes = types.Where(t => t.IsReal);
+        var intTypes = LangtType.IntegerTypes;
+        var realTypes = LangtType.RealTypes;
 
         void BuildConverters(
             IEnumerable<LangtType> source, 
@@ -80,8 +69,9 @@ public record LangtConversion(TransformProvider TransformProvider)
 
             string lroundName = "llvm.nearbyint." + fromName;
 
-            var lFuncType = new LangtFunctionType(from, from);
+            var lFuncType = LangtFunctionType.Create(new[] {from}, from).Expect();
 
+            // TODO: make accessing intrinsics easier
             Add(new DirectTransformProvider(to, from,
                 (cg, v) => cg.Builder.BuildFPToSI(
                     cg.Builder.BuildCall2(
@@ -98,7 +88,7 @@ public record LangtConversion(TransformProvider TransformProvider)
 
         // Pointer conversions //
         Add(new FunctionalTransformProvider(
-            (t1, t2) => t1.IsPointer && t2.IsPointer && t1.PointeeType != t2.PointeeType,
+            (t1, t2) => t1.IsPointer && t2.IsPointer && t1.ElementType != t2.ElementType,
             (_, _, _, v) => v,
             "*a->*b"
         ));
@@ -114,6 +104,21 @@ public record LangtConversion(TransformProvider TransformProvider)
             (_, _, _, v) => v,
             "a->(alias a)"
         ));
+
+        Add(new FunctionalTransformProvider(
+            (t1, t2) => t2.IsOption && t2.OptionTypes.Contains(t1),
+            (i, o, cg, v) =>
+            {
+                var s = cg.Builder.BuildAlloca(cg.LowerType(o));
+                cg.Builder.BuildStore(v, s);
+                
+                var t = cg.Builder.BuildStructGEP2(cg.LowerType(o), s, LangtOptionType.TagLocation);
+                cg.Builder.BuildStore(LLVMValueRef.CreateConstInt(LLVMTypeRef.Int8, (ulong)o.OptionTypeMap![i]), t);
+
+                return cg.Builder.BuildLoad2(cg.LowerType(o), s);
+            },
+            "a->a|..."
+        ), true);
 
         // foreach(var b in Builtin)
         // {

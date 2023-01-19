@@ -9,21 +9,55 @@
   "categories": [
     "Programming Languages"
   ],
+  "activationEvents": [
+    "onLanguage:langt"
+  ],
+  "main": "./out/extension.js",
   "contributes": {
-    "languages": [{
-      "id": "langt",
-      "aliases": ["Langt", "langt"],
-      "extensions": [".lgt"],
-      "configuration": "./language-configuration.json",
-      "icon": {
-        "dark":  "./icons/Dark.png",
-        "light": "./icons/Light.png"
+    "languages": [
+      {
+        "id": "langt",
+        "aliases": [
+          "Langt",
+          "langt"
+        ],
+        "extensions": [
+          ".lgt"
+        ],
+        "configuration": "./language-configuration.json",
+        "icon": {
+          "dark": "./icons/Dark.png",
+          "light": "./icons/Light.png"
+        }
       }
-    }],
-    "grammars": [{
-      "language": "langt",
-      "scopeName": "source.lgt",
-      "path": "./syntaxes/langt.tmLanguage.json"
-    }]
+    ],
+    "grammars": [
+      {
+        "language": "langt",
+        "scopeName": "source.lgt",
+        "path": "./syntaxes/langt.tmLanguage.json"
+      }
+    ],
+    "semanticTokenScopes": [
+      {
+        "language": "langt",
+        "scopes": {
+          "type.builtin": ["keyword.langt"]
+        }
+      }
+    ]
+  },
+  "scripts": {
+    "vscode:prepublish": "npm run compile",
+    "compile": "bash ./build.sh",
+    "watch": "tsc -watch -p ./"
+  },
+  "devDependencies": {
+    "@types/node": "^8.10.25",
+    "typescript": "^2.9.2",
+    "@types/vscode": "^1.74.0",
+    "vscode-test": "1.6.1",
+    "vscode-jsonrpc": "^8.0.2",
+    "vscode-languageclient": "^8.0.2"
   }
 }

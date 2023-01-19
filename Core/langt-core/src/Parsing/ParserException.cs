@@ -4,18 +4,18 @@ namespace Langt.Parsing;
 public class ParserException : Exception
 {
     public override string Message {get;}
-    public DiagnosticSeverity Severity {get; init;}
+    public MessageSeverityType Severity {get; init;}
 
-    private ParserException(string message, DiagnosticSeverity severity) 
+    private ParserException(string message, MessageSeverityType severity) 
     {
         Message = message;
         Severity = severity;
     }
 
-    public static ParserException Create(string message, DiagnosticSeverity severity = DiagnosticSeverity.Fatal)
+    public static ParserException Create(string message, MessageSeverityType severity = MessageSeverityType.Fatal)
         => new(message, severity);
     public static ParserException Error(string message)
-        => new(message, DiagnosticSeverity.Error);
+        => new(message, MessageSeverityType.Error);
     public static ParserException Fatal(string message)
-        => new(message, DiagnosticSeverity.Fatal);
+        => new(message, MessageSeverityType.Fatal);
 }

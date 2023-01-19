@@ -1,9 +1,15 @@
 namespace Langt.Parsing;
 
-public enum OperatorType
+public enum ParseOperatorType
 {
     LeftRecursive,
     RightRecursive,
     UnaryPrefix,
     UnaryPostfix
+}
+
+public enum OperatorType
+{
+    Binary,
+    Unary
 }
