@@ -4,7 +4,7 @@ import { workspace, Disposable, ExtensionContext } from 'vscode';
 import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, TransportKind, InitializeParams } from 'vscode-languageclient/node';
 import { Trace } from 'vscode-jsonrpc';
 
-// TODO: remove
+// TODO: replace with stored path
 const serverPath = String.raw`C:\Users\dylan\OneDrive\Desktop\Programming\langt\Experimental\langt-lsp\dbuild\langt-lsp.dll`
 
 export function activate(context: ExtensionContext) {

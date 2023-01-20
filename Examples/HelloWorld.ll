@@ -1,8 +1,7 @@
-; ModuleID = '../../Examples/HelloWorld.lgt'
-source_filename = "../../Examples/HelloWorld.lgt"
+; ModuleID = 'HelloWorld.lgt'
+source_filename = "HelloWorld.lgt"
 
 @str = private unnamed_addr constant [12 x i8] c"Hello World\00", align 1
-@str.1 = private unnamed_addr constant [6 x i8] c"hello\00", align 1
 
 define i8 @"<langt>op_neg(int8)"(i8 %0) local_unnamed_addr {
 entry:
@@ -3750,9 +3749,8 @@ entry:
 
 declare void @printf(ptr, ...) local_unnamed_addr
 
-define void @"<langt>sys::main()"() local_unnamed_addr {
+define void @"<langt>main()"() local_unnamed_addr {
 entry:
   call void (ptr, ...) @printf(ptr noundef nonnull @str)
-  call void (ptr, ...) @printf(ptr noundef nonnull @str.1)
   ret void
 }

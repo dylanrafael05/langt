@@ -12,39 +12,42 @@
         },
         {
             "label": "build-cli",
-            "command": "dotnet",
-            "type": "process",
+            "command": "python",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "args": [
-                "build",
-                "${workspaceFolder}/Core/langt-cli/langt-cli.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
+                "${workspaceFolder}/Scripts/build.py",
+                "langt-cli",
+                "true"
+            ]
         },
         {
-            "label": "publish-cli",
-            "command": "dotnet",
-            "type": "process",
+            "label": "build-core",
+            "command": "python",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "args": [
-                "publish",
-                "${workspaceFolder}/Core/langt-cli/langt-cli.csproj",
-                "/property:GenerateFullPaths=true",
-                "/consoleloggerparameters:NoSummary"
-            ],
-            "problemMatcher": "$msCompile"
+                "${workspaceFolder}/Scripts/build.py",
+                "langt-core",
+                "true"
+            ]
         },
         {
-            "label": "watch-cli",
-            "command": "dotnet",
-            "type": "process",
+            "label": "publish",
+            "command": "python",
+            "type": "shell",
+            "options": {
+                "cwd": "${workspaceFolder}"
+            },
             "args": [
-                "watch",
-                "run",
-                "--project",
-                "${workspaceFolder}/Core/langt-cli/langt-cli.csproj"
-            ],
-            "problemMatcher": "$msCompile"
+                "${workspaceFolder}/Scripts/build.py",
+                "all",
+                "false"
+            ]
         }
     ]
 }
