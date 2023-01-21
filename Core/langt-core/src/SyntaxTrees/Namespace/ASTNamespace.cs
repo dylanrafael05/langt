@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.AST;

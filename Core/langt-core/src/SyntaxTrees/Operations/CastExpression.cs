@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -7,7 +7,7 @@ namespace Langt.AST;
 public record BoundCastExpression(CastExpression Source, BoundASTNode Value, ITransformer Transformer) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
-    public override void LowerSelf(CodeGenerator lowerer)
+    public override void LowerSelf(Context lowerer)
     {
         Value.Lower(lowerer);
 

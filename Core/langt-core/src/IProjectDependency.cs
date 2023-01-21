@@ -1,4 +1,4 @@
-namespace Langt.Codegen;
+namespace Langt;
 
 public interface IProjectDependency
 {

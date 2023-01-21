@@ -1,6 +1,6 @@
 using System.Diagnostics;
-using Langt.Codegen;
 using Langt.Structure;
+using Langt.Structure.Collections;
 using TT = Langt.Lexing.TokenType;
 
 namespace Langt.Lexing;

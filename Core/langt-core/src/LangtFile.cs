@@ -1,8 +1,10 @@
 using Langt.AST;
 using Langt.Lexing;
 using Langt.Parsing;
+using Langt.Structure;
+using Langt.Structure.Resolutions;
 
-namespace Langt.Codegen;
+namespace Langt;
 
 public class LangtFile
 {

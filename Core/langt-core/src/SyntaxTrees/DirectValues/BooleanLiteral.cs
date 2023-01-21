@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -7,15 +7,6 @@ namespace Langt.AST;
 public record BoundBooleanLiteral(BooleanLiteral Source) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
-
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        generator.PushValue( 
-            LangtType.Bool,
-            LLVMValueRef.CreateConstInt(LLVMTypeRef.Int1, Source.Tok.Type is TokenType.True ? 1ul : 0ul),
-            DebugSourceName
-        );
-    }
 }
 
 public record BooleanLiteral(ASTToken Tok) : ASTNode, IDirectValue

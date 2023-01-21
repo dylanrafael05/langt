@@ -10,10 +10,10 @@ targets : list[str] = [
     'linux-x64',
 ]
 
-sources : list[str] = [
-    'langt-cli',
-    'langt-core',
-]
+sources : dict[str, str] = {
+    'langt-cli': r'Core\langt-cli',
+    'langt-core': r'Core\langt-core',
+}
 
 builds : str = r'Builds'
 
@@ -25,15 +25,15 @@ def clear(dir: str):
         shutil.rmtree(dir)
 
 #################################
-# MAIN BUILD SCRIPT
+# MAIN BUILD SCRIPTS
 #################################
-def build(source: str, devel: bool):
+def build_source(source: str, devel: bool):
 
     # Handle 'all'
     if source == 'all':
 
         for s in sources:
-            build(s, devel)
+            build_source(s, devel)
 
         return
 
@@ -42,7 +42,7 @@ def build(source: str, devel: bool):
 
     # Begin actual build
     ccwd = os.getcwd()
-    os.chdir(rf'Core\{source}')
+    os.chdir(sources[source])
 
     if not devel:
 
@@ -57,10 +57,11 @@ def build(source: str, devel: bool):
             os.system(rf'dotnet publish -o {fol} -r {target} --sc true')
 
             print('-' * 50)
-            print(f'Zipping built files')
+            print(f'Zipping build')
 
             with zipfile.ZipFile(os.path.join(ccwd, builds, f'{source}.{target}.zip'), 'w') as new_zip:
                 for file in os.scandir(fol):
+                    print(f'Adding file {file.name}')
                     new_zip.write(file.path)
 
             print('-' * 50)
@@ -77,4 +78,3 @@ def build(source: str, devel: bool):
 
     # Return cwd
     os.chdir(ccwd)
-

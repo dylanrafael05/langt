@@ -1,5 +1,6 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
+using Langt.Structure.Resolutions;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -8,33 +9,6 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundNodes};
     public bool HasScope => Scope is not null;
-
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        if(HasScope)
-        {
-            foreach(var variable in Scope!.NamedItems.Values.OfType<LangtVariable>())
-            {
-                var v = generator.Builder.BuildAlloca(generator.LowerType(variable.Type), "var."+variable.Name);
-                
-                if(variable.IsParameter)
-                {
-                    generator.Builder.BuildStore
-                    (
-                        generator.CurrentFunction!.LLVMFunction.GetParam(variable.ParameterNumber!.Value), v
-                    );
-                }
-
-                variable.Attach(v);
-            }
-        }
-
-        foreach(var s in BoundNodes)
-        {
-            s.Lower(generator);
-            generator.DiscardValues(DebugSourceName);
-        }
-    }
 
     public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, IScope? scope = null)
     {

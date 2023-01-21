@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -7,7 +7,7 @@ public record BoundFunctionBlockBody(FunctionBlockBody Source, BoundASTNode Body
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Body.Lower(generator);
 

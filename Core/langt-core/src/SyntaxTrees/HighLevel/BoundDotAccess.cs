@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 
 namespace Langt.AST;
 
@@ -22,7 +22,7 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
 
     public override LangtType Type => LangtReferenceType.Create(Field!.Type).Expect();
 
-    public override void LowerSelf(CodeGenerator lowerer)
+    public override void LowerSelf(Context lowerer)
     {
         Left.Lower(lowerer);
 

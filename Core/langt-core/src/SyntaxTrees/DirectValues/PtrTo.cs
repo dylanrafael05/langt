@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -7,16 +7,6 @@ namespace Langt.AST;
 public record BoundPtrTo(PtrTo Source, LangtVariable Variable) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
-
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        var f = Variable!.UnderlyingValue!;
-        generator.PushValue( 
-            f.Type, 
-            f.LLVM,
-            DebugSourceName
-        );
-    }
 }
 
 public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue

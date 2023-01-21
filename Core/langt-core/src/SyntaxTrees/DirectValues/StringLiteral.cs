@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 using Langt.Utility;
 
@@ -8,17 +8,6 @@ namespace Langt.AST;
 public record BoundStringLiteral(StringLiteral Source, string Value) : BoundASTNode(Source) 
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
-
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        var res = generator.Builder.BuildGlobalStringPtr(Value, "str");
-
-        generator.PushValue( 
-            Type,
-            res,
-            DebugSourceName
-        );
-    }
 }
 
 public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue

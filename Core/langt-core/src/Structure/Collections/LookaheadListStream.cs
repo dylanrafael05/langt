@@ -1,4 +1,4 @@
-namespace Langt.Structure;
+namespace Langt.Structure.Collections;
 
 public abstract class LookaheadListStream<T>
 {

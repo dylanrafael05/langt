@@ -2,13 +2,14 @@ global using CGError = System.ValueTuple<string, Langt.SourceRange>;
 
 using System.Text;
 using Langt.Structure;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 using System.Collections;
 using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using Langt.Utility;
 using Results;
+using Langt.Structure.Resolutions;
 
 namespace Langt.AST;
 
@@ -144,7 +145,7 @@ public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Source};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         generator.PushValue( 
             Function!.Type, 
@@ -160,7 +161,7 @@ public record BoundTransform(BoundASTNode Source, ITransformer Transform) : Boun
 
     public override LangtType Type => Transform.Output;
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Source.Lower(generator);
         var pre = generator.PopValue(DebugSourceName);
@@ -340,9 +341,11 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
             .AsTargetTypeDependent();
     }
 
-    public virtual void LowerSelf(CodeGenerator generator)
+    [Obsolete("Use llvm-cg's CodeGenerator.Lower() instead", true)] 
+    public virtual void LowerSelf(Context generator)
     {}
-    public void Lower(CodeGenerator generator)
+    [Obsolete("Use llvm-cg's CodeGenerator.Lower() instead", true)] 
+    public void Lower(Context generator)
     {   
         generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
 
@@ -352,7 +355,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         }
 
         LowerSelf(generator);
-        generator.LogStack(DebugSourceName);
+        // generator.LogStack(DebugSourceName);
     }
 }
 

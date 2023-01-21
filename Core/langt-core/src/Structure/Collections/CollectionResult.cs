@@ -1,4 +1,4 @@
-namespace Langt.Structure;
+namespace Langt.Structure.Collections;
 
 public static class CollectionResult
 {

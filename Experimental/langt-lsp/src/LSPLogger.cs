@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 
 namespace Langt.LSP;
 

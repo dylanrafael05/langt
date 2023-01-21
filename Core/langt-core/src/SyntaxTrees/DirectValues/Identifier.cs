@@ -1,5 +1,6 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
+using Langt.Structure.Resolutions;
 using Langt.Structure.Visitors;
 using System.Diagnostics.CodeAnalysis;
 
@@ -15,16 +16,6 @@ public record BoundVariableReference(BoundASTNode BoundSource, LangtVariable Var
 
     public override IResolution? Resolution => Variable;
     public override bool HasResolution => true;
-
-    public override void LowerSelf(CodeGenerator generator)
-    {
-        generator.PushValue
-        ( 
-            Type, 
-            Variable!.UnderlyingValue!.LLVM,
-            DebugSourceName
-        );
-    }
 }
 
 public record Identifier(ASTToken Tok) : ASTNode, IDirectValue

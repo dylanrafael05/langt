@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -18,13 +18,6 @@ public record BoundFunctionDefinition(FunctionDefinition Source,
                                       BoundASTNode Body) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
-
-    public override void LowerSelf(CodeGenerator lowerer)
-    {
-        if(Source.Let.Type is TokenType.Extern) return; //work is already done for us when creating the prototypes!
-        
-        lowerer.BuildFunction(Function, Body);
-    }
 }
 
 public record FunctionDefinition(ASTToken Let,

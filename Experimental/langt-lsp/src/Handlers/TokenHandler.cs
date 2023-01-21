@@ -1,5 +1,5 @@
 using Langt.AST;
-using Langt.Codegen;
+using Langt.Structure;
 using Microsoft.Extensions.Logging;
 using OmniSharp.Extensions.LanguageServer.Protocol.Client.Capabilities;
 using OmniSharp.Extensions.LanguageServer.Protocol.Document;

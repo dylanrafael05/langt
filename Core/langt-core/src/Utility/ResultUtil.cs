@@ -1,7 +1,8 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.AST;
-using Langt.Codegen;
-using Langt.Utility.Collections;
+using Langt.Structure;
+using Langt.Structure.Collections;
+using Langt.Structure.Resolutions;
 using Results.Interfaces;
 
 namespace Langt.Utility;

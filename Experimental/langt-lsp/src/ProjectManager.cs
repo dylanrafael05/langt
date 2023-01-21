@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Utility;
 using OmniSharp.Extensions.LanguageServer.Protocol;
 using OmniSharp.Extensions.LanguageServer.Protocol.Models;

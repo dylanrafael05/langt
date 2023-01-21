@@ -1,5 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Utility;
 
 namespace Langt.AST;
@@ -8,11 +8,11 @@ namespace Langt.AST;
 // TODO: in what circumstances would "no fail" execution be requried?
 // It appears that the main case for this is resolution; is there another way to report resolution failures?
 
-public record ASTPassState(CodeGenerator CG, bool Noisy, bool CanFail);
+public record ASTPassState(Context CG, bool Noisy, bool CanFail);
 
-public record GeneralPassState(CodeGenerator CG, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
+public record GeneralPassState(Context CG, bool Noisy, bool CanFail) : ASTPassState(CG, Noisy, CanFail)
 {
-    public static GeneralPassState Start(CodeGenerator gen) => new(gen, true, true);
+    public static GeneralPassState Start(Context gen) => new(gen, true, true);
 }
 
 public struct TypeCheckOptions

@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
 using Langt.Utility;

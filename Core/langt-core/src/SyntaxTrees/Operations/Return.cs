@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -8,7 +8,7 @@ public record BoundReturn(Return Source, BoundASTNode? Value) : BoundASTNode(Sou
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         if(Value is null)
         {

@@ -2,7 +2,7 @@ using System.Runtime.InteropServices;
 using Langt.Lexing;
 using Langt.AST;
 using Langt.Utility;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Optimization;
 using Langt.Parsing;
 using Langt.Structure.Visitors;

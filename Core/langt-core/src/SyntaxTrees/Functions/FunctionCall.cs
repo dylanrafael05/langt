@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -8,7 +8,7 @@ public record BoundFunctionPointerCall(ASTNode Source, BoundASTNode Function, Bo
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Function, Arguments};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Function.Lower(generator);
 
@@ -26,7 +26,7 @@ public record BoundFunctionCall(ASTNode Source, LangtFunction Function, BoundAST
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Arguments};
 
-    public override void LowerSelf(CodeGenerator lowerer)
+    public override void LowerSelf(Context lowerer)
     {
         lowerer.BuildFunctionCall
         (

@@ -149,3 +149,6 @@ $RECYCLE.BIN/
 .DS_Store
 
 _NCrunch*
+
+# Pycache
+__pycache__/

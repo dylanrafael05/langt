@@ -1,11 +1,11 @@
-namespace Langt.Codegen;
+namespace Langt.Structure;
 
 using Langt.AST;
 using TT = Langt.Lexing.TokenType;
 
 public static class BuiltinOperators
 {
-    public static void Initialize(CodeGenerator generator)
+    public static void Initialize(Context generator)
     {
         // NEGATION //
         foreach(var r in LangtType.IntegerTypes)
@@ -23,7 +23,7 @@ public static class BuiltinOperators
         {
             var convIR = generator.ResolveConversion(r, i, SourceRange.Default).Expect().TransformProvider.TransformerFor(i, r);
 
-            void Create(TT op, CodeGenerator.BinaryOpDefiner definer)
+            void Create(TT op, Context.BinaryOpDefiner definer)
             {
                 generator.DefineBinaryOperator(op, i, r, r, (b, x, y) => definer(b, convIR.Perform(generator, x), y));
                 generator.DefineBinaryOperator(op, r, i, r, (b, x, y) => definer(b, x, convIR.Perform(generator, y)));
@@ -67,7 +67,7 @@ public static class BuiltinOperators
             var im = convmM?.Input == i1 ? i1 : i2;
             var iM = convmM?.Input == i1 ? i2 : i1;
 
-            void Create(TT op, CodeGenerator.BinaryOpDefiner definer)
+            void Create(TT op, Context.BinaryOpDefiner definer)
             {
                 if(convmM is not null)
                 {
@@ -133,7 +133,7 @@ public static class BuiltinOperators
             var im = convmM?.Input == i1 ? i1 : i2;
             var iM = convmM?.Input == i1 ? i2 : i1;
 
-            void Create(TT op, CodeGenerator.BinaryOpDefiner definer)
+            void Create(TT op, Context.BinaryOpDefiner definer)
             {
                 if(convmM is not null)
                 {

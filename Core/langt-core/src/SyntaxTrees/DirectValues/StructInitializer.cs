@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -8,7 +8,9 @@ public record BoundStructInitializer(StructInitializer Source, BoundASTNode[] Bo
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundArgs};
 
-    public override void LowerSelf(CodeGenerator lowerer)
+    // TODO: CONTINUE FROM HERE
+    // NOTE: FROM HEREEEE
+    public override void LowerSelf(Context lowerer)
     {
         var llvmArgs = new List<LLVMValueRef>();
 

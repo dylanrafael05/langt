@@ -11,7 +11,7 @@ def run():
     _, source, devel_s = sys.argv
     devel = devel_s == 'true'
 
-    impl.build(source, devel)
+    impl.build_source(source, devel)
 
 # Main execution
 if __name__ == '__main__':

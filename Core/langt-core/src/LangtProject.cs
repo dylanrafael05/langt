@@ -1,33 +1,33 @@
 using Langt.AST;
-using Langt.Optimization;
+using Langt.Structure;
+using Langt.Structure.Collections;
 using Langt.Structure.Visitors;
 using Langt.Utility;
-using Langt.Utility.Collections;
 
-namespace Langt.Codegen;
+namespace Langt;
 
 public class LangtProject
 {
     public LangtProject(ILogger logger, string llvmModuleName)
     {
         Logger = logger;
-        LLVMModuleName = llvmModuleName;
+        // LLVMModuleName = llvmModuleName;
 
         logger.Init();
 
-        CodeGenerator = new(this);
+        Context = new(this);
     }
 
-    public CodeGenerator CodeGenerator {get;}
+    public Context Context {get;}
     public LangtScope GlobalScope {get;} = new(null);
     public List<LangtFile> Files {get;} = new();
     public DiagnosticCollection Diagnostics {get;} = new();
     public OrderedList<StaticReference> References {get;} = new();
 
     public ILogger Logger {get;}
-    public string LLVMModuleName {get;}
+    // public string LLVMModuleName {get;}
     
-    public LLVMModuleRef Module => CodeGenerator.Module;
+    // public LLVMModuleRef Module => Context.Module;
 
     public void AddFileContents(FileInfo file)
         => AddFileContents(file.FullName, File.ReadAllText(file.FullName));
@@ -49,12 +49,12 @@ public class LangtProject
 
     public void BindSyntaxTrees()
     {
-        var startState = GeneralPassState.Start(CodeGenerator);
+        var startState = GeneralPassState.Start(Context);
 
         Logger.Note("Handling definitions . . . ");
         foreach(var f in Files)
         {
-            CodeGenerator.Open(f);
+            Context.Open(f);
             HandleResult(
                 f.AST.HandleDefinitions(startState)
             );
@@ -63,7 +63,7 @@ public class LangtProject
         Logger.Note("Refining definitions . . . ");
         foreach(var f in Files)
         {
-            CodeGenerator.Open(f);
+            Context.Open(f);
             HandleResult(
                 f.AST.RefineDefinitions(startState)
             );
@@ -72,68 +72,13 @@ public class LangtProject
         Logger.Note("Performing binding . . . ");
         foreach(var f in Files)
         {  
-            CodeGenerator.Open(f);
+            Context.Open(f);
             var r = f.AST.Bind(startState);  
             HandleResult(r);
 
             if(!r) continue;
             f.BoundAST = r.Value;
         }
-    }
-
-    public bool Compile(bool optimize) 
-    {
-#if DEBUG
-        try
-        {
-#endif
-        Logger.Note("Building . . . ");
-
-        BindSyntaxTrees();
-
-        if(Diagnostics.AnyErrors)
-        {
-            Logger.Note("Errors present! Stopping build process . . . ");
-            return false;
-        }
-
-
-        Logger.Note("Lowering . . . ");
-        foreach(var f in Files)
-        {
-            CodeGenerator.Open(f);
-            f.BoundAST!.Lower(CodeGenerator);
-        }
-
-#if DEBUG
-        Logger.Debug("Pre-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
-        if(!CodeGenerator.Verify()) return false;
-#endif
-        
-        if(optimize)
-        {
-            Logger.Note("Optimizing . . . ");
-            Optimizer.Optimize(CodeGenerator);
-
-#if DEBUG
-            if(!CodeGenerator.Verify()) return false;
-#endif
-
-            Logger.Note("Done building!");
-
-            Logger.Debug("Post-optimization dump:\n\r" + CodeGenerator.Module.PrintToString().ReplaceLineEndings(), "llvm");
-        }
-
-        return true;
-
-#if DEBUG
-        }
-        catch(Exception) 
-        {
-            LogAllDiagnostics();
-            throw;
-        }
-#endif
     }
 
     public void LoadFromFileOrDirectory(string input) 

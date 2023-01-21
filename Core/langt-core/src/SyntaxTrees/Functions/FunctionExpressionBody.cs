@@ -1,4 +1,4 @@
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
 
@@ -8,7 +8,7 @@ public record BoundFunctionExpressionBody(FunctionExpressionBody Source, BoundAS
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Expression};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Expression.Lower(generator);
         generator.Builder.BuildRet(generator.PopValue(DebugSourceName).LLVM);

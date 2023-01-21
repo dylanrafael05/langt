@@ -1,5 +1,5 @@
 using Langt.Lexing;
-using Langt.Codegen;
+using Langt.Structure;
 using Langt.Structure.Visitors;
 
 using TT = Langt.Lexing.TokenType;
@@ -10,7 +10,7 @@ public record BoundAndExpression(BinaryOperation Source, BoundASTNode Left, Boun
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Left.Lower(generator);
         var l = generator.PopValue(DebugSourceName);
@@ -48,7 +48,7 @@ public record BoundOrExpression(BinaryOperation Source, BoundASTNode Left, Bound
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
 
-    public override void LowerSelf(CodeGenerator generator)
+    public override void LowerSelf(Context generator)
     {
         Left.Lower(generator);
         var l = generator.PopValue(DebugSourceName);
