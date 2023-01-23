@@ -29,7 +29,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     {
         var builder = ResultBuilder.Empty();
 
-        var resolution = state.CG.ResolutionScope.Resolve(Tok.ContentStr, Range);
+        var resolution = state.CTX.ResolutionScope.Resolve(Tok.ContentStr, Range);
         builder.AddData(resolution);
         if(!resolution) return builder.BuildError<BoundASTNode>();
 
@@ -37,7 +37,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 
         return builder.Build<BoundASTNode>
         (
-            new BoundASTWrapper(this)
+            new BoundEmpty(this)
             {
                 HasResolution = true,
                 Resolution = resolution.Value

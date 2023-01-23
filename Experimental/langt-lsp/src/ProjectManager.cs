@@ -6,7 +6,7 @@ using OmniSharp.Extensions.LanguageServer.Protocol.Models;
 namespace Langt.LSP;
 public class ProjectManager
 {
-    public LangtProject Project {get; private set;} = new(new LSPLogger(), "__lsp");
+    public LangtProject Project {get; private set;} = new(new LSPLogger());
     public DiagnosticCollection Diagnostics => Project.Diagnostics;
 
     private Dictionary<DocumentUri, Source> uriMap = new();
@@ -22,7 +22,7 @@ public class ProjectManager
 
     public void RebuildProject(TextDocumentIdentifier? docToExclude = null)
     {
-        var newproj = new LangtProject(Project.Logger, Project.LLVMModuleName);
+        var newproj = new LangtProject(Project.Logger);
 
         foreach(var file in Project.Files)
         {

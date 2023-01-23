@@ -23,7 +23,7 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
     {
         var builder = ResultBuilder.Empty();
 
-        var dt = state.CG.ResolutionScope.Define
+        var dt = state.CTX.ResolutionScope.Define
         (
             s => new LangtStructureType(Name.ContentStr, s)
             {

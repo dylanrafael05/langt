@@ -7,16 +7,6 @@ namespace Langt.AST;
 public record BoundAssignment(Assignment Source, BoundASTNode Left, BoundASTNode Right) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
-
-    public override void LowerSelf(Context generator)
-    {
-        Left.Lower(generator);
-        Right.Lower(generator);
-
-        var (right, left) = (generator.PopValue(DebugSourceName), generator.PopValue(DebugSourceName));
-
-        generator.Builder.BuildStore(right.LLVM, left.LLVM);
-    }
 }
 
 public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode

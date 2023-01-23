@@ -14,7 +14,7 @@ public class LangtFunction : Resolution
 
     public required LangtFunctionType Type {get; init;}
     public required string[] ParameterNames {get; init;}
-    public required LLVMValueRef LLVMFunction {get; init;}
+    public required bool IsExtern {get; init;}
 
     public override string Name => Group.Name;
     public override string DisplayName => Group.DisplayName;

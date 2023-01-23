@@ -104,13 +104,6 @@ public class LangtFunctionType : LangtType
 
     public string SignatureString => GetFullSignatureString(IsVararg, ParameterTypes);
 
-    public override LLVMTypeRef Lower(Context context)
-        => LLVMTypeRef.CreateFunction(
-            context.LowerType(ReturnType),
-            ParameterTypes.Select(context.LowerType).ToArray(),
-            IsVararg
-        );
-
     public MatchSignatureResult MatchSignature(ASTPassState state, SourceRange range, MutableMatchSignatureInput ipt)
     {
         var level = SignatureMatchLevel.None;

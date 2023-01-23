@@ -119,26 +119,23 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
 
     public class BasicType : LangtType
     {
-        private LLVMTypeRef llvm;
-        public BasicType(string name, LLVMTypeRef llvm) : base(name)
-        {
-            this.llvm = llvm;
-        }
+        public BasicType(string name) : base(name)
+        {}
         
         // public override LLVMTypeRef Lower(Context context) => llvm;
         public override bool IsBuiltin => true;
     }
 
-    public static readonly LangtType Real64 = new BasicType("real64", LLVMTypeRef.Double) {RealBitDepth = 64};
-    public static readonly LangtType Real32 = new BasicType("real32", LLVMTypeRef.Float)  {RealBitDepth = 32};
-    public static readonly LangtType Real16 = new BasicType("real16", LLVMTypeRef.Half)   {RealBitDepth = 16};
-    public static readonly LangtType Int64  = new BasicType("int64" , LLVMTypeRef.Int64)  {IntegerBitDepth = 64};
-    public static readonly LangtType Int32  = new BasicType("int32" , LLVMTypeRef.Int32)  {IntegerBitDepth = 32};
-    public static readonly LangtType Int16  = new BasicType("int16" , LLVMTypeRef.Int16)  {IntegerBitDepth = 16};
-    public static readonly LangtType Int8   = new BasicType("int8"  , LLVMTypeRef.Int8)   {IntegerBitDepth = 08};
-    public static readonly LangtType Bool   = new BasicType("bool"  , LLVMTypeRef.Int1);
-    public static readonly LangtType None   = new BasicType("none"  , LLVMTypeRef.Void);
-    public static readonly LangtType Ptr    = new BasicType("ptr"   , LLVMTypeRef.CreatePointer(LLVMTypeRef.Int8, 0));
+    public static readonly LangtType Real64 = new BasicType(LangtWords.Real64)    {RealBitDepth = 64};
+    public static readonly LangtType Real32 = new BasicType(LangtWords.Real32)    {RealBitDepth = 32};
+    public static readonly LangtType Real16 = new BasicType(LangtWords.Real16)    {RealBitDepth = 16};
+    public static readonly LangtType Int64  = new BasicType(LangtWords.Integer64) {IntegerBitDepth = 64};
+    public static readonly LangtType Int32  = new BasicType(LangtWords.Integer32) {IntegerBitDepth = 32};
+    public static readonly LangtType Int16  = new BasicType(LangtWords.Integer16) {IntegerBitDepth = 16};
+    public static readonly LangtType Int8   = new BasicType(LangtWords.Integer8)  {IntegerBitDepth = 08};
+    public static readonly LangtType Bool   = new BasicType(LangtWords.Boolean);
+    public static readonly LangtType None   = new BasicType(LangtWords.Unit);
+    public static readonly LangtType Ptr    = new BasicType(LangtWords.Pointer);
 
     public static readonly LangtType[] IntegerTypes = {Int8, Int16, Int32, Int64};
     public static readonly LangtType[] RealTypes    = {Real16, Real32, Real64};
@@ -152,7 +149,7 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
         Ptr
     };
 
-    public static readonly LangtType Error = new BasicType("error", LLVMTypeRef.Void);
+    public static readonly LangtType Error = new BasicType(LangtWords.Error);
 
     public bool IsError => ReferenceEquals(this, Error);
 }

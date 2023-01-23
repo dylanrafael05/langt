@@ -9,9 +9,6 @@ public class LangtReferenceType : LangtTypeWithElement
     protected override string ModifyName(string nameIn)
         => "&" + nameIn;
 
-    public override LLVMTypeRef Lower(Context context)
-        => Ptr.Lower(context);
-
     public static Result<LangtReferenceType> Create(LangtType elem, SourceRange range = default)
     {
         if(elem.IsReference)

@@ -17,7 +17,8 @@ public struct LowerBoundGroup : ILowerImplementation<BoundGroup>
                 {
                     cg.Builder.BuildStore
                     (
-                        cg.CurrentFunction!.LLVMFunction.GetParam(variable.ParameterNumber!.Value), llvm
+                        cg.CurrentFunction!.GetParam(variable.ParameterNumber!.Value), 
+                        llvm
                     );
                 }
 

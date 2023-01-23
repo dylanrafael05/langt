@@ -4,21 +4,18 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record BoundCastExpression(CastExpression Source, BoundASTNode Value, ITransformer Transformer) : BoundASTNode(Source)
+public record BoundPointerCastExpression(CastExpression Source, BoundASTNode Value, LangtPointerType CastType) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
-    public override void LowerSelf(Context lowerer)
-    {
-        Value.Lower(lowerer);
 
-        var v = lowerer.PopValue(DebugSourceName);
+    public override LangtType Type => CastType;
+}
 
-        lowerer.PushValue( 
-            Transformer!.Output,
-            Transformer.Perform(lowerer, v.LLVM),
-            DebugSourceName
-        );
-    }
+public record BoundAliasCastExpression(CastExpression Source, BoundASTNode Value, LangtType AliasType) : BoundASTNode(Source)
+{
+    public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
+
+    public override LangtType Type => AliasType;
 }
 
 public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
@@ -45,7 +42,26 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 
         var (val, type) = results.Value;
 
-        var cv = state.CG.ResolveConversion(type, val.Type, Range);
+        // Handle pointer bitcasting
+        if(val.Type.IsPointer && type.IsPointer)
+        {
+            return builder.Build<BoundASTNode>
+            (
+                new BoundPointerCastExpression(this, val, type.Pointer)
+            );
+        }
+
+        // Handle alias type casting
+        if((val.Type.IsAlias && type == val.Type.ElementType) || (type.IsAlias && val.Type == type.ElementType))
+        {
+            return builder.Build<BoundASTNode>
+            (
+                new BoundAliasCastExpression(this, val, type)
+            );
+        }
+
+        // Conversion
+        var cv = state.CTX.ResolveConversion(type, val.Type, Range);
         builder.AddData(cv);
 
         if(!cv) return builder.BuildError<BoundASTNode>();
@@ -54,7 +70,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         // TODO: make RawExpressionType required or a parameter
         return builder.Build<BoundASTNode>
         (
-            new BoundCastExpression(this, val, conversion.TransformProvider.TransformerFor(val.Type, type))
+            new BoundConversion(val with {ASTSource = this}, conversion)
             {
                 Type = type
             }

@@ -53,7 +53,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
             varT = boundValue.NaturalType ?? boundValue.Type;
         }
 
-        var couldDef = state.CG.ResolutionScope.Define
+        var couldDef = state.CTX.ResolutionScope.Define
         (
             s => new LangtVariable(Identifier.ContentStr, varT, s) 
             {

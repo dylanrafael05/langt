@@ -23,23 +23,6 @@ public class LangtOptionType : LangtType
 
     public const uint TagLocation = 1;
 
-    // TODO: ensure that pointers to option types are also valid pointers to their options
-    public override LLVMTypeRef Lower(Context context)
-    {
-        var maxSize = OptionTypes.Max(context.Sizeof);
-
-        var elems = new List<LLVMTypeRef>
-        {
-            LLVMTypeRef.CreateArray(LLVMTypeRef.Int8, (uint)maxSize),
-            LLVMTypeRef.Int8 // Tag
-        };
-
-        var s = context.Context.CreateNamedStruct(FullName);
-        s.StructSetBody(elems.ToArray(), false);
-
-        return s;
-    }
-
     public static Result<LangtOptionType> Create(IReadOnlySet<LangtType> options, SourceRange range = default)
     {
         if(options.Count == 0)

@@ -4,8 +4,8 @@ exports.activate = void 0;
 const vscode_1 = require("vscode");
 const node_1 = require("vscode-languageclient/node");
 const vscode_jsonrpc_1 = require("vscode-jsonrpc");
-// TODO: remove
-const serverPath = String.raw `C:\Users\dylan\OneDrive\Desktop\Programming\langt\Experimental\langt-lsp\bin\Debug\net7.0\win-x64\langt-lsp.dll`;
+// TODO: replace with stored path
+const serverPath = String.raw `..\langt-lsp\bin\Debug\net7.0\win-x64\langt-lsp.dll`;
 function activate(context) {
     // The server is implemented in node
     let serverExe = 'dotnet';

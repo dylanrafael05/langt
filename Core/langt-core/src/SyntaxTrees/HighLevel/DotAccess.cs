@@ -35,7 +35,11 @@ public record StaticAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         return builder.Build<BoundASTNode>
         (
-            new BoundStaticAccess(this, left, Right, resolutionResult.Value)
+            new BoundEmpty(this)
+            {
+                Resolution = resolutionResult.Value,
+                HasResolution = true
+            }
         )
         .AddStaticReference(Right.Range, resolutionResult.Value);
     }

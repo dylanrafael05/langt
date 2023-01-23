@@ -11,39 +11,39 @@ public class Context : IProjectDependency
 {
     public static Dictionary<OperatorSpec, string> MagicNames {get;} = new() 
     {
-        [new(OperatorType.Binary, TokenType.Plus        )] = "op_add"          ,
-        [new(OperatorType.Binary, TokenType.Minus       )] = "op_sub"          ,
-        [new(OperatorType.Binary, TokenType.Star        )] = "op_mul"          ,
-        [new(OperatorType.Binary, TokenType.Slash       )] = "op_div"          ,
-        [new(OperatorType.Binary, TokenType.Percent     )] = "op_mod"          ,
+        [new(OperatorType.Binary, TokenType.Plus        )] = LangtWords.MagicAdd,
+        [new(OperatorType.Binary, TokenType.Minus       )] = LangtWords.MagicSub,
+        [new(OperatorType.Binary, TokenType.Star        )] = LangtWords.MagicMul,
+        [new(OperatorType.Binary, TokenType.Slash       )] = LangtWords.MagicDiv,
+        [new(OperatorType.Binary, TokenType.Percent     )] = LangtWords.MagicMod,
         
-        [new(OperatorType.Binary, TokenType.DoubleEquals)] = "op_equal"        ,
-        [new(OperatorType.Binary, TokenType.NotEquals   )] = "op_not_equal"    ,
-        [new(OperatorType.Binary, TokenType.LessThan    )] = "op_less"         ,
-        [new(OperatorType.Binary, TokenType.LessEqual   )] = "op_less_equal"   ,
-        [new(OperatorType.Binary, TokenType.GreaterThan )] = "op_greater"      ,
-        [new(OperatorType.Binary, TokenType.GreaterEqual)] = "op_greater_equal",
+        [new(OperatorType.Binary, TokenType.DoubleEquals)] = LangtWords.MagicEq,
+        [new(OperatorType.Binary, TokenType.NotEquals   )] = LangtWords.MagicNotEq,
+        [new(OperatorType.Binary, TokenType.LessThan    )] = LangtWords.MagicLess,
+        [new(OperatorType.Binary, TokenType.LessEqual   )] = LangtWords.MagicLessEq,
+        [new(OperatorType.Binary, TokenType.GreaterThan )] = LangtWords.MagicGreat,
+        [new(OperatorType.Binary, TokenType.GreaterEqual)] = LangtWords.MagicGreatEq,
 
-        [new(OperatorType.Unary , TokenType.Minus       )] = "op_neg"         ,
-        [new(OperatorType.Unary , TokenType.Not         )] = "op_not"         ,
+        [new(OperatorType.Unary , TokenType.Minus       )] = LangtWords.MagicNeg,
+        [new(OperatorType.Unary , TokenType.Not         )] = LangtWords.MagicNot,
     };
     public static Dictionary<string, string> MagicNameToDescription {get;} = new()
     {
-        ["op_add"          ] = "operator +",
-        ["op_sub"          ] = "operator -",
-        ["op_mul"          ] = "operator *",
-        ["op_div"          ] = "operator /",
-        ["op_mod"          ] = "operator %",
+        [LangtWords.MagicAdd    ] = "operator +",
+        [LangtWords.MagicSub    ] = "operator -",
+        [LangtWords.MagicMul    ] = "operator *",
+        [LangtWords.MagicDiv    ] = "operator /",
+        [LangtWords.MagicMod    ] = "operator %",
 
-        ["op_equal"        ] = "operator ==",
-        ["op_not_equal"    ] = "operator !=",
-        ["op_less"         ] = "operator <" ,
-        ["op_less_equal"   ] = "operator <=",
-        ["op_greater"      ] = "operator >" ,
-        ["op_greater_equal"] = "operator >=",
+        [LangtWords.MagicEq     ] = "operator ==",
+        [LangtWords.MagicNotEq  ] = "operator !=",
+        [LangtWords.MagicLess   ] = "operator <" ,
+        [LangtWords.MagicLessEq ] = "operator <=",
+        [LangtWords.MagicGreat  ] = "operator >" ,
+        [LangtWords.MagicGreatEq] = "operator >=",
 
-        ["op_neg"          ] = "operator unary -",
-        ["op_not"          ] = "operator not",
+        [LangtWords.MagicNeg    ] = "operator unary -",
+        [LangtWords.MagicNot    ] = "operator not",
     };
 
     public static string DisplayableFunctionGroupName(string name) 
@@ -51,6 +51,7 @@ public class Context : IProjectDependency
 
     public LangtProject Project {get; init;}
 
+    public LangtFunction? CurrentFunction {get; set;}
     /// <summary>
     /// The scope in which resolution is currently taking place.
     /// </summary>
@@ -85,8 +86,7 @@ public class Context : IProjectDependency
         CurrentNamespace = null;
     }
 
-    private readonly List<LangtConversion> conversions = new();
-    private readonly Dictionary<(LangtType to, LangtType from), LangtConversion> directConversions = new();
+    private readonly List<IConversionProvider> conversions = new();
 
     /// <summary>
     /// The diagnostic collector used by the project this code generator depends on.
@@ -115,7 +115,7 @@ public class Context : IProjectDependency
             Project.GlobalScope.DefineProxy(bt, SourceRange.Default).Expect();
         }
         
-        foreach(var conv in LangtConversion.Builtin)
+        foreach(var conv in LangtConversion.Builtins)
         {
             DefineConversion(conv);
         }
@@ -138,6 +138,38 @@ public class Context : IProjectDependency
         return Project.GlobalScope.ResolveFunctionGroup(name, SourceRange.Default, false).Expect("Operators that are known must exist in the global scope.");
     }
 
+    public void DefineUnaryOperator(TokenType op, LangtType x, LangtType r)
+    {
+        var opfn = GetOperator(new(OperatorType.Unary, op));
+
+        var ftype = LangtFunctionType.Create(new[] {x}, r).Expect();
+
+        var fn = new LangtFunction(opfn)
+        {
+            Type           = ftype,
+            ParameterNames = new[] {"__x"},
+            IsExtern       = false
+        };
+
+        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
+    }
+
+    public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r)
+    {
+        var opfn = GetOperator(new(OperatorType.Binary, op));
+
+        var ftype = LangtFunctionType.Create(new[] {a, b}, r).Expect();
+
+        var fn = new LangtFunction(opfn)
+        { 
+            Type           = ftype,
+            ParameterNames = new[] {"__a", "__b"},
+            IsExtern       = false
+        };
+
+        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
+    }
+
     public void SetCurrentNamespace(LangtNamespace ns)
     {
         Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
@@ -148,16 +180,9 @@ public class Context : IProjectDependency
         CurrentNamespace = ns;
     }
 
-    public void DefineConversion(LangtConversion conversion)
+    public void DefineConversion(IConversionProvider conversion)
     {
-        if(conversion.TransformProvider.IsDirect)
-        {
-            directConversions.Add((conversion.TransformProvider.DirectResult!, conversion.TransformProvider.DirectInput!), conversion);
-        }
-        else
-        {
-            conversions.Add(conversion);
-        }
+        conversions.Add(conversion);
     }
 
     public IScope OpenScope()
@@ -167,21 +192,18 @@ public class Context : IProjectDependency
         ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close scope; the current scope is the global scope!");
     }
 
-    public Result<LangtConversion> ResolveConversion(LangtType to, LangtType from, SourceRange range) 
+    public Result<LangtConversion> ResolveConversion(LangtType input, LangtType output, SourceRange range) 
     {
-        if(!directConversions.TryGetValue((to, from), out var conv))
-        {
-            conv = conversions.FirstOrDefault(c => c.TransformProvider.CanPerform(from, to));
+        var conv = conversions.Select(c => c.GetConversionFor(input, output)).FirstOrDefault(c => c.HasValue);
 
-            if(conv is null)
-            {
-                return ResultBuilder.Empty()
-                    .WithDgnError($"Could not find a conversion from {from.FullName} to {to.FullName}", range)
-                    .BuildError<LangtConversion>()
-                ;
-            }
+        if(conv is null)
+        {
+            return ResultBuilder.Empty()
+                .WithDgnError($"Could not find a conversion from {input.FullName} to {output.FullName}", range)
+                .BuildError<LangtConversion>()
+            ;
         }
         
-        return Result.Success(conv);
+        return Result.Success(conv.Value);
     }
 }

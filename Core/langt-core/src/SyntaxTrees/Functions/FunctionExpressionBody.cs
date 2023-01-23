@@ -7,12 +7,6 @@ namespace Langt.AST;
 public record BoundFunctionExpressionBody(FunctionExpressionBody Source, BoundASTNode Expression) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Expression};
-
-    public override void LowerSelf(Context generator)
-    {
-        Expression.Lower(generator);
-        generator.Builder.BuildRet(generator.PopValue(DebugSourceName).LLVM);
-    }
 }
 
 public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : FunctionBody

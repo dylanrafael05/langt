@@ -20,9 +20,21 @@ builds : str = r'Builds'
 #################################
 # FUNCTIONS
 #################################
-def clear(dir: str):
+def cleardir(dir: str):
+    """
+    Clear a directory if it exists.
+    """
     if os.path.exists(dir):
         shutil.rmtree(dir)
+
+def reqsys(cmd: str):
+    """
+    Forward the given string to the system's command line and execute it, forwarding the 
+    return code of the call as the return code of this instance of python if it is non-zero.
+    """
+    result = os.system(cmd)
+    if result != 0:
+        exit(result)
 
 #################################
 # MAIN BUILD SCRIPTS
@@ -53,8 +65,8 @@ def build_source(source: str, devel: bool):
 
             fol = os.path.join(ccwd, builds, source, target)
 
-            clear(fol)
-            os.system(rf'dotnet publish -o {fol} -r {target} --sc true')
+            cleardir(fol)
+            reqsys(rf'dotnet publish -o {fol} -r {target} --sc true')
 
             print('-' * 50)
             print(f'Zipping build')
@@ -73,8 +85,8 @@ def build_source(source: str, devel: bool):
 
         fol = os.path.join(ccwd, builds, source, 'Debug')
 
-        clear(fol)
-        os.system(rf'dotnet build -o {fol} --sc false')
+        cleardir(fol)
+        reqsys(rf'dotnet build -o {fol} --sc false')
 
     # Return cwd
     os.chdir(ccwd)

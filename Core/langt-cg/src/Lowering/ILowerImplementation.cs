@@ -1,4 +1,5 @@
 using Langt.AST;
+using Langt.Utility;
 
 namespace Langt.CG.Lowering;
 
@@ -14,6 +15,16 @@ public interface ILowerImplementation<T> : ILowerImplementation where T : BoundA
 
 public interface ILowerImplementation 
 {
+    static ILowerImplementation()
+    {
+#if DEBUG
+        foreach(var t in typeof(BoundASTNode).Assembly.GetTypes().Where(t => t.BaseType == typeof(BoundASTNode)))
+        {
+            Expect.NonNull(DefaultFor(t), $"Bound AST node type {t.Name} must have associated lower implementation");
+        }
+#endif
+    }
+
     public static void Lower(CodeGenerator cg, BoundASTNode node) 
     {
         var impl = DefaultFor(node.GetType());
@@ -28,10 +39,11 @@ public interface ILowerImplementation
         => DefaultFor(typeof(T));
     public static ILowerImplementation? DefaultFor(Type t)
     {
-        var typeImpl = typeof(ILowerImplementation)
+        var inter    = typeof(ILowerImplementation<>).MakeGenericType(t);
+        var typeImpl = typeof(ILowerImplementation<>)
             .Assembly
             .GetTypes()
-            .FirstOrDefault(t => t.IsClass && t.GetInterfaces().Contains(typeof(ILowerImplementation<>).MakeGenericType(t)));
+            .FirstOrDefault(ty => ty.GetInterfaces().FirstOrDefault() == inter);
 
         if(typeImpl is null) return null;
 

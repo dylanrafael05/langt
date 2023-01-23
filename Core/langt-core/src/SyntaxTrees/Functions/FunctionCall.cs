@@ -7,35 +7,11 @@ namespace Langt.AST;
 public record BoundFunctionPointerCall(ASTNode Source, BoundASTNode Function, BoundASTNode[] Arguments, LangtFunctionType FunctionType) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Function, Arguments};
-
-    public override void LowerSelf(Context generator)
-    {
-        Function.Lower(generator);
-
-        generator.BuildFunctionCall
-        (
-            generator.PopValue(DebugSourceName).LLVM,
-            Arguments,
-            FunctionType,
-            DebugSourceName
-        );
-    }
 }
 
 public record BoundFunctionCall(ASTNode Source, LangtFunction Function, BoundASTNode[] Arguments) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Arguments};
-
-    public override void LowerSelf(Context lowerer)
-    {
-        lowerer.BuildFunctionCall
-        (
-            Function.LLVMFunction,
-            Arguments,
-            Function.Type,
-            DebugSourceName
-        );
-    }
 }
 
 public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollection<ASTNode> Arguments, ASTToken End) : ASTNode, IDirectValue

@@ -16,7 +16,7 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var fn = state.CG.GetOperator(new(Parsing.OperatorType.Unary, Operator.Type));
+        var fn = state.CTX.GetOperator(new(Parsing.OperatorType.Unary, Operator.Type));
         var fr = fn.ResolveOverload(new[] {Operand}, Range, state);
 
         var builder = ResultBuilder.From(fr);

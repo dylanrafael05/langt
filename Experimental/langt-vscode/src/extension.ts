@@ -5,7 +5,7 @@ import { LanguageClient, LanguageClientOptions, SettingMonitor, ServerOptions, T
 import { Trace } from 'vscode-jsonrpc';
 
 // TODO: replace with stored path
-const serverPath = String.raw`C:\Users\dylan\OneDrive\Desktop\Programming\langt\Experimental\langt-lsp\dbuild\langt-lsp.dll`
+const serverPath = String.raw`..\langt-lsp\bin\Debug\net7.0\win-x64\langt-lsp.dll`
 
 export function activate(context: ExtensionContext) {
 

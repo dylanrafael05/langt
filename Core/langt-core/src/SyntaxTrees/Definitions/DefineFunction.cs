@@ -1,5 +1,6 @@
 using Langt.Lexing;
 using Langt.Structure;
+using Langt.Structure.Resolutions;
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -52,7 +53,7 @@ public record FunctionDefinition(ASTToken Let,
 
     public override Result HandleDefinitions(ASTPassState state)
     {
-        FunctionGroup = state.CG.ResolutionScope.ResolveFunctionGroup
+        FunctionGroup = state.CTX.ResolutionScope.ResolveFunctionGroup
             (
                 Identifier.ContentStr, 
                 Range,
@@ -63,7 +64,7 @@ public record FunctionDefinition(ASTToken Let,
 
         if(FunctionGroup is null)
         {
-            return state.CG.ResolutionScope.Define
+            return state.CTX.ResolutionScope.Define
             (
                 s => new LangtFunctionGroup(Identifier.ContentStr, s), Range, 
                 f => FunctionGroup = f
@@ -77,7 +78,7 @@ public record FunctionDefinition(ASTToken Let,
 
     public override Result RefineDefinitions(ASTPassState state)
     {
-        state.CG.Logger.Debug($"Entered .{nameof(RefineDefinitions)}", "results");
+        state.CTX.Logger.Debug($"Entered .{nameof(RefineDefinitions)}", "results");
         var builder = ResultBuilder.Empty();
 
         var rtr = Type.Resolve(state);
@@ -115,14 +116,13 @@ public record FunctionDefinition(ASTToken Let,
         if(!builder) return builder.Build();
 
         var fnType = fnres.Value;
-
-        var lf = state.CG.CreateNewLLVMFunction(Identifier.ContentStr, Let.Type is TokenType.Extern, fnType);
         
         Function = new LangtFunction(FunctionGroup!)
         {
             Type            = fnType,
             ParameterNames  = ArgSpec.Values.Select(v => v.Name.ContentStr).ToArray(),
-            LLVMFunction    = lf,
+            
+            IsExtern        = Let.Type is TokenType.Extern,
 
             Documentation   = Let.Documentation,
             DefinitionRange = SourceRange.CombineFrom(Let, Type)
@@ -143,15 +143,15 @@ public record FunctionDefinition(ASTToken Let,
         if(Let.Type is TokenType.Extern || Function is null)
         {
             // TODO: precheck extern existence
-            return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
+            return Result.Success<BoundASTNode>(new BoundEmpty(this));
         }
 
-        var previousFunction = state.CG.CurrentFunction;
+        var previousFunction = state.CTX.CurrentFunction;
         
         Result<BoundASTNode> bodyResult;
 
-        state.CG.CurrentFunction = Function;
-        var scope = state.CG.OpenScope();
+        state.CTX.CurrentFunction = Function;
+        var scope = state.CTX.OpenScope();
         {
             DefineParametersInScope(builder, scope);
 
@@ -166,8 +166,8 @@ public record FunctionDefinition(ASTToken Let,
 
             if(!builder.WithData(bodyResult)) return builder.BuildError<BoundASTNode>();
         }
-        state.CG.CloseScope();
-        state.CG.CurrentFunction = previousFunction;
+        state.CTX.CloseScope();
+        state.CTX.CurrentFunction = previousFunction;
 
         return builder.Build<BoundASTNode>
         (

@@ -3,12 +3,12 @@ using Langt.Lexing;
 using Langt.AST;
 using Langt.Utility;
 using Langt.Structure;
-using Langt.Optimization;
 using Langt.Parsing;
 using Langt.Structure.Visitors;
 using Langt;
 using System.CommandLine;
 using System.Text.RegularExpressions;
+using Langt.CG;
 
 namespace Langt.CLI;
 
@@ -134,21 +134,21 @@ public static partial class Program
         while(loop);
     }
 
-    public static LangtProject CompileProject(string input, ILogger logger, bool disableopt)
+    public static LangtCompilation CompileProject(string input, ILogger logger, bool disableopt)
     {
-        var proj = new LangtProject(logger, input);
+        var comp = new LangtCompilation(new LangtProject(logger), input);
 
-        proj.LoadFromFileOrDirectory(input);
-        proj.Compile(!disableopt);
+        comp.Project.LoadFromFileOrDirectory(input);
+        comp.Compile(!disableopt);
 
-        proj.LogAllDiagnostics();
+        comp.Project.LogAllDiagnostics();
 
-        if(proj.Diagnostics.AnyErrors)
+        if(comp.Diagnostics.AnyErrors)
         {
             CLILogger.Abort();
         }
 
-        return proj;
+        return comp;
     }
 
     public static ILogger InitLogger(bool noisy, string[] debugFlags)

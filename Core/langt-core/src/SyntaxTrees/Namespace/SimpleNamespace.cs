@@ -13,7 +13,7 @@ public record SimpleNamespace(ASTToken Name) : ASTNamespace
 
         var builder = ResultBuilder.Empty();
 
-        var r = ResolveFrom(state.CG.Project.GlobalScope, Name.ContentStr, default, options.AllowNamespaceDefinitions);
+        var r = ResolveFrom(state.CTX.Project.GlobalScope, Name.ContentStr, default, options.AllowNamespaceDefinitions);
         builder.AddData(r);
         if(!r) return builder.BuildError<LangtNamespace>();
 

@@ -20,7 +20,7 @@ public record PtrTo(ASTToken PtrToKey, ASTToken Var) : ASTNode, IDirectValue
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var vResult = state.CG.ResolutionScope.ResolveVariable
+        var vResult = state.CTX.ResolutionScope.ResolveVariable
         (
             Var.ContentStr, 
             Range

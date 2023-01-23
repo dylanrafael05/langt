@@ -10,15 +10,18 @@ namespace Langt.CG;
 
 public class CodeGenerator
 {
-    public const string LangtIdentifierPrepend = "<langt>";
+    public delegate LLVMValueRef Applicator(LLVMValueRef input);
+    public const string LangtIdentifierPrepend = "<lgt>";
 
     public CodeGenerator(LangtCompilation compilation)
     {
         Compilation = compilation;
-        TypeBuilder = new LangtTypeBuilder {CG = this};
-        Binder = new(TypeBuilder);
 
-        Logger = compilation.Logger;
+        TypeBuilder = new TypeBuilder       {CG = this};
+        FuncBuilder = new FunctionBuilder   {CG = this};
+        ConvBuilder = new ConversionBuilder {CG = this};
+
+        Binder = new(TypeBuilder, FuncBuilder, ConvBuilder);
 
         LLVMContext = LLVMContextRef.Global;   
         Module  = LLVMContext.CreateModuleWithName(compilation.LLVMModuleName);
@@ -27,26 +30,26 @@ public class CodeGenerator
 
         Builder = LLVMContext.CreateBuilder();
 
-        Initialize();
-    }
-
-    public void Initialize()
-    {
-        BuiltinOperators.Initialize(this);
+        ImplementBuiltinOperators.Initialize(this);
     }
 
     public LangtCompilation Compilation {get;}
-    public TypeBuilder TypeBuilder {get;}
+    public Builder<LangtType, LLVMTypeRef> TypeBuilder {get;}
+    public Builder<LangtFunction, LLVMValueRef> FuncBuilder {get;}
+    public Builder<LangtConversion, Applicator> ConvBuilder {get;}
     public Binder Binder {get;}
 
-    public LangtFunction? CurrentFunction {get; set;}
+    public LLVMValueRef CurrentFunction {get; private set;} = default;
+    public LangtFunctionType CurrentFunctionType {get; private set;} = default!;
 
     public LLVMContextRef LLVMContext {get;}
     public LLVMTargetDataRef Target {get;}
     public LLVMModuleRef Module {get;}
     public LLVMBuilderRef Builder {get;}
 
-    public ILogger Logger {get;}
+    public ILogger Logger => Compilation.Logger;
+    public LangtProject Project => Compilation.Project;
+    public Context Context => Project.Context;
     
     private readonly Dictionary<LangtType, LLVMTypeRef> loweredTypes = new();
     private readonly Stack<LangtValue> unnamedValues = new();
@@ -68,64 +71,37 @@ public class CodeGenerator
         ILowerImplementation.Lower(this, node);
     }
 
+    // TODO: make static specs available
+    public LangtFunctionGroup GetOperator(OperatorSpec spec) 
+        => Compilation.Project.Context.GetOperator(spec);
+
+    public void EnterFunction(LangtFunction fn) 
+    {
+        var l = Binder.Get(fn);
+        CurrentFunction = l;
+        CurrentFunctionType = fn.Type;
+
+        var entry = LLVMContext.AppendBasicBlock(l, ".entry");
+        Builder.PositionAtEnd(entry);
+    }
+    public void ExitFunction()
+    {
+        CurrentFunction = default;
+        CurrentFunctionType = default!;
+    }
+    public void Function(LangtFunction fn, Action act)
+    {
+        EnterFunction(fn);
+        act();
+        ExitFunction();
+    }
+
     public ulong Sizeof(LangtType type)
     {
         if(type == LangtType.None) return 0;
 
         var l = Binder.Get(type);
         return Target.StoreSizeOfType(l);
-    }
-
-    public void DefineUnaryOperator(TokenType op, LangtType x, LangtType r, UnaryOpDefiner definer)
-    {
-        var opfn = Compilation.Project.Context.GetOperator(new(OperatorType.Unary, op));
-
-        var ftype = LangtFunctionType.Create(new[] {x}, r).Expect();
-
-        var lfn = CreateNewLLVMFunction(opfn.Name, false, ftype);
-        var fn = new LangtFunction(opfn)
-        {
-            Type           = ftype,
-            ParameterNames = new[] {"__x"},
-            LLVMFunction   = lfn
-        };
-
-        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
-
-        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
-        Builder.PositionAtEnd(bb);
-
-        Builder.BuildRet
-        (
-            definer(Builder, lfn.GetParam(0))
-        );
-    }
-
-    public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r, BinaryOpDefiner definer)
-    {
-        // Logger.Note($"Defining op {a.FullName} {op} {b.FullName}");
-        
-        var opfn = Compilation.Project.Context.GetOperator(new(OperatorType.Binary, op));
-
-        var ftype = LangtFunctionType.Create(new[] {a, b}, r).Expect();
-
-        var lfn = CreateNewLLVMFunction(opfn.Name, false, ftype);
-        var fn = new LangtFunction(opfn)
-        { 
-            Type           = ftype,
-            ParameterNames = new[] {"__a", "__b"},
-            LLVMFunction   = lfn
-        };
-
-        opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
-
-        var bb = LLVMContext.AppendBasicBlock(fn.LLVMFunction, "entry");
-        Builder.PositionAtEnd(bb);
-
-        Builder.BuildRet
-        (
-            definer(Builder, lfn.GetParam(0), lfn.GetParam(1))
-        );
     }
 
     public void BuildFunctionCall(LLVMValueRef fn, BoundASTNode[] arguments, LangtFunctionType fntype, string sourceName)
@@ -148,22 +124,6 @@ public class CodeGenerator
         {
             PushValue(fntype!.ReturnType, r, sourceName);
         }
-    }
-
-    public LLVMValueRef CreateNewLLVMFunction(string name, bool isExtern, LangtFunctionType type, LangtNamespace ns) 
-    {
-        return Module.AddFunction
-        (
-            GetGeneratedFunctionName
-            (
-                isExtern, 
-                ns, 
-                name,
-                type.IsVararg,
-                type.ParameterTypes
-            ), 
-            Binder.Get(type)
-        );
     }
 
     public void PushValueNoDebug(LangtValue value)
@@ -234,12 +194,14 @@ public class CodeGenerator
         }
     }
 
-    public static string GetGeneratedFunctionName(bool isExtern, LangtNamespace? currentNamespace, string name, bool isVararg, params LangtType[] paramTypes)
+    public static string GetFunctionName(bool isExtern, string name, string fullName, bool isVararg, params LangtType[] paramTypes)
     {
         if(isExtern) return name;
-        return LangtIdentifierPrepend 
-            + (currentNamespace is null ? "" : currentNamespace.FullName + "::") 
-            + name 
-            + LangtFunctionType.GetFullSignatureString(isVararg, paramTypes);
+        return GetGeneratedFunctionName(fullName, isVararg, paramTypes);
     }
+
+    public static string GetGeneratedFunctionName(string fullName, bool isVararg, params LangtType[] paramTypes) 
+        => LangtIdentifierPrepend
+            + fullName
+            + LangtFunctionType.GetFullSignatureString(isVararg, paramTypes);
 }

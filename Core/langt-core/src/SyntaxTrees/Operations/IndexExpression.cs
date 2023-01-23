@@ -7,23 +7,6 @@ namespace Langt.AST;
 public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, BoundASTNode Index) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value, Index};
-
-    public override void LowerSelf(Context lowerer)
-    {
-        Value.Lower(lowerer);
-        var val = lowerer.PopValue(DebugSourceName);
-
-        Index.Lower(lowerer);
-        var index = lowerer.PopValue(DebugSourceName);
-
-        var pointeeType = lowerer.LowerType(Value.Type.ElementType!);
-
-        lowerer.PushValue( 
-            val.Type,
-            lowerer.Builder.BuildGEP2(pointeeType, val.LLVM, new[] {index.LLVM}, "index." + val.Type.Name),
-            DebugSourceName
-        );
-    }
 }
 
 public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, ASTToken Close) : ASTNode

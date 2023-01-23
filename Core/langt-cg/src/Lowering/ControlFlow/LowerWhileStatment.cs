@@ -6,15 +6,15 @@ public struct LowerWhileStatment : ILowerImplementation<BoundWhileStatement>
 {
     public void LowerImpl(CodeGenerator cg, BoundWhileStatement node)
     {
-        if(cg.CurrentFunction is null) 
+        if(cg.CurrentFunction is {Handle : 0}) 
         {
             cg.Logger.Fatal("Cannot lower while statement when not part of a function!");
             throw new Exception();
         }
 
-        var condBB  = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!.LLVMFunction, node.Source.While.Range.CharStart+".while.cond" );
-        var trueBB  = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!.LLVMFunction, node.Source.While.Range.CharStart+".while.true" ); 
-        var breakBB = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!.LLVMFunction, node.Source.While.Range.CharStart+".while.break");
+        var condBB  = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!, node.Source.While.Range.CharStart+".while.cond" );
+        var trueBB  = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!, node.Source.While.Range.CharStart+".while.true" ); 
+        var breakBB = cg.LLVMContext.AppendBasicBlock(cg.CurrentFunction!, node.Source.While.Range.CharStart+".while.break");
 
         cg.Builder.BuildBr(condBB);
         cg.Builder.PositionAtEnd(condBB);

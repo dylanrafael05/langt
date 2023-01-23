@@ -1,3 +1,5 @@
+using Langt.Structure.Resolutions;
+
 namespace Langt.Structure;
 
 public class LangtStructureType : LangtResolvableType
@@ -25,12 +27,4 @@ public class LangtStructureType : LangtResolvableType
         return true;
     }
     public bool HasField(string name) => Fields.Count(f => f.Name == name) is 1;
-
-    public override LLVMTypeRef Lower(Context context)
-    {
-        var s = context.Context.CreateNamedStruct(Context.LangtIdentifierPrepend + FullName);
-        s.StructSetBody(Fields.Select(f => context.LowerType(f.Type)).ToArray(), false);
-
-        return s;
-    }
 }

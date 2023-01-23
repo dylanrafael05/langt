@@ -9,7 +9,10 @@ public struct LowerFunctionDefinition : ILowerImplementation<BoundFunctionDefini
     {
         // TODO: reimpl
         if(node.Source.Let.Type is TokenType.Extern) return; //work is already done for us when creating the prototypes!
-        
-        cg.BuildFunction(Function, Body);
+
+        cg.Function(node.Function, () =>
+        {
+            cg.Lower(node.Body);
+        });
     }
 }

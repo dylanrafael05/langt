@@ -1,4 +1,5 @@
 using Langt.Structure;
+using Langt.Structure.Resolutions;
 
 namespace Langt.AST;
 

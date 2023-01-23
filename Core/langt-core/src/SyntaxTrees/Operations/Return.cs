@@ -7,19 +7,6 @@ namespace Langt.AST;
 public record BoundReturn(Return Source, BoundASTNode? Value) : BoundASTNode(Source) 
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value};
-
-    public override void LowerSelf(Context generator)
-    {
-        if(Value is null)
-        {
-            generator.Builder.BuildRetVoid();
-        }
-        else
-        {
-            Value.Lower(generator);
-            generator.Builder.BuildRet(generator.PopValue(DebugSourceName).LLVM);
-        }
-    }
 }
 
 public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
@@ -39,7 +26,7 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
     {
         if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true});
 
-        var rtype = state.CG.CurrentFunction!.Type.ReturnType;
+        var rtype = state.CTX.CurrentFunction!.Type.ReturnType;
 
         var vr = Value.BindMatchingExprType(state, rtype);
         if(!vr) return vr;

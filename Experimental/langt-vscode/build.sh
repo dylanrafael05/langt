@@ -1,5 +1,5 @@
 # Initialize
-printf $"Beginning build . . . \n"
+printf $"Beginning build of extension . . . \n"
 npm install
 
 # Compile typescript

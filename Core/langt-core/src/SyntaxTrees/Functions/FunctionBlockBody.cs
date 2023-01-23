@@ -6,16 +6,6 @@ namespace Langt.AST;
 public record BoundFunctionBlockBody(FunctionBlockBody Source, BoundASTNode Body) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Body};
-
-    public override void LowerSelf(Context generator)
-    {
-        Body.Lower(generator);
-
-        if(generator.CurrentFunction!.Type.ReturnType == LangtType.None && !Body.Returns)
-        {
-            generator.Builder.BuildRetVoid();
-        }
-    }
 }
 
 public record FunctionBlockBody(Block Block) : FunctionBody

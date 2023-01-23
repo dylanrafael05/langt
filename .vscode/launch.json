@@ -5,17 +5,27 @@
     "version": "0.2.0",
     "configurations": [
         {
-            "name": "run with deferred arguments",
+            "name": "debug (defer)",
             "type": "coreclr",
             "request": "launch",
-            "program": "${workspaceFolder}/Core/langt-cli/bin/Debug/net7.0/win-x64/langt-cli.dll",
+            "program": "${workspaceFolder}/Builds/langt-cli/Debug/langt-cli.dll",
             "args": ["defer", "--loop"],
             "cwd": "${workspaceFolder}/Examples",
             "console": "integratedTerminal",
-            "stopAtEntry": false
+            "stopAtEntry": false,
+            "preLaunchTask": "build-cli"
         },
         {
-            "name": "extension",
+            "name": "extension (quick)",
+            "type": "extensionHost",
+            "request": "launch",
+            "args": [
+                "--extensionDevelopmentPath=${workspaceFolder}/Experimental/langt-vscode"
+            ],
+            "preLaunchTask": "build-cli"
+        },
+        {
+            "name": "extension (rebuilding)",
             "type": "extensionHost",
             "request": "launch",
             "args": [

@@ -7,33 +7,6 @@ namespace Langt.AST;
 public record BoundStructInitializer(StructInitializer Source, BoundASTNode[] BoundArgs) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundArgs};
-
-    // TODO: CONTINUE FROM HERE
-    // NOTE: FROM HEREEEE
-    public override void LowerSelf(Context lowerer)
-    {
-        var llvmArgs = new List<LLVMValueRef>();
-
-        foreach(var arg in BoundArgs)
-        {
-            arg.Lower(lowerer);
-            llvmArgs.Add(lowerer.PopValue(DebugSourceName).LLVM);
-        }
-
-        var structBuild = lowerer.Builder.BuildAlloca(lowerer.LowerType(Type), Type.Name+".builder");
-
-        for(int i = 0; i < llvmArgs.Count; i++)
-        {
-            var fptr = lowerer.Builder.BuildStructGEP2(lowerer.LowerType(Type), structBuild, (uint)i, Type.Name+".builder.element."+i);
-            lowerer.Builder.BuildStore(llvmArgs[i], fptr);
-        }
-
-        lowerer.PushValue( 
-            Type,
-            lowerer.Builder.BuildLoad2(lowerer.LowerType(Type), structBuild, Type.Name),
-            DebugSourceName
-        );
-    }
 }
 
 public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection<ASTNode> Args, ASTToken Close) : ASTNode

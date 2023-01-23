@@ -8,7 +8,7 @@ namespace Langt;
 
 public class LangtProject
 {
-    public LangtProject(ILogger logger, string llvmModuleName)
+    public LangtProject(ILogger logger)
     {
         Logger = logger;
         // LLVMModuleName = llvmModuleName;

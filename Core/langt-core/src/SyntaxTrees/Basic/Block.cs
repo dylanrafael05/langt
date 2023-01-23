@@ -23,7 +23,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
             var res = n.Bind(state);
             builder.AddData(res);
             
-            var bast = res.Or(new BoundASTWrapper(n) {IsError = true})!;
+            var bast = res.Or(new BoundEmpty(n) {IsError = true})!;
 
             if(returns)
             {
@@ -76,11 +76,11 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        var scope = options.PredefinedBlockScope ?? state.CG.OpenScope();
+        var scope = options.PredefinedBlockScope ?? state.CTX.OpenScope();
 
         var r = BoundGroup.BindFromNodes(this, Statements, state, scope);
 
-        if(!options.HasPredefinedBlockScope) state.CG.CloseScope();
+        if(!options.HasPredefinedBlockScope) state.CTX.CloseScope();
 
         return r;
     }

@@ -14,6 +14,18 @@ public static class EnumerableExtensions
             }
         }
     }
+    public static IEnumerable<(T First, T Second)> ChooseSelfUnique<T>(this IEnumerable<T> e)
+    {
+        var skip = 0;
+        foreach(var x in e) 
+        {
+            foreach(var y in e.Skip(skip)) 
+            {
+                yield return (x, y);
+            }
+            skip++;
+        }
+    }
     public static IEnumerable<(T First, T Second)> ChooseSelf<T>(this IEnumerable<T> e)
         => e.Choose(e);
 

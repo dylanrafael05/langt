@@ -15,22 +15,22 @@ public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) 
 
         LNamespace = n.Value;
 
-        state.CG.SetCurrentNamespace(LNamespace);
+        state.CTX.SetCurrentNamespace(LNamespace);
 
         return Result.Success();
     }
 
     public override Result RefineDefinitions(ASTPassState state)
     {
-        if(LNamespace is not null) state.CG.SetCurrentNamespace(LNamespace!);
+        if(LNamespace is not null) state.CTX.SetCurrentNamespace(LNamespace!);
 
         return Result.Success();
     }
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
-        if(LNamespace is not null) state.CG.SetCurrentNamespace(LNamespace!);
+        if(LNamespace is not null) state.CTX.SetCurrentNamespace(LNamespace!);
 
-        return Result.Success<BoundASTNode>(new BoundASTWrapper(this));
+        return Result.Success<BoundASTNode>(new BoundEmpty(this));
     }
 }

@@ -1,7 +1,4 @@
-global using CGError = System.ValueTuple<string, Langt.SourceRange>;
-
 using System.Text;
-using Langt.Structure;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 using System.Collections;
@@ -144,35 +141,13 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : So
 public record BoundFunctionReference(BoundASTNode Source, LangtFunction Function) : BoundASTNode(Source.ASTSource)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Source};
-
-    public override void LowerSelf(Context generator)
-    {
-        generator.PushValue( 
-            Function!.Type, 
-            Function!.LLVMFunction,
-            DebugSourceName
-        );
-    }
 }
 
-public record BoundTransform(BoundASTNode Source, ITransformer Transform) : BoundASTNode(Source.ASTSource)
+public record BoundConversion(BoundASTNode Source, LangtConversion Conversion) : BoundASTNode(Source.ASTSource)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Source};
 
-    public override LangtType Type => Transform.Output;
-
-    public override void LowerSelf(Context generator)
-    {
-        Source.Lower(generator);
-        var pre = generator.PopValue(DebugSourceName);
-
-        generator.PushValue
-        (
-            Transform.Output, 
-            Transform.Perform(generator, pre.LLVM),
-            DebugSourceName
-        );
-    }
+    public override LangtType Type => Conversion.Output;
 }
 
 
@@ -208,12 +183,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// there is no distinction between the type to be inferred or the expression type itself. 
     /// </summary>
     public LangtType? NaturalType {get; init;} = null;
-    /// <summary>
-    /// What is the final, or fully transformed, type of this node.
-    /// Found using all the <see cref="ITransformer"/> instances which have been applied to
-    /// this AST node.
-    /// </summary>
-    [Obsolete("Use BoundTransform instead", true)] public LangtType TransformedType => AppliedTransformers.Count > 0 ? AppliedTransformers[^1].Output : Type;
 
     /// <summary>
     /// Whether or not this AST node contains a return statement.
@@ -248,20 +217,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     public LangtNamespace ExpectNamespace => Expect.Is<LangtNamespace>(Resolution, "Expected a namespace");
 
     /// <summary>
-    /// The list of transformers currently applied to this AST node, in reverse order 
-    /// of their application.
-    /// </summary>
-    [Obsolete("Use BoundTransform instead", true)] public List<ITransformer> AppliedTransformers {get; init;} = new();
-
-    /// <summary>
-    /// Apply the given transform to this AST node.
-    /// </summary>
-    [Obsolete("Use BoundTransform instead", true)] public void ApplyTransform(ITransformer transformer)
-    {
-        AppliedTransformers.Add(transformer);
-    }
-
-    /// <summary>
     /// Attempt to apply a dereference if this node is an l-value and is a pointer.
     /// </summary>
     /// <seealso cref="IsLValue"/>
@@ -270,7 +225,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     {
         if(!Type.IsReference) return this;
         
-        return new BoundTransform(this, DerefenceTransform.For(Type));
+        return new BoundConversion(this, LangtConversion.DereferenceFor(Type));
     }
 
     public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target, out bool coerced)
@@ -319,7 +274,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         coerced = true;
 
         // Attempt to find a conversion
-        var convResult = state.CG.ResolveConversion(target, Type, Range);
+        var convResult = state.CTX.ResolveConversion(target, Type, Range);
         if(!convResult) return builder.WithData(convResult).BuildError<BoundASTNode>()
                         .AsTargetTypeDependent();
 
@@ -336,7 +291,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         }
 
         // Return with conversion
-        var res = new BoundTransform(this, conv.TransformProvider.TransformerFor(Type, target));
+        var res = new BoundConversion(this, conv);
         return builder.Build<BoundASTNode>(res)
             .AsTargetTypeDependent();
     }
@@ -359,7 +314,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     }
 }
 
-public record BoundASTWrapper(ASTNode Source) : BoundASTNode(Source)
+public record BoundEmpty(ASTNode Source) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {};
 }
@@ -400,7 +355,7 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     public virtual Result RefineDefinitions(ASTPassState state) => Result.Success();
 
     protected virtual Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options) 
-        => Result.Success(new BoundASTWrapper(this) as BoundASTNode);
+        => Result.Success(new BoundEmpty(this) as BoundASTNode);
 
     public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions? optionsMaybe = null) 
     {

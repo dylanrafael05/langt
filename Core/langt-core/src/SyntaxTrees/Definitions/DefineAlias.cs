@@ -12,7 +12,7 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
     {
         var builder = ResultBuilder.Empty();
         
-        var dr = state.CG.ResolutionScope.Define
+        var dr = state.CTX.ResolutionScope.Define
         (
             s => new LangtAliasType(Name.ContentStr, s) 
             {

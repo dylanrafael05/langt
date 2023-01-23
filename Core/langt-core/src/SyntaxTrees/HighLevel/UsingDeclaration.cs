@@ -13,7 +13,7 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 
         if(ns)
         {
-            state.CG.CurrentFile!.IncludeNamespace(ns.Value);
+            state.CTX.CurrentFile!.IncludeNamespace(ns.Value);
         }
 
         return ns.Drop();

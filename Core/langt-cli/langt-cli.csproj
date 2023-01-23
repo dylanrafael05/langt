@@ -29,6 +29,7 @@
     <Using Include="System.Text" />
     <Using Include="System.Diagnostics" />
     <Using Include="LLVMSharp.Interop" />
+    <ProjectReference Include="../langt-cg/langt-cg.csproj"/>
     <ProjectReference Include="../langt-core/langt-core.csproj"/>
   </ItemGroup>
 
