@@ -2,6 +2,8 @@ namespace Langt.Structure;
 
 public record struct LangtConversion(LangtType Input, LangtType Output, ConversionID ID) : IConversionProvider
 {
+    public override string ToString() => ID.Name;
+
     public bool IsImplicit => ID.IsImplicit;
     public bool IsCallable => ID.IsCallable;
 
@@ -37,21 +39,29 @@ public record struct LangtConversion(LangtType Input, LangtType Output, Conversi
                     continue;
                 }
 
+                var convTy = bitDepth(input) > bitDepth(output) ? ConversionType.Explicit : ConversionType.Implicit;
+
+                if(input.IsNativeInteger)       convTy = ConversionType.Explicit;
+                else if(output.IsNativeInteger) convTy = bitDepth(input) < 32 ? ConversionType.Implicit : ConversionType.Explicit;
+
                 n!.Add
                 (
-                    FunctionalConversionProvider.Direct
-                    (
-                        input, output, 
-                        bitDepth(input) > bitDepth(output) ? ConversionType.Explicit : ConversionType.Implicit
-                    )
+                    FunctionalConversionProvider.Direct(input, output, convTy)
                 );
             }
         }
 
-        GeneratePromotions(LangtType.IntegerTypes, t => t.IntegerBitDepth!.Value);
-        GeneratePromotions(LangtType.RealTypes,    t => t.RealBitDepth!.Value);
+        GeneratePromotions(LangtType.UnsignedIntegerTypes, t => t.IntegerBitDepth!.Value);
+        GeneratePromotions(LangtType.SignedIntegerTypes,   t => t.IntegerBitDepth!.Value);
+        GeneratePromotions(LangtType.RealTypes,            t => t.RealBitDepth!.Value);
 
-        foreach(var (intTy, realTy) in LangtType.IntegerTypes.Choose(LangtType.RealTypes))
+        foreach(var (sTy, uTy) in LangtType.SignedIntegerTypes.Choose(LangtType.UnsignedIntegerTypes))
+        {
+            n.Add(FunctionalConversionProvider.Direct(sTy, uTy, ConversionType.Explicit));
+            n.Add(FunctionalConversionProvider.Direct(uTy, sTy, ConversionType.Explicit));
+        }
+
+        foreach(var (intTy, realTy) in LangtType.AllIntegerTypes.Choose(LangtType.RealTypes))
         {
             n.Add(FunctionalConversionProvider.Direct(intTy, realTy, ConversionType.Implicit));
             n.Add(FunctionalConversionProvider.Direct(realTy, intTy, ConversionType.Explicit));

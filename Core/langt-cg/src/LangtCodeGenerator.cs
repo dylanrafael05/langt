@@ -5,6 +5,7 @@ using Langt.Parsing;
 using Langt.CG.Bindings;
 using Langt.CG.Structure;
 using Langt.CG.Lowering;
+using Langt.Structure.Resolutions;
 
 namespace Langt.CG;
 
@@ -24,7 +25,7 @@ public class CodeGenerator
         Binder = new(TypeBuilder, FuncBuilder, ConvBuilder);
 
         LLVMContext = LLVMContextRef.Global;   
-        Module  = LLVMContext.CreateModuleWithName(compilation.LLVMModuleName);
+        Module      = LLVMContext.CreateModuleWithName(compilation.LLVMModuleName);
 
         Target = LLVMTargetDataRef.FromStringRepresentation(Module.DataLayout);
 
@@ -95,6 +96,36 @@ public class CodeGenerator
         act();
         ExitFunction();
     }
+
+    public void InitializeScope(IScope scope)
+    {
+        foreach(var variable in scope!.NamedItems.Values.OfType<LangtVariable>())
+        {
+            var llvm = Builder.BuildAlloca(Binder.Get(variable.Type), "var."+variable.Name);
+            
+            if(variable.IsParameter)
+            {
+                Builder.BuildStore
+                (
+                    CurrentFunction!.GetParam(variable.ParameterNumber!.Value), 
+                    llvm
+                );
+            }
+
+            Binder.BindVariable(variable, llvm);
+        }
+    }
+
+    public int SizeofIntInBits(LangtType intTy) => intTy.Name switch 
+    {
+        LangtWords.Integer8  or LangtWords.UnsignedInteger8  => 8,
+        LangtWords.Integer16 or LangtWords.UnsignedInteger16 => 16,
+        LangtWords.Integer32 or LangtWords.UnsignedInteger32 => 32,
+        LangtWords.Integer64 or LangtWords.UnsignedInteger64 => 64,
+        LangtWords.IntegerN  or LangtWords.UnsignedIntegerN  => (int)Target.SizeOfTypeInBits(Binder.Get(intTy)),
+
+        _ => throw new NotSupportedException($"Unexpected type {intTy} supplied to {nameof(SizeofIntInBits)}")
+    };
 
     public ulong Sizeof(LangtType type)
     {

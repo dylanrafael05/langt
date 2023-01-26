@@ -1,7 +1,7 @@
 namespace Langt.Structure.Visitors;
 
 // TODO: create variant with visit functionality in visitor class instead of in element class
-[Obsolete("Use new Visitor class instead, and replace DumpVisitor with PrettyPrintStructure")]
+// [Obsolete("Use new Visitor class instead, and replace DumpVisitor with PrettyPrintStructure")]
 public abstract class DepVisitor<TSelf> where TSelf : DepVisitor<TSelf>
 {
     private readonly Stack<IElement<TSelf>> stack = new();

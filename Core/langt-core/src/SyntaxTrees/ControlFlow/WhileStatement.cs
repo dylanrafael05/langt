@@ -1,5 +1,4 @@
 using Langt.Structure;
-using Langt.Structure;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
 

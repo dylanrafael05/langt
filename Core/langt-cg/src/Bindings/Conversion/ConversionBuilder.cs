@@ -39,21 +39,49 @@ public class ConversionBuilder : Builder<LangtConversion, CodeGenerator.Applicat
 
     public CodeGenerator.Applicator BuildOther(LangtConversion cv)
     {
+        // int -> int
         if(cv.Input.IsInteger && cv.Output.IsInteger)
         {
-            return l => CG.Builder.BuildIntCast(l, CG.Binder.Get(cv.Output));
+            var bi = CG.SizeofIntInBits(cv.Input);
+            var bo = CG.SizeofIntInBits(cv.Output);
+            
+            if(bi == bo) return l => l;
+
+            LLVMOpcode opcode;
+
+            if(bi < bo) opcode = cv.Input.Signedness is Signedness.Signed ? LLVMOpcode.LLVMSExt : LLVMOpcode.LLVMZExt;
+            else        opcode = LLVMOpcode.LLVMTrunc;
+
+            return l => CG.Builder.BuildCast(opcode, l, CG.Binder.Get(cv.Output));
         }
+        // real -> real
         else if(cv.Input.IsReal && cv.Output.IsReal)
         {
             return l => CG.Builder.BuildFPCast(l, CG.Binder.Get(cv.Output));
         }
+        // int -> real
         else if(cv.Input.IsInteger && cv.Output.IsReal)
         {
-            return l => CG.Builder.BuildCast(LLVMOpcode.LLVMSIToFP, l, CG.Binder.Get(cv.Output));
+            var opcode = cv.Input.Signedness switch 
+            {
+                Signedness.Signed   => LLVMOpcode.LLVMSIToFP,
+                Signedness.Unsigned => LLVMOpcode.LLVMUIToFP,
+                _                   => throw new NotSupportedException()
+            };
+
+            return l => CG.Builder.BuildCast(opcode, l, CG.Binder.Get(cv.Output));
         }
+        // real -> int
         else if(cv.Input.IsReal && cv.Output.IsInteger)
         {
-            return l => CG.Builder.BuildCast(LLVMOpcode.LLVMFPToSI, l, CG.Binder.Get(cv.Output));
+            var opcode = cv.Input.Signedness switch 
+            {
+                Signedness.Signed   => LLVMOpcode.LLVMFPToSI,
+                Signedness.Unsigned => LLVMOpcode.LLVMFPToUI,
+                _                   => throw new NotSupportedException()
+            };
+
+            return l => CG.Builder.BuildCast(opcode, l, CG.Binder.Get(cv.Output));
         }
 
         throw new NotSupportedException($"Unknown conversion {cv.ID.Name}");

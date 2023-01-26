@@ -161,7 +161,7 @@ public record FunctionDefinition(ASTToken Let,
             }
             else 
             {
-                bodyResult = Body!.Bind(state, new TypeCheckOptions {TargetType = Function.Type.ReturnType});
+                bodyResult = Body!.Bind(state, new TypeCheckOptions {PredefinedBlockScope = scope, TargetType = Function.Type.ReturnType});
             }
 
             if(!builder.WithData(bodyResult)) return builder.BuildError<BoundASTNode>();

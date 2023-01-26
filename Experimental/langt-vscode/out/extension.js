@@ -7,13 +7,14 @@ const vscode_jsonrpc_1 = require("vscode-jsonrpc");
 // TODO: replace with stored path
 const serverPath = String.raw `..\langt-lsp\bin\Debug\net7.0\win-x64\langt-lsp.dll`;
 function activate(context) {
+    const sp = context.extensionPath + '\\' + serverPath;
     // The server is implemented in node
     let serverExe = 'dotnet';
     // If the extension is launched in debug mode then the debug server options are used
     // Otherwise the run options are used
     let serverOptions = {
-        run: { command: serverExe, args: [serverPath] },
-        debug: { command: serverExe, args: [serverPath] }
+        run: { command: serverExe, args: [sp] },
+        debug: { command: serverExe, args: [sp] }
     };
     // Options to control the language client
     let clientOptions = {

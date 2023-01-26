@@ -36,8 +36,15 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
 
     public int? IntegerBitDepth {get; init;}
     public int? RealBitDepth {get; init;}
+    public Signedness? Signedness {get; init;}
 
+    [MemberNotNullWhen(true, nameof(IntegerBitDepth))]
+    public bool IsNativeInteger => IntegerBitDepth is -1;
+
+    [MemberNotNullWhen(true, nameof(IntegerBitDepth)), MemberNotNullWhen(true, nameof(Signedness))]
     public bool IsInteger => IntegerBitDepth != null;
+
+    [MemberNotNullWhen(true, nameof(RealBitDepth))]
     public bool IsReal => RealBitDepth != null;
 
     [MemberNotNullWhen(true, nameof(ElementType)), MemberNotNullWhen(true, nameof(Pointer))] 
@@ -126,24 +133,36 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
         public override bool IsBuiltin => true;
     }
 
-    public static readonly LangtType Real64 = new BasicType(LangtWords.Real64)    {RealBitDepth = 64};
-    public static readonly LangtType Real32 = new BasicType(LangtWords.Real32)    {RealBitDepth = 32};
-    public static readonly LangtType Real16 = new BasicType(LangtWords.Real16)    {RealBitDepth = 16};
-    public static readonly LangtType Int64  = new BasicType(LangtWords.Integer64) {IntegerBitDepth = 64};
-    public static readonly LangtType Int32  = new BasicType(LangtWords.Integer32) {IntegerBitDepth = 32};
-    public static readonly LangtType Int16  = new BasicType(LangtWords.Integer16) {IntegerBitDepth = 16};
-    public static readonly LangtType Int8   = new BasicType(LangtWords.Integer8)  {IntegerBitDepth = 08};
-    public static readonly LangtType Bool   = new BasicType(LangtWords.Boolean);
-    public static readonly LangtType None   = new BasicType(LangtWords.Unit);
-    public static readonly LangtType Ptr    = new BasicType(LangtWords.Pointer);
+    public static readonly LangtType Real64 = new BasicType(LangtWords.Real64) {RealBitDepth = 64};
+    public static readonly LangtType Real32 = new BasicType(LangtWords.Real32) {RealBitDepth = 32};
+    public static readonly LangtType Real16 = new BasicType(LangtWords.Real16) {RealBitDepth = 16};
 
-    public static readonly LangtType[] IntegerTypes = {Int8, Int16, Int32, Int64};
-    public static readonly LangtType[] RealTypes    = {Real16, Real32, Real64};
+    public static readonly LangtType UIntSZ = new BasicType(LangtWords.UnsignedIntegerN)  { IntegerBitDepth = -1, Signedness = Langt.Structure.Signedness.Unsigned};
+    public static readonly LangtType UInt64 = new BasicType(LangtWords.UnsignedInteger64) { IntegerBitDepth = 64, Signedness = Langt.Structure.Signedness.Unsigned};
+    public static readonly LangtType UInt32 = new BasicType(LangtWords.UnsignedInteger32) { IntegerBitDepth = 32, Signedness = Langt.Structure.Signedness.Unsigned};
+    public static readonly LangtType UInt16 = new BasicType(LangtWords.UnsignedInteger16) { IntegerBitDepth = 16, Signedness = Langt.Structure.Signedness.Unsigned};
+    public static readonly LangtType UInt8  = new BasicType(LangtWords.UnsignedInteger8)  { IntegerBitDepth = 08, Signedness = Langt.Structure.Signedness.Unsigned};
+
+    public static readonly LangtType IntSZ = new BasicType(LangtWords.IntegerN)  { IntegerBitDepth = -1, Signedness = Langt.Structure.Signedness.Signed};
+    public static readonly LangtType Int64 = new BasicType(LangtWords.Integer64) { IntegerBitDepth = 64, Signedness = Langt.Structure.Signedness.Signed};
+    public static readonly LangtType Int32 = new BasicType(LangtWords.Integer32) { IntegerBitDepth = 32, Signedness = Langt.Structure.Signedness.Signed};
+    public static readonly LangtType Int16 = new BasicType(LangtWords.Integer16) { IntegerBitDepth = 16, Signedness = Langt.Structure.Signedness.Signed};
+    public static readonly LangtType Int8  = new BasicType(LangtWords.Integer8)  { IntegerBitDepth = 08, Signedness = Langt.Structure.Signedness.Signed};
+
+    public static readonly LangtType Bool = new BasicType(LangtWords.Boolean);
+    public static readonly LangtType None = new BasicType(LangtWords.None);
+    public static readonly LangtType Ptr  = new BasicType(LangtWords.Pointer);
+
+    public static readonly LangtType[] UnsignedIntegerTypes = {UInt8, UInt16, UInt32, UInt64, UIntSZ};
+    public static readonly LangtType[] SignedIntegerTypes = {Int8, Int16, Int32, Int64, IntSZ};
+    public static readonly LangtType[] AllIntegerTypes = {UInt8, UInt16, UInt32, UInt64, UIntSZ, Int8, Int16, Int32, Int64, IntSZ};
+    public static readonly LangtType[] RealTypes = {Real16, Real32, Real64};
 
     public static readonly LangtType[] BuiltinTypes =
     {
         Real64, Real32, Real16,
-        Int64, Int32, Int16, Int8,
+        IntSZ,  Int64,  Int32,  Int16,  Int8,
+        UIntSZ, UInt64, UInt32, UInt16, UInt8,
         Bool,
         None,
         Ptr

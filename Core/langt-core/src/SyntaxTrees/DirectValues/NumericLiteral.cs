@@ -2,6 +2,7 @@ using Langt.Lexing;
 using Langt.Structure;
 using Langt.Utility;
 using Langt.Structure.Visitors;
+using System.Numerics;
 
 namespace Langt.AST;
 
@@ -22,6 +23,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
         LangtType exprType;
         LangtType? natType = null;
 
+        // TODO: reimplement using BigInteger / BigFloat
         ulong? intVal = null;
         double? dblVal = null;
 

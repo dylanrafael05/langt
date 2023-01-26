@@ -20,10 +20,11 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
 
     public LLVMTypeRef BuildBuiltin(LangtType ty) => ty.Name switch 
     {
-        LangtWords.Integer8  => CG.LLVMContext.Int8Type,
-        LangtWords.Integer16 => CG.LLVMContext.Int16Type,
-        LangtWords.Integer32 => CG.LLVMContext.Int32Type,
-        LangtWords.Integer64 => CG.LLVMContext.Int64Type,
+        LangtWords.Integer8  or LangtWords.UnsignedInteger8  => CG.LLVMContext.Int8Type,
+        LangtWords.Integer16 or LangtWords.UnsignedInteger16 => CG.LLVMContext.Int16Type,
+        LangtWords.Integer32 or LangtWords.UnsignedInteger32 => CG.LLVMContext.Int32Type,
+        LangtWords.Integer64 or LangtWords.UnsignedInteger64 => CG.LLVMContext.Int64Type,
+        LangtWords.IntegerN  or LangtWords.UnsignedIntegerN  => CG.LLVMContext.GetIntPtrType(CG.Target),
 
         LangtWords.Real16 => CG.LLVMContext.HalfType,
         LangtWords.Real32 => CG.LLVMContext.FloatType,
@@ -31,7 +32,7 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
 
         LangtWords.Boolean => CG.LLVMContext.Int1Type,
 
-        LangtWords.Unit => CG.LLVMContext.VoidType,
+        LangtWords.None => CG.LLVMContext.VoidType,
 
         LangtWords.Pointer => CG.LLVMContext.CreatePointerType(0),
 

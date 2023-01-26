@@ -2,6 +2,7 @@ namespace Langt.Structure;
 
 public static class ConversionExtensions
 {
+    // TODO: fix issue with isize winning rules
     public static LangtType WinningType(this Context ctx, LangtType a, LangtType b, out LangtConversion? ab, out LangtConversion? ba)
     {
         ab = ba = null;
@@ -11,10 +12,14 @@ public static class ConversionExtensions
         ba = ctx.ResolveConversion(b, a, SourceRange.Default).Map<LangtConversion?>(c => c).OrDefault();
 
         if(ab is null && ba is null) 
-            throw new NotSupportedException($"Called .WinningType with two types that are not mutually convertible!");
+            throw new NotSupportedException($"Called .WinningType with two types that are not mutually convertible! {a} and {b}");
         
         if(ab!.Value.IsImplicit == ba!.Value.IsImplicit) 
-            throw new NotSupportedException($"Called .WinningType with two types that are mutually convertible by the same explicity!");
+        {
+            // TODO: this is an arbitrary choice!
+            ba = null;
+            return a;
+        }
 
         var ret = ab is null || ab.Value.IsImplicit ? b : a;
         

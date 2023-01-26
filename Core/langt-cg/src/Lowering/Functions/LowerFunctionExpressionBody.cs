@@ -6,6 +6,7 @@ public struct LowerFunctionExpressionBody : ILowerImplementation<BoundFunctionEx
 {
     public void LowerImpl(CodeGenerator cg, BoundFunctionExpressionBody node)
     {
+        cg.InitializeScope(node.Scope);
         cg.Lower(node.Expression);
         cg.Builder.BuildRet(cg.PopValue(node.DebugSourceName));
     }

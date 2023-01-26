@@ -1,5 +1,6 @@
 using Langt.AST;
 using Langt.Structure;
+using Langt.Structure.Resolutions;
 
 namespace Langt.CG.Lowering;
 
@@ -9,21 +10,7 @@ public struct LowerBoundGroup : ILowerImplementation<BoundGroup>
     {
         if(node.HasScope)
         {
-            foreach(var variable in node.Scope!.NamedItems.Values.OfType<LangtVariable>())
-            {
-                var llvm = cg.Builder.BuildAlloca(cg.Binder.Get(variable.Type), "var."+variable.Name);
-                
-                if(variable.IsParameter)
-                {
-                    cg.Builder.BuildStore
-                    (
-                        cg.CurrentFunction!.GetParam(variable.ParameterNumber!.Value), 
-                        llvm
-                    );
-                }
-
-                cg.Binder.BindVariable(variable, llvm);
-            }
+            cg.InitializeScope(node.Scope);
         }
 
         foreach(var s in node.BoundNodes)

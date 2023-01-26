@@ -55,7 +55,7 @@ public static class Expect
     [Conditional("DEBUG")]
     public static void That(bool arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
     {
-        if(arg) 
+        if(!arg) 
         {
             throw new Exception(message ?? $"Value [{argname}] was expected to be true but was not");
         }
@@ -64,7 +64,7 @@ public static class Expect
     [Conditional("DEBUG")]
     public static void Not(bool arg, string? message = null, [CallerArgumentExpression(nameof(arg))] string argname = "ERROR")
     {
-        if(!arg) 
+        if(arg) 
         {
             throw new Exception(message ?? $"Value [{argname}] was expected to be false but was not");
         }

@@ -4,15 +4,24 @@ public static class LangtWords
 {
     public const string 
         Boolean = "bool",
-        Integer8 = "int8",
-        Integer16 = "int16",
-        Integer32 = "int32",
-        Integer64 = "int64",
-        Real16 = "real16",
-        Real32 = "real32",
-        Real64 = "real64",
+
+        Integer8  = "i8",
+        Integer16 = "i16",
+        Integer32 = "i32",
+        Integer64 = "i64",
+        IntegerN  = "isize",
+
+        UnsignedInteger8  = "u8",
+        UnsignedInteger16 = "u16",
+        UnsignedInteger32 = "u32",
+        UnsignedInteger64 = "u64",
+        UnsignedIntegerN  = "usize",
+
+        Real16 = "f16",
+        Real32 = "f32",
+        Real64 = "f64",
         Pointer = "ptr",
-        Unit = "none",
+        None = "none",
         Error = "error",
 
         MagicAdd = "op_add",

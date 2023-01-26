@@ -1,7 +1,6 @@
 using Langt.Lexing;
 using Langt.Structure;
 using Langt.Structure.Visitors;
-using Langt.Structure;
 
 namespace Langt.AST;
 

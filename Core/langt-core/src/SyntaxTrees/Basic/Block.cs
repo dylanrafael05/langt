@@ -8,6 +8,9 @@ namespace Langt.AST;
 public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope? Scope) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {BoundNodes};
+    
+    
+    [MemberNotNullWhen(true, nameof(Scope))] 
     public bool HasScope => Scope is not null;
 
     public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, IScope? scope = null)

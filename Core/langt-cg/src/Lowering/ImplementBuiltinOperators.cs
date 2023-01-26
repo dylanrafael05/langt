@@ -75,22 +75,31 @@ public static class ImplementBuiltinOperators
             
             Implement(cg, f, (x, y) =>
             {
-                x = a == win ? x : cg.Binder.Get(convAB!.Value)(x);
-                y = b == win ? y : cg.Binder.Get(convBA!.Value)(y);
+                x = convAB.HasValue ? cg.Binder.Get(convAB!.Value)(x) : x;
+                y = convBA.HasValue ? cg.Binder.Get(convBA!.Value)(y) : y;
 
                 return f.Name switch 
                 {
                     LangtWords.MagicAdd     => isI ? cg.Builder.BuildAdd(x, y)              : cg.Builder.BuildFAdd(x, y),
                     LangtWords.MagicSub     => isI ? cg.Builder.BuildSub(x, y)              : cg.Builder.BuildFSub(x, y),
                     LangtWords.MagicMul     => isI ? cg.Builder.BuildMul(x, y)              : cg.Builder.BuildFMul(x, y),
-                    LangtWords.MagicDiv     => isI ? cg.Builder.BuildSDiv(x, y)             : cg.Builder.BuildFDiv(x, y),
-                    LangtWords.MagicMod     => isI ? cg.Builder.BuildSRem(x, y)             : cg.Builder.BuildFRem(x, y),
+
+                    LangtWords.MagicDiv     => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildSDiv(x, y) : cg.Builder.BuildUDiv(x, y))
+                                                   : cg.Builder.BuildFDiv(x, y),
+                    LangtWords.MagicMod     => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildSRem(x, y) : cg.Builder.BuildURem(x, y))
+                                                   : cg.Builder.BuildFRem(x, y),
+
                     LangtWords.MagicEq      => isI ? cg.Builder.BuildICmp(LLVMIntEQ, x, y)  : cg.Builder.BuildFCmp(LLVMRealOEQ, x, y),
                     LangtWords.MagicNotEq   => isI ? cg.Builder.BuildICmp(LLVMIntNE, x, y)  : cg.Builder.BuildFCmp(LLVMRealONE, x, y),
-                    LangtWords.MagicLess    => isI ? cg.Builder.BuildICmp(LLVMIntSLT, x, y) : cg.Builder.BuildFCmp(LLVMRealOLT, x, y),
-                    LangtWords.MagicLessEq  => isI ? cg.Builder.BuildICmp(LLVMIntSLE, x, y) : cg.Builder.BuildFCmp(LLVMRealOLE, x, y),
-                    LangtWords.MagicGreat   => isI ? cg.Builder.BuildICmp(LLVMIntSGT, x, y) : cg.Builder.BuildFCmp(LLVMRealOGT, x, y),
-                    LangtWords.MagicGreatEq => isI ? cg.Builder.BuildICmp(LLVMIntSGE, x, y) : cg.Builder.BuildFCmp(LLVMRealOGE, x, y),
+
+                    LangtWords.MagicLess    => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSLT, x, y) : cg.Builder.BuildICmp(LLVMIntULT, x, y)) 
+                                                   : cg.Builder.BuildFCmp(LLVMRealOLT, x, y),
+                    LangtWords.MagicLessEq  => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSLE, x, y) : cg.Builder.BuildICmp(LLVMIntULE, x, y)) 
+                                                   : cg.Builder.BuildFCmp(LLVMRealOLE, x, y),
+                    LangtWords.MagicGreat   => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSGT, x, y) : cg.Builder.BuildICmp(LLVMIntUGT, x, y)) 
+                                                   : cg.Builder.BuildFCmp(LLVMRealOGT, x, y),
+                    LangtWords.MagicGreatEq => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSGE, x, y) : cg.Builder.BuildICmp(LLVMIntUGE, x, y)) 
+                                                   : cg.Builder.BuildFCmp(LLVMRealOGE, x, y),
 
                     _ => throw new NotSupportedException("Unreachable")
                 };
