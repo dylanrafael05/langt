@@ -1,4 +1,4 @@
-extern printf(text *i8 ...) none
+extern printf(text *u8 ...) none
 
 
 #[(
@@ -7,7 +7,10 @@ extern printf(text *i8 ...) none
 let main() none
 {
     printf("HALLO WARLD")
-    let x = sex(69)
+    let x = identity(69)
+
+    let k = &x
+    x = *k
 }
 
-let sex(integer i8) i8 => integer
+let identity(x i8) u8 => x as u8

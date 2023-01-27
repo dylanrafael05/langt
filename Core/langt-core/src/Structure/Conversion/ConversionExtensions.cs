@@ -11,6 +11,20 @@ public static class ConversionExtensions
         ab = ctx.ResolveConversion(a, b, SourceRange.Default).Map<LangtConversion?>(c => c).OrDefault();
         ba = ctx.ResolveConversion(b, a, SourceRange.Default).Map<LangtConversion?>(c => c).OrDefault();
 
+        if(a.IsInteger && b.IsInteger && (a.IsNativeInteger || b.IsNativeInteger))
+        {
+            if(a.IsNativeInteger)
+            {
+                ab = null;
+                return a;
+            }
+            else 
+            {
+                ba = null;
+                return b;
+            }
+        }
+
         if(ab is null && ba is null) 
             throw new NotSupportedException($"Called .WinningType with two types that are not mutually convertible! {a} and {b}");
         

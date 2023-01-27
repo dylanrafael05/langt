@@ -274,7 +274,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         coerced = true;
 
         // Attempt to find a conversion
-        var convResult = state.CTX.ResolveConversion(target, Type, Range);
+        var convResult = state.CTX.ResolveConversion(Type, target, Range);
         if(!convResult) return builder.WithData(convResult).BuildError<BoundASTNode>()
                         .AsTargetTypeDependent();
 
@@ -295,6 +295,8 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         return builder.Build<BoundASTNode>(res)
             .AsTargetTypeDependent();
     }
+    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target) 
+        => MatchExprType(state, target, out _);
 
     [Obsolete("Use llvm-cg's CodeGenerator.Lower() instead", true)] 
     public virtual void LowerSelf(Context generator)

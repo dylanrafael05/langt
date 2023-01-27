@@ -48,14 +48,7 @@ public static class BuiltinOperators
             .Concat(LangtType.UnsignedIntegerTypes.ChooseSelfUnique())
             .Concat(LangtType.RealTypes.ChooseSelfUnique()))
         {
-            LangtType win;
-
-            if(a.IsNativeInteger || b.IsNativeInteger)
-            {
-                if(a.IsNativeInteger) win = a;
-                else                  win = b;
-            }
-            else win = ctx.WinningType(a, b);
+            var win = ctx.WinningType(a, b);
 
             Create(a, b, win, TT.Plus);
             Create(a, b, win, TT.Minus);

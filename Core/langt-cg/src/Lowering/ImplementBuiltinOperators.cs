@@ -53,7 +53,14 @@ public static class ImplementBuiltinOperators
         {
             if(f.Type.ParameterTypes is [{IsInteger : true}])
             {
-                Implement(cg, f, x => cg.Builder.BuildNeg(x));
+                if(f.Type.ParameterTypes is [{Signedness : Signedness.Unsigned}])
+                {
+                    Implement(cg, f, x => cg.Builder.BuildNeg(cg.Builder.BuildZExt(x, cg.Binder.Get(f.Type.ReturnType))));
+                }
+                else 
+                {
+                    Implement(cg, f, x => cg.Builder.BuildNeg(x));
+                }
             }
 
             if(f.Type.ParameterTypes is [{IsReal : true}])
@@ -80,17 +87,17 @@ public static class ImplementBuiltinOperators
 
                 return f.Name switch 
                 {
-                    LangtWords.MagicAdd     => isI ? cg.Builder.BuildAdd(x, y)              : cg.Builder.BuildFAdd(x, y),
-                    LangtWords.MagicSub     => isI ? cg.Builder.BuildSub(x, y)              : cg.Builder.BuildFSub(x, y),
-                    LangtWords.MagicMul     => isI ? cg.Builder.BuildMul(x, y)              : cg.Builder.BuildFMul(x, y),
+                    LangtWords.MagicAdd     => isI ? cg.Builder.BuildAdd(x, y) : cg.Builder.BuildFAdd(x, y),
+                    LangtWords.MagicSub     => isI ? cg.Builder.BuildSub(x, y) : cg.Builder.BuildFSub(x, y),
+                    LangtWords.MagicMul     => isI ? cg.Builder.BuildMul(x, y) : cg.Builder.BuildFMul(x, y),
 
                     LangtWords.MagicDiv     => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildSDiv(x, y) : cg.Builder.BuildUDiv(x, y))
                                                    : cg.Builder.BuildFDiv(x, y),
                     LangtWords.MagicMod     => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildSRem(x, y) : cg.Builder.BuildURem(x, y))
                                                    : cg.Builder.BuildFRem(x, y),
 
-                    LangtWords.MagicEq      => isI ? cg.Builder.BuildICmp(LLVMIntEQ, x, y)  : cg.Builder.BuildFCmp(LLVMRealOEQ, x, y),
-                    LangtWords.MagicNotEq   => isI ? cg.Builder.BuildICmp(LLVMIntNE, x, y)  : cg.Builder.BuildFCmp(LLVMRealONE, x, y),
+                    LangtWords.MagicEq      => isI ? cg.Builder.BuildICmp(LLVMIntEQ, x, y) : cg.Builder.BuildFCmp(LLVMRealOEQ, x, y),
+                    LangtWords.MagicNotEq   => isI ? cg.Builder.BuildICmp(LLVMIntNE, x, y) : cg.Builder.BuildFCmp(LLVMRealONE, x, y),
 
                     LangtWords.MagicLess    => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSLT, x, y) : cg.Builder.BuildICmp(LLVMIntULT, x, y)) 
                                                    : cg.Builder.BuildFCmp(LLVMRealOLT, x, y),

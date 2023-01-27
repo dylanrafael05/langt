@@ -6,10 +6,11 @@ public struct LowerPtrTo : ILowerImplementation<BoundPtrTo>
 {
     public void LowerImpl(CodeGenerator cg, BoundPtrTo node)
     {
-        var f = cg.Binder.Get(node.Variable);
+        cg.Lower(node.Value);
+        var f = cg.PopValue(node.DebugSourceName);
         cg.PushValue
         ( 
-            node.Type, 
+            f.Type, 
             f,
             node.DebugSourceName
         );

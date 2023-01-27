@@ -61,7 +61,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         }
 
         // Conversion
-        var cv = state.CTX.ResolveConversion(type, val.Type, Range);
+        var cv = state.CTX.ResolveConversion(val.Type, type, Range);
         builder.AddData(cv);
 
         if(!cv) return builder.BuildError<BoundASTNode>();
@@ -70,7 +70,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         // TODO: make RawExpressionType required or a parameter
         return builder.Build<BoundASTNode>
         (
-            new BoundConversion(val with {ASTSource = this}, conversion)
+            new BoundConversion(val, conversion)
             {
                 Type = type
             }

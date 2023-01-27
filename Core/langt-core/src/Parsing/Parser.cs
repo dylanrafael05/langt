@@ -19,6 +19,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public static readonly ParseOperatorSpec[] Operators = new ParseOperatorSpec[] 
     {
+        new(ParseOperatorType.UnaryPrefix    , TT.Ampersand, TT.Star),
         new(ParseOperatorType.UnaryPrefix    , TT.Not),
         new(ParseOperatorType.LeftRecursive  , TT.Or),
         new(ParseOperatorType.LeftRecursive  , TT.And),
@@ -580,7 +581,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public ASTNode PrimaryExpression(ParserState state) => RecoverPoint(() => CurrentType switch
     {
         TT.OpenParen => ParentheticExpression(state),
-        TT.Ampersand => PtrTo(state),
+        // TT.Ampersand => PtrTo(state),
 
         TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), 
             //TODO: this does not account for types in namespaces!
@@ -616,6 +617,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         return new ParentheticExpression(open, expr, close);
     }
 
+    [Obsolete("Use UnaryOperator with '&'", true)]
     public PtrTo PtrTo(ParserState state)
         => new(Require(TT.Ampersand), Require(TT.Identifier));
 
