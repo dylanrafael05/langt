@@ -6,18 +6,11 @@ public struct LowerStructFieldAccess : ILowerImplementation<BoundStructFieldAcce
 {
     public void LowerImpl(CodeGenerator cg, BoundStructFieldAccess node)
     {
-        cg.Lower(node);
-
-        var s = cg.PopValue(node.DebugSourceName);
-
-        cg.PushValue( 
-            node.Type,
-            cg.Builder.BuildStructGEP2(
-                cg.Binder.Get(s.Type.ElementType!), 
-                s.LLVM,
-                (uint)node.FieldIndex!.Value,
-                s.Type.ElementType!.Name + "." + node.Field!.Name
-            ),
+        var (ty, ptr) = LowerHelpers.BuildStructGEP(cg, node, node.FieldIndex, node.Field, node.DebugSourceName);
+        cg.PushValue
+        (
+            ty, 
+            cg.Builder.BuildLoad2(cg.Binder.Get(ty.ElementType!), ptr), 
             node.DebugSourceName
         );
     }

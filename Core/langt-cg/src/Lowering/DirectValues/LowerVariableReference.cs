@@ -9,7 +9,7 @@ public struct LowerVariableReference : ILowerImplementation<BoundVariableReferen
         cg.PushValue
         ( 
             node.Type, 
-            cg.Binder.Get(node.Variable),
+            cg.Builder.BuildLoad2(cg.Binder.Get(node.Type), cg.Binder.Get(node.Variable)),
             node.DebugSourceName
         );
     }

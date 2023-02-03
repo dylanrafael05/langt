@@ -7,6 +7,7 @@ using System.Diagnostics.CodeAnalysis;
 using Langt.Utility;
 using Results;
 using Langt.Structure.Resolutions;
+using Spectre.Console;
 
 namespace Langt.AST;
 
@@ -62,7 +63,7 @@ public class TreeItemContainer<T> : IEnumerable<TreeItemSpec<T>>
 /// 
 /// Note that TChild should be be type of the inheriter.
 /// </summary>
-public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : SourcedTreeNode<TChild>, ISourceRanged
+public abstract record SourcedTreeNode<TChild> : ISourceRanged, ITreeRenderable where TChild : SourcedTreeNode<TChild>, ISourceRanged
 {
     public abstract TreeItemContainer<TChild> ChildContainer {get;}
 
@@ -73,6 +74,50 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : So
     public virtual SourceRange Range {get; init;}
     public string DebugSourceName {get; init;}
 
+    public virtual TreeBuilder ToStringTree()
+    {
+        var tree = TreeBuilder.From($"[italic]{Markup.Escape(GetType().ReadableName())}[/]");
+        
+        foreach(var c in ChildContainer) 
+        {
+            var cs = c.ChildValues;
+
+            if(cs.Count() == 1)
+            {
+                var gen = c.ChildValues.First()
+                    ?.ToStringTree()
+                    ?? TreeBuilder.From("[gray bold italic]<null>[/]");
+                
+                gen.ModifyContent(s => $"[blue]{Markup.Escape(c.ChildName)}[/] [gray]=[/] {s}");
+                
+                tree.AddNode(gen);
+            }
+            else 
+            {
+                var gen = TreeBuilder.From($"[blue]{Markup.Escape(c.ChildName)}[/] [gray]=[/] ");
+
+                if(!cs.Any())
+                {
+                    gen.ModifyContent(c => c + "[gray bold italic]<empty>[/]");
+                }
+                else 
+                {
+                    gen.ModifyContent(c => c + "[gray]...[/]");
+                    foreach(var (k, ch) in cs.Indexed())
+                    {
+                        var t = ch?.ToStringTree() ?? TreeBuilder.From("[gray bold italic]<null>[/]");
+                        t.ModifyContent(s => $"[blue]{Markup.Escape($"[{k}]")}[/] [gray]=[/] " + s);
+
+                        gen.AddNode(t);
+                    }
+                }
+
+                tree.AddNode(gen);
+            }
+        }
+
+        return tree;
+    }
 
     public SourcedTreeNode()
     {
@@ -82,7 +127,7 @@ public abstract record SourcedTreeNode<TChild> : ISourceRanged where TChild : So
         Children    = cc.Children.ToArray();
 
         Range = SourceRange.CombineFrom(Children.Select(x => (ISourceRanged)x));
-        DebugSourceName = GetType().Name + "@" + Range.CharStart + ":line " + Range.LineStart;
+        DebugSourceName = GetType().ReadableName() + "@" + Range.CharStart + ":line " + Range.LineStart;
     }
 
     // TODO: abstract this out to a TreeNode class?
@@ -151,25 +196,15 @@ public record BoundConversion(BoundASTNode Source, LangtConversion Conversion) :
 }
 
 
-public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>, IElement<VisitDumper>
+public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundASTNode>
 {
     public override SourceRange Range => ASTSource.Range;
-
-    public virtual void Dump(VisitDumper dumper)
-    {
-        dumper.PutString("bound-node");
-        dumper.Visit(ASTSource);
-    }
-
-    void IElement<VisitDumper>.OnVisit(VisitDumper visitor)
-        => Dump(visitor);
     
     /// <summary>
     /// Is the current AST node representative of an expression which can automatically
-    /// be dereferenced or be assigned to if it constitutes a pointer?
-    /// TODO: remove in favor of a LangtLValueType or LangtPointerType.IsLValue
+    /// be dereferenced or be assigned to?
     /// </summary>
-    [Obsolete("Use LangtReferenceType instead", true)] public virtual bool IsLValue => false;
+    public virtual bool IsAssignable => false;
     
     /// <summary>
     /// What is the direct type of this AST node. Should be
@@ -219,9 +254,9 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// <summary>
     /// Attempt to apply a dereference if this node is an l-value and is a pointer.
     /// </summary>
-    /// <seealso cref="IsLValue"/>
+    /// <seealso cref="IsAssignable"/>
     /// <seealso cref="LangtType.IsPointer"/>
-    public BoundASTNode TryDeferenceLValue()
+    public BoundASTNode TryDeference()
     {
         if(!Type.IsReference) return this;
         
@@ -297,23 +332,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     }
     public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target) 
         => MatchExprType(state, target, out _);
-
-    [Obsolete("Use llvm-cg's CodeGenerator.Lower() instead", true)] 
-    public virtual void LowerSelf(Context generator)
-    {}
-    [Obsolete("Use llvm-cg's CodeGenerator.Lower() instead", true)] 
-    public void Lower(Context generator)
-    {   
-        generator.Project.Logger.Debug("Lowering " + DebugSourceName, "lowering");
-
-        if(Unreachable)
-        {
-            return;
-        }
-
-        LowerSelf(generator);
-        // generator.LogStack(DebugSourceName);
-    }
 }
 
 public record BoundEmpty(ASTNode Source) : BoundASTNode(Source)
@@ -324,7 +342,7 @@ public record BoundEmpty(ASTNode Source) : BoundASTNode(Source)
 /// <summary>
 /// Represents any construct directly present in the AST.
 /// </summary>
-public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
+public abstract record ASTNode : SourcedTreeNode<ASTNode>
 {
     /// <summary>
     /// Is the current AST node block-like; should the presence of an invalid child 
@@ -375,8 +393,8 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
             v.UseCount++;
         }
 
-        if(options.AutoDeferenceLValue) 
-            bast = bast.TryDeferenceLValue();
+        if(options.AutoDeference) 
+            bast = bast.TryDeference();
 
         return result.Map(_ => bast);
     }
@@ -405,16 +423,4 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>, IElement<VisitDumper>
     }
     public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions? optionsMaybe = null)
         => BindMatchingExprType(state, type, out _, optionsMaybe);
-
-    public virtual void Dump(VisitDumper visitor)
-    {
-        visitor.PutString(GetType().Name);
-        foreach(var c in Children) 
-        {
-            visitor.Visit(c);
-        }
-    }
-    
-    void IElement<VisitDumper>.OnVisit(VisitDumper visitor) 
-        => Dump(visitor);
 }

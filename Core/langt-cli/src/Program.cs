@@ -1,6 +1,5 @@
 using System.Runtime.InteropServices;
 using Langt.Lexing;
-using Langt.AST;
 using Langt.Utility;
 using Langt.Structure;
 using Langt.Parsing;
@@ -9,8 +8,16 @@ using Langt;
 using System.CommandLine;
 using System.Text.RegularExpressions;
 using Langt.CG;
+using Spectre.Console;
+using System.CommandLine.Binding;
 
 namespace Langt.CLI;
+
+public enum InspectType
+{
+    BoundTree,
+    SyntaxTree
+}
 
 public static partial class Program
 {
@@ -85,6 +92,48 @@ public static partial class Program
             compile.SetHandler(OnCompile, fileinput, disableopt, outputtype, outputname, noisy, debugFlags);
             Root.Add(compile);
 
+            var inspectTy = new Option<InspectType>
+            (
+                "--type", 
+                description: """The type of syntax tree to inspect""",
+
+                parseArgument: r => 
+                {
+                    if(r.Tokens.Count != 1)
+                    {
+                        r.ErrorMessage = "Invalid amount of tokens for inspect type.";
+                        return default;
+                    }
+                    else 
+                    {
+                        (r.ErrorMessage, var result) = r.Tokens[0].Value switch 
+                        {
+                            "syntax" or "s" => (null, InspectType.SyntaxTree),
+                            "bind"   or "b" => (null, InspectType.BoundTree),
+
+                            var v           => ($"Invalid inspection type {v}", default(InspectType))
+                        };
+
+                        return result;
+                    }
+                }
+            )
+            {
+                ArgumentHelpName = "<syntax|s>|<bind|b>"
+            };
+
+            inspectTy.SetDefaultValue(InspectType.SyntaxTree);
+            inspectTy.AddAlias("-t");
+
+            var inspect = new Command("inspect", """Inspects the abstract syntax trees of a file""")
+            {
+                fileinput,
+                inspectTy
+            };
+            
+            inspect.SetHandler(OnInspect, fileinput, inspectTy, noisy, debugFlags);
+            Root.Add(inspect);
+
             var loop = new Option<bool>("--loop", "Repeatedly await new arguments after each call");
             loop.AddAlias("-l");
 
@@ -134,12 +183,19 @@ public static partial class Program
         while(loop);
     }
 
-    public static LangtCompilation CompileProject(string input, ILogger logger, bool disableopt)
+    public static LangtProject BuildProject(string input, ILogger logger)
     {
-        var comp = new LangtCompilation(new LangtProject(logger), input);
+        var proj = new LangtProject(logger);
+        proj.LoadFromFileOrDirectory(input);
+        proj.BindSyntaxTrees();
 
-        comp.Project.LoadFromFileOrDirectory(input);
-        comp.Compile(!disableopt);
+        return proj;
+    }
+
+    public static LangtCompilation BuildCompilation(string input, ILogger logger, bool disableopt)
+    {
+        var comp = new LangtCompilation(BuildProject(input, logger), input);
+        comp.Build(!disableopt);
 
         comp.Project.LogAllDiagnostics();
 
@@ -195,11 +251,30 @@ public static partial class Program
         Console.WriteLine();
 
         using ILogger logger = InitLogger(noisy, debugFlags);
-        var proj = CompileProject(input, logger, disableopt);
+        var proj = BuildCompilation(input, logger, disableopt);
 
         if(ofilename == NoOutputFile) ofilename = Path.ChangeExtension(input, "ll");
 
         proj.Module.PrintToFile(ofilename);
+    });
+
+    public static void OnInspect(string input, InspectType type, bool noisy, string[] debugFlags) => Try(() =>
+    {
+        Console.WriteLine();
+
+        using ILogger logger = InitLogger(noisy, debugFlags);
+        var proj = BuildProject(input, logger);
+
+        var f = proj.Files.First();
+        var r = (ITreeRenderable)(type switch 
+        {
+            InspectType.BoundTree  => f.BoundAST!,
+            InspectType.SyntaxTree => f.AST!,
+
+            _ => throw new NotSupportedException($"Unknown inspection type {type}")
+        });
+
+        AnsiConsole.Write(r.ToStringTree().Build(Style.Parse("gray"), TreeGuide.Line));
     });
 
     public static void OnRun(string input, bool disableopt, bool noisy, string[] debugFlags) => Try(() =>
@@ -207,7 +282,7 @@ public static partial class Program
         Console.WriteLine();
 
         using ILogger logger = InitLogger(noisy, debugFlags);
-        var proj = CompileProject(input, logger, disableopt);
+        var proj = BuildCompilation(input, logger, disableopt);
 
         logger.Note("Running function main in " + input + " . . .");
 

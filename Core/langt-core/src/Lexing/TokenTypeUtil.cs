@@ -43,6 +43,15 @@ public static class TokenTypeUtil
         TT.LessThan  => "'<'",
         TT.LessEqual => "'<='",
 
+        TT.ArrowRight => "'=>'",
+        TT.Ellipsis  => "'...'",
+
         _ => "'" + t.ToString().ToLower() + "'"
+    };
+
+    public static string GetReadableName(this Token t) => t.Type switch 
+    {
+        TT.Identifier or TT.String or TT.Integer or TT.Decimal => t.ContentStr,
+        _ => t.Type.GetReadableName()
     };
 }

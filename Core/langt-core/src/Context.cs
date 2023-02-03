@@ -9,6 +9,28 @@ namespace Langt;
 
 public class Context : IProjectDependency
 {
+    public static readonly string[] AllMagicNames = 
+    {
+        LangtWords.MagicAdd,
+        LangtWords.MagicSub,
+        LangtWords.MagicMul,
+        LangtWords.MagicDiv,
+        LangtWords.MagicMod,
+        
+        LangtWords.MagicEq,
+        LangtWords.MagicNotEq,
+        LangtWords.MagicLess,
+        LangtWords.MagicLessEq,
+        LangtWords.MagicGreat,
+        LangtWords.MagicGreatEq,
+        
+        LangtWords.MagicNeg,
+        LangtWords.MagicNot,
+        
+        LangtWords.MagicIndex,
+        LangtWords.MagicSetIndex,
+    };
+
     public static Dictionary<OperatorSpec, string> MagicNames {get;} = new() 
     {
         [new(OperatorType.Binary, TokenType.Plus        )] = LangtWords.MagicAdd,
@@ -120,7 +142,7 @@ public class Context : IProjectDependency
             DefineConversion(conv);
         }
 
-        foreach(var op in MagicNames.Values)
+        foreach(var op in AllMagicNames)
         {
             Project.GlobalScope.Define(s => new LangtFunctionGroup(op, s), SourceRange.Default).Expect();
         }
@@ -128,6 +150,10 @@ public class Context : IProjectDependency
         BuiltinOperators.Initialize(this);
     }
 
+    public LangtFunctionGroup GetGlobalFunction(string name)
+    {
+        return Project.GlobalScope.ResolveFunctionGroup(name, SourceRange.Default, false).Expect("Operators that are known must exist in the global scope.");
+    }
     public LangtFunctionGroup GetOperator(OperatorSpec op)
     {
         if(!MagicNames.TryGetValue(op, out var name))
@@ -135,7 +161,7 @@ public class Context : IProjectDependency
             throw new InvalidOperationException($"Unknown operator passed to .{nameof(GetOperator)}");
         }
 
-        return Project.GlobalScope.ResolveFunctionGroup(name, SourceRange.Default, false).Expect("Operators that are known must exist in the global scope.");
+        return GetGlobalFunction(name);
     }
 
     public void DefineUnaryOperator(TokenType op, LangtType x, LangtType r)

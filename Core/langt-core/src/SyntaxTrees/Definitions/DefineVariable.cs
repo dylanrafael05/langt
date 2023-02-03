@@ -14,12 +14,6 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Type, Eq, Value};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Defining variable " + Identifier.Range.Content.ToString());
-        visitor.Visit(Value);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         LangtType varT;

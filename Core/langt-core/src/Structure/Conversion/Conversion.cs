@@ -24,7 +24,7 @@ public record struct LangtConversion(LangtType Input, LangtType Output, Conversi
         {
             Dereference,
 
-            FunctionalConversionProvider.Predicate((i, o) => i.IsPointer && o.IsPointer, ConversionID.PointerCast),
+            FunctionalConversionProvider.Predicate((i, o) => i.IsAnyPointer && o.IsAnyPointer, ConversionID.PointerCast),
             FunctionalConversionProvider.Predicate((i, o) => o.IsAlias && i == o.AliasBaseType, ConversionID.AliasConst),
             FunctionalConversionProvider.Predicate((i, o) => i.IsAlias && o == i.AliasBaseType, ConversionID.AliasDest),
             FunctionalConversionProvider.Predicate((i, o) => i.IsOption && i.OptionTypes.Contains(o), ConversionID.OptionConst),

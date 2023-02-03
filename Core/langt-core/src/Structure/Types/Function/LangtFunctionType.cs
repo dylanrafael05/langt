@@ -59,7 +59,9 @@ public class LangtFunctionType : LangtType
         public static MutableMatchSignatureInput From(ASTNode[] parameters) => new(parameters);
 
         private ASTNode[] Parameters {get; init;}
-        private Result<BoundASTNode>?[] CachedBoundParameters  {get; init;}
+        private Result<BoundASTNode>?[] CachedBoundParameters {get; init;}
+
+        public IList<Result<BoundASTNode>?> BoundParameters => CachedBoundParameters;
         
         public int ParameterCount => Parameters.Length;
 

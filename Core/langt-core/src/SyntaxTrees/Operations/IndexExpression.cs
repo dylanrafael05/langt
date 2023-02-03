@@ -7,46 +7,30 @@ namespace Langt.AST;
 public record BoundIndexExpression(IndexExpression Source, BoundASTNode Value, BoundASTNode Index) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Value, Index};
+    public override bool IsAssignable => true;
 }
 
-public record IndexExpression(ASTNode Value, ASTToken Open, ASTNode IndexValue, ASTToken Close) : ASTNode
+public record IndexExpression(ASTNode Value, ASTToken Open, SeparatedCollection<ASTNode> Arguments, ASTToken Close) : ASTNode
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, Open, IndexValue, Close};
-
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Indexing . . .");
-        visitor.Visit(Value);
-        visitor.PutString(". . . with index . . .");
-        visitor.Visit(IndexValue);
-    }
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, Open, Arguments, Close};
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
 
-        var results = Result.All
-        (
-            Value.Bind(state),
-            IndexValue.BindMatchingExprType(state, LangtType.Int64)
-        );
-        builder.AddData(results);
+        var op = state.CTX.GetGlobalFunction(LangtWords.MagicIndex);
+        var args = Arguments.Values.Prepend(Value).ToArray();
 
-        if(!results) return builder.BuildError<BoundASTNode>();
+        var fr = op.ResolveOverload(args, Range, state);
+        builder.AddData(fr);
 
-        var (val, index) = results.Value;
+        if(!builder) return builder.BuildError<BoundASTNode>();
 
-        if(!val.Type.IsPointer)
-        {
-            return builder.WithDgnError("Cannot index a non-pointer", Range).BuildError<BoundASTNode>();
-        }
+        var fn = fr.Value;
 
         return builder.Build<BoundASTNode>
         (
-            new BoundIndexExpression(this, val, index) 
-            {
-                Type = LangtReferenceType.Create(val.Type.ElementType).Expect()
-            }
+            new BoundFunctionCall(this, fn.Function, fn.OutputParameters.Value.ToArray())
         );
     }
 }

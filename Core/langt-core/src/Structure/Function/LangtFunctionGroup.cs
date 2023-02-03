@@ -33,14 +33,17 @@ public class LangtFunctionGroup : Resolution
         return Result.Success();
     }
 
-    private Result<Resolution> HandleOverload(Resolution[] resolves, SourceRange range) 
+    private Result<Resolution> HandleOverload(Resolution[] resolves, SourceRange range, IEnumerable<LangtType?> parameterTypes) 
     {
+        string Type()  => "type".Pluralize(parameterTypes.Count());
+        string Types() => parameterTypes.Stringify();
+
         var builder = ResultBuilder.Empty();
 
         if(resolves.Length == 0) 
         {
             return builder.WithDgnError(
-                $"Could not resolve any matching overloads for call to {FullName}",
+                $"Could not resolve any matching overloads for call to {FullName} with parameter {Type()} {Types()}",
                 range
             ).BuildError<Resolution>();
         }
@@ -59,7 +62,7 @@ public class LangtFunctionGroup : Resolution
             if(byLevel.Length != 1)
             {
                 return builder.WithDgnError(
-                    $"Could not resolve any one matching overload for call to {FullName}, multiple overloads are valid",
+                    $"Could not resolve any one matching overload for call to {FullName} with parameter {Type()} {Types()}, multiple overloads are valid",
                     range
                 ).BuildError<Resolution>();
             }
@@ -91,7 +94,10 @@ public class LangtFunctionGroup : Resolution
 
         return HandleOverload(
             resolves,
-            range
+            range,
+            mmsi.BoundParameters.Where(k => k.HasValue)
+                .Select(k => k!.Value)
+                .Select(k => k.HasValue ? k.Value.Type : LangtType.Error)
         );
     }
     public Result<Resolution> ResolveExactOverload(LangtType[] parameterTypes, bool isVararg, SourceRange range) 
@@ -103,7 +109,8 @@ public class LangtFunctionGroup : Resolution
         
         return HandleOverload(
             resolves, 
-            range
+            range,
+            parameterTypes
         );
     }
 }

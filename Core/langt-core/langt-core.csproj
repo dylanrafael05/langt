@@ -23,9 +23,10 @@
     <PackageReference Include="Mono.Options" Version="6.12.0.148" />
     <!-- <PackageReference Include="OmniSharp.Extensions.LanguageServer" Version="0.19.6" /> -->
     <!-- <PackageReference Include="System.CommandLine" Version="2.0.0-beta4.22272.1" /> -->
-    <ProjectReference Include="../results/Results.csproj"/>
+    <ProjectReference Include="../results/Results.csproj" />
     <Using Include="System.Text" />
     <Using Include="System.Diagnostics" />
+    <PackageReference Include="Spectre.Console" Version="0.46.0" />
     <!-- <Using Include="LLVMSharp.Interop" /> -->
   </ItemGroup>
 

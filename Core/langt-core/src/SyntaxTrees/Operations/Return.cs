@@ -13,15 +13,6 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {ReturnTok, Value};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("return");
-        if(Value is not null)
-        {
-            visitor.Visit(Value);
-        }
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true});

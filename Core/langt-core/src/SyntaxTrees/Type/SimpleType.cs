@@ -9,11 +9,6 @@ public record SimpleType(ASTToken Name) : ASTType
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.VisitNoDepth(Name);
-    }
-
     public override Result<LangtType> Resolve(ASTPassState state)
     {
         var t = state.CTX.ResolutionScope.ResolveType(Name.ContentStr, Range);

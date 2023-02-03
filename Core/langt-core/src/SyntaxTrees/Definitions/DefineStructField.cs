@@ -8,12 +8,6 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString(Name.ContentStr);
-        visitor.Visit(Type);
-    }
-
     // TODO: move resolution logic to TypeCheckRaw?
     public Result<LangtStructureField> Field(ASTPassState state) 
     {

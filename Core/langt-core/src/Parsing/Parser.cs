@@ -420,7 +420,6 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         return new(name,type);
     }
 
-    // TODO: change this to return only direct values
     public ASTNode Expression(ParserState state) => RecoverPoint(() =>
     {
         ParsePass pass = CastExpression;
@@ -552,7 +551,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             else if(CurrentType is TT.OpenIndex)
             {
                 var open = Grab();
-                var index = Expression(state);
+                var index = SeparatedCollection(state with {AllowCommaExpressions = false}, Expression, t => t is TT.Comma, t => t is TT.CloseIndex);
                 var close = Require(TT.CloseIndex);
 
                 ret = new IndexExpression(ret, open, index, close);
@@ -581,7 +580,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     public ASTNode PrimaryExpression(ParserState state) => RecoverPoint(() => CurrentType switch
     {
         TT.OpenParen => ParentheticExpression(state),
-        // TT.Ampersand => PtrTo(state),
+        TT.Sizeof => Sizeof(state),
 
         TT.Identifier when Next.Nullable()?.Type is TT.OpenBlock => StructCreate(state), 
             //TODO: this does not account for types in namespaces!
@@ -597,6 +596,14 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
         _ => throw ParserException.Error($"Unexpected {CurrentTypeName} found while parsing primary expression")
     });
+
+    public Sizeof Sizeof(ParserState state) 
+    {
+        var s = Require(TT.Sizeof);
+        var t = Type(state);
+
+        return new(s, t);
+    }
 
     public StructInitializer StructCreate(ParserState state)
     {
@@ -616,10 +623,6 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
         return new ParentheticExpression(open, expr, close);
     }
-
-    [Obsolete("Use UnaryOperator with '&'", true)]
-    public PtrTo PtrTo(ParserState state)
-        => new(Require(TT.Ampersand), Require(TT.Identifier));
 
     public SeparatedCollection<T> SeparatedCollection<T>(ParserState state, ParsePass<T> pass, Predicate<TT> seperatorPred, Predicate<TT> endPred, bool lineBreaksAfterSep = true)
         where T : ASTNode

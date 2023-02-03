@@ -13,16 +13,6 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, Open, Args, Close};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Creating struct");
-        visitor.Visit(Type);
-        foreach(var a in Args.Values)
-        {
-            visitor.Visit(a);
-        }
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var tn = Type.Resolve(state);

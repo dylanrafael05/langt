@@ -49,6 +49,7 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
 
     [MemberNotNullWhen(true, nameof(ElementType)), MemberNotNullWhen(true, nameof(Pointer))] 
     public bool IsPointer => this is LangtPointerType;
+    public bool IsAnyPointer => this is LangtPointerType || this == Ptr;
     public LangtPointerType? Pointer => this as LangtPointerType;
     [MemberNotNullWhen(true, nameof(ElementType)), MemberNotNullWhen(true, nameof(Reference))] 
     public bool IsReference => this is LangtReferenceType;

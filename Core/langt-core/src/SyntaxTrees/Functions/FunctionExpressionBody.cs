@@ -13,11 +13,6 @@ public record BoundFunctionExpressionBody(FunctionExpressionBody Source, BoundAS
 public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : FunctionBody
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Eq, Expression};
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("returns...");
-        visitor.Visit(Expression);
-    }
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {

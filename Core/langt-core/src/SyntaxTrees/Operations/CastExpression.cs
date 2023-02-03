@@ -22,13 +22,6 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, As, Type};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Cast");
-        visitor.Visit(Value);
-        visitor.Visit(Type);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var results = Result.All

@@ -12,21 +12,12 @@ public record BoundFunctionPointerCall(ASTNode Source, BoundASTNode Function, Bo
 public record BoundFunctionCall(ASTNode Source, LangtFunction Function, BoundASTNode[] Arguments) : BoundASTNode(Source)
 {
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Arguments};
+    public override LangtType Type => Function.Type.ReturnType;
 }
 
 public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollection<ASTNode> Arguments, ASTToken End) : ASTNode, IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {FunctionAST, Open, Arguments, End};
-
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Function Call");
-        visitor.Visit(FunctionAST);
-        foreach(var arg in Arguments.Values)
-        {
-            visitor.Visit(arg);
-        }
-    }
 
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {

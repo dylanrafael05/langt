@@ -25,9 +25,6 @@ public record ASTInvalid(SourceRange ErrRange) : ASTNode
     public override TreeItemContainer<ASTNode> ChildContainer => new();
     public override SourceRange Range => ErrRange;
 
-    public override void Dump(VisitDumper visitor)
-    {}
-
     public override Result HandleDefinitions(ASTPassState state)
         => Result.Error(SilentError.Create());
     public override Result RefineDefinitions(ASTPassState state)

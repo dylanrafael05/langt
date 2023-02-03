@@ -38,6 +38,9 @@ public static class LangtWords
         MagicGreatEq = "op_greater_equal",
 
         MagicNeg = "op_neg",
-        MagicNot = "op_not"
+        MagicNot = "op_not",
+
+        MagicIndex    = "op_index",
+        MagicSetIndex = "op_set_index"
     ;
 }

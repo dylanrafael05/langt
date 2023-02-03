@@ -1,5 +1,6 @@
 using Langt.Structure.Visitors;
 using Langt.Lexing;
+using Spectre.Console;
 
 namespace Langt.AST;
 
@@ -73,8 +74,6 @@ public record ASTToken(IReadOnlyList<Token> Prefix, Token Inner) : ASTNode
         return s.ToString();
     }
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.VisitNoDepth(Inner);
-    }
+    public override TreeBuilder ToStringTree()
+        => TreeBuilder.From($"[green]{Markup.Escape(Inner.GetReadableName())}[/]");
 }

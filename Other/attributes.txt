@@ -1,0 +1,21 @@
+# Attributes on functions
+let sort[T](arr std::array[T]) std::array[T] + sorted
+{
+     # Sorting implementation
+     return arr with + sorted
+}
+
+let sort_in_place[T](arr std::array[T]) -> arr + sorted
+{
+     # Elided
+}
+
+
+# Attribute old functions
+let sort_old[T](arr std::array[T]) {}
+
+attr sort_old[T](arr std::array[T]) -> arr + sorted
+
+
+# Attribute old functions
+let op::add(_ int + unit??, _ int + unit)

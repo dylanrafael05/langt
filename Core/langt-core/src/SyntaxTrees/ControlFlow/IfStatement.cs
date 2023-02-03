@@ -13,15 +13,6 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {If, Condition, Block, Else};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("If");
-        visitor.Visit(Condition);
-        visitor.PutString("... then ...");
-        visitor.Visit(Block);
-        if(Else is not null) visitor.Visit(Else);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var results = Result.All

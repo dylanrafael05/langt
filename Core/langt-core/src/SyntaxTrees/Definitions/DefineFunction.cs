@@ -34,19 +34,6 @@ public record FunctionDefinition(ASTToken Let,
 
     public SourceRange DefinitionRange = SourceRange.CombineFrom(Let, Close);
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Defining function " + Identifier.Range.Content.ToString());
-        foreach(var argspec in ArgSpec.Values)
-        {
-            // TODO: implement depth modification by parameters; headers
-            visitor.PutString(argspec.Name.ContentStr);
-            visitor.Visit(argspec.Type);
-        }
-
-        if(Body is not null) visitor.Visit(Body);
-    }
-
     private LangtFunctionGroup? FunctionGroup {get; set;}
     private LangtFunction? Function {get; set;}
     private LangtType?[]? ArgTypes {get; set;}

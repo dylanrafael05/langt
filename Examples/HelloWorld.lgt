@@ -1,16 +1,10 @@
 extern printf(text *u8 ...) none
+extern malloc(size usize) ptr
+extern free(p ptr) none
 
-
-#[(
-    You suck
-)]
 let main() none
 {
-    printf("HALLO WARLD")
-    let x = identity(69)
-
-    let k = &x
-    x = *k
+    printf("%d", sizeof u64)
 }
 
-let identity(x i8) u8 => x as u8
+let k(a u8, b u8) u8 => a

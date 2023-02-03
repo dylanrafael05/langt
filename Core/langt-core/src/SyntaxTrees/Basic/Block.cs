@@ -62,16 +62,6 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Open, Statements, Close};
     public override bool BlockLike => true;
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Block {");
-        foreach(var s in Statements) 
-        {
-            visitor.Visit(s);
-        }
-        visitor.PutString("}");
-    }
-
     public override Result HandleDefinitions(ASTPassState state)
         => ResultGroup.GreedyForeach(Statements, n => n.HandleDefinitions(state)).Combine();
     public override Result RefineDefinitions(ASTPassState state)

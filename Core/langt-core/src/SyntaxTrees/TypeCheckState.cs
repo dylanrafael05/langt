@@ -19,7 +19,7 @@ public record GeneralPassState(Context CTX, bool Noisy, bool CanFail) : ASTPassS
 public struct TypeCheckOptions
 {
     public LangtType? TargetType {get; init;} = null;
-    public bool AutoDeferenceLValue {get; init;} = true;
+    public bool AutoDeference {get; init;} = true;
     public IScope? PredefinedBlockScope {get; init;} = null;
     public bool AllowNamespaceDefinitions {get; init;} = false;
 

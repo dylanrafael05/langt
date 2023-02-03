@@ -10,19 +10,13 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Operator, Operand};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString($"Unary {Operator.ContentStr}");
-        visitor.Visit(Operand);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
 
         if(Operator.Type is TT.Ampersand or TT.Star) 
         {
-            var vr = Operand.Bind(state, new TypeCheckOptions {AutoDeferenceLValue = false});
+            var vr = Operand.Bind(state, new TypeCheckOptions {AutoDeference = false});
             builder.AddData(vr);
 
             if(!builder) return builder.BuildError<BoundASTNode>();
@@ -43,7 +37,7 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
             }
             else 
             {
-                v = v.TryDeferenceLValue();
+                v = v.TryDeference();
                 
                 if(!v.Type.IsPointer)
                 {
@@ -70,9 +64,6 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
         return builder.Build<BoundASTNode>
         (
             new BoundFunctionCall(this, fo.Function, fp)
-            {
-                Type = fo.Function.Type.ReturnType
-            }
         );
     }
 }

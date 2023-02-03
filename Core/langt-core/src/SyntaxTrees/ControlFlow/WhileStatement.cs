@@ -13,14 +13,6 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {While, Condition, Block};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("While");
-        visitor.Visit(Condition);
-        visitor.PutString("... then ...");
-        visitor.Visit(Block);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var results = Result.All

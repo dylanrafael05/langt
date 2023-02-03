@@ -29,13 +29,6 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Operator, Right};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString($"Binary {Operator.Range.Content}");
-        visitor.Visit(Left);
-        visitor.Visit(Right);
-    }
-
     protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
@@ -124,10 +117,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         var fo = fr.Value;
         var fp = fo.OutputParameters.Value.ToArray();
 
-        var res = new BoundFunctionCall(this, fo.Function, fp)
-        {
-            Type = fo.Function.Type.ReturnType
-        };
+        var res = new BoundFunctionCall(this, fo.Function, fp);
 
         if(invertResult) 
         {
@@ -136,10 +126,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
                 .Expect()
                 .Function;
             
-            res = new BoundFunctionCall(this, not, new[] {res}) 
-            {
-                Type = LangtType.Bool
-            };          
+            res = new BoundFunctionCall(this, not, new[] {res});          
         }
 
         return builder.Build<BoundASTNode>(res);

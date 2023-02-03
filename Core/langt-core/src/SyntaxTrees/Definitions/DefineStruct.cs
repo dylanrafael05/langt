@@ -8,15 +8,6 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Struct, Name, Open, Fields, Close};
 
-    public override void Dump(VisitDumper visitor)
-    {
-        visitor.PutString("Defining struct " + Name.ContentStr);
-        foreach(var f in Fields.Values)
-        {
-            visitor.Visit(f);
-        }
-    }
-
     public LangtStructureType? StructureType {get; private set;}
 
     public override Result HandleDefinitions(ASTPassState state)

@@ -159,11 +159,13 @@ public class CodeGenerator
 
     public void PushValueNoDebug(LangtValue value)
         => unnamedValues.Push(value);
-    public void PushValue(LangtType type, LLVMValueRef value, string debugSource)
+    public void PushValue(LangtValue val, string debugSource)
     {
-        Logger.Debug($"\tProduced one value from {debugSource}: type {type.FullName}, value {value.Name}", "lowering");
-        unnamedValues.Push(new(type, value));
+        Logger.Debug($"\tProduced one value from {debugSource}: type {val.Type.FullName}, value {val.LLVM.Name}", "lowering");
+        unnamedValues.Push(val);
     }
+    public void PushValue(LangtType ty, LLVMValueRef val, string debugSource)
+        => PushValue(new(ty, val), debugSource);
 
     public LangtValue PopValue(string source)
     {
