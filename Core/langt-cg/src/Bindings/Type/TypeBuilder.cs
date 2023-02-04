@@ -5,15 +5,19 @@ namespace Langt.CG.Bindings;
 
 public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
 {
+    private int StructCount {get; set;} = 0;
+
     public override LLVMTypeRef Build(LangtType ty) => ty switch 
     {
-        {IsBuiltin:   true} => BuildBuiltin(ty),
-        {IsPointer:   true} => BuildPointer(ty.Pointer),
-        {IsReference: true} => BuildReference(ty.Reference),
-        {IsFunction:  true} => BuildFunction(ty.Function),
-        {IsStructure: true} => BuildStructure(ty.Structure),
-        {IsAlias:     true} => BuildAlias(ty.Alias),
-        {IsOption:    true} => BuildOption(ty.Option),
+        {IsConstructed: false} => throw new InvalidOperationException($"Cannot build non-constructed type!"),
+
+        {IsBuiltin:    true} => BuildBuiltin(ty),
+        {IsPointer:    true} => BuildPointer(ty.Pointer),
+        {IsReference:  true} => BuildReference(ty.Reference),
+        {IsFunction:   true} => BuildFunction(ty.Function),
+        {IsStructure:  true} => BuildStructure(ty.Structure),
+        {IsAlias:      true} => BuildAlias(ty.Alias),
+        {IsOption:     true} => BuildOption(ty.Option),
 
         _ => throw new NotImplementedException($"Cannot build type {ty}")
     };
@@ -51,10 +55,12 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
     public LLVMTypeRef BuildFunction(LangtFunctionType ty)
         => LLVMTypeRef.CreateFunction(Build(ty.ReturnType), ty.ParameterTypes.Select(CG.Binder.Get).ToArray(), ty.IsVararg);
 
-    public LLVMTypeRef BuildStructure(LangtStructureType ty)
+    public LLVMTypeRef BuildStructure(IStructureType ty)
     {
-        var s = CG.LLVMContext.CreateNamedStruct(CodeGenerator.LangtIdentifierPrepend + ty.FullName);
-        s.StructSetBody(ty.Fields.Select(f => f.Type).Select(CG.Binder.Get).ToArray(), false);
+        var name = ty is LangtStructureType ? ("anon`" + StructCount++) : ty.FullName;
+
+        var s = CG.LLVMContext.CreateNamedStruct(CodeGenerator.LangtIdentifierPrepend + name);
+        s.StructSetBody(ty.Fields().Select(f => f.Type).Select(CG.Binder.Get).ToArray(), false);
 
         return s;
     }

@@ -2,29 +2,43 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public class LangtStructureType : LangtResolvableType
+public class LangtStructureType : LangtType, IStructureType
 {
-    public LangtStructureType(string name, IScope scope) : base(name, scope)
-    {}
-
-    public IList<LangtStructureField> Fields {get; init;} = new List<LangtStructureField>();
-    public bool TryResolveField(string name, out LangtStructureField? field, out int index) 
+    public LangtStructureType(IScope typeScope)
     {
-        // Invariant
-        Expect.That(Fields.DistinctBy(f => f.Name).SequenceEqual(Fields), "Structs cannot have duplicate fields");
+        TypeScope = typeScope;
+    }
 
-        var f = Fields.Indexed().Where(f => f.Value.Name == name).ToArray();
+    public IScope TypeScope {get;}
 
-        if(f.Length is 0 or > 1)
+    public IEnumerable<string> FieldNames => fieldDict.Keys;
+    private readonly Dictionary<string, LangtStructureField> fieldDict = new();
+    
+
+    public void AddField(string name, LangtType ty)
+    {
+        fieldDict.Add(name, new(name, ty, fieldDict.Count));
+    }
+
+    public virtual bool ResolveField(string name, out LangtStructureField field) 
+    {
+        if(!fieldDict.ContainsKey(name))
         {
-            field = null;
-            index = -1;
+            field = default;
             return false;
         }
 
-        field = f.First().Value;
-        index = f.First().Index;
+        field = fieldDict[name];
         return true;
     }
-    public bool HasField(string name) => Fields.Count(f => f.Name == name) is 1;
+    public bool HasField(string name) => fieldDict.ContainsKey(name);
+
+    public override bool Contains(LangtType ty)
+        => this.Fields().Any(k => k.Type.Contains(ty)) || base.Contains(ty);
+
+    public override bool Equals(LangtType? other)
+        => other is not null
+        && other.IsStructure
+        && this.Fields().SequenceEqual(other.Structure.Fields());
 }
+

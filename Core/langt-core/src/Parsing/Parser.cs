@@ -231,6 +231,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
     {
         var structTok = Require(TT.Struct);
         var name = Require(TT.Identifier);
+        var gen = GenericParameterSpecification(state);
         PassLineBreaks(false);
         var open = Require(TT.OpenBlock);
         PassLineBreaks(false);
@@ -243,7 +244,21 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         PassLineBreaks(false);
         var close = Require(TT.CloseBlock);
 
-        return new(structTok, name, open, fields, close);                
+        return new(structTok, name, gen, open, fields, close);                
+    }
+
+    public GenericParameterSpecification? GenericParameterSpecification(ParserState state)
+    {
+        if(CurrentType is TT.OpenIndex)
+        {
+            var open  = Grab();
+            var types = SeparatedCollection(state, p => Require(TT.Identifier), t => t is TT.Comma, t => t is TT.CloseIndex);
+            var close = Require(TT.CloseIndex);
+
+            return new(open, types, close);
+        }
+
+        return null;
     }
 
     public Return Return(ParserState state)
@@ -395,6 +410,14 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             var next = Type(state);
 
             result = new OptionType(result, pipe, next);
+        }
+        else if(CurrentType is TT.OpenIndex)
+        {
+            var open = Grab();
+            var args = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.CloseIndex, false);
+            var close = Require(TT.CloseIndex);
+
+            result = new ConsGenericStructType(result, open, args, close);
         }
 
         return result;

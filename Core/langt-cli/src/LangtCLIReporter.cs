@@ -98,6 +98,12 @@ public sealed class CLILogger : ILogger
         Console.WriteLine("Aborting process . . . ");
         Console.WriteLine();
 
-        Environment.Exit(1);
+        throw new AbortException();
+    }
+
+    [Serializable]
+    public class AbortException : Exception
+    {
+        public AbortException() {}
     }
 }

@@ -195,15 +195,14 @@ public static partial class Program
     public static LangtCompilation BuildCompilation(string input, ILogger logger, bool disableopt)
     {
         var comp = new LangtCompilation(BuildProject(input, logger), input);
-        comp.Build(!disableopt);
-
-        comp.Project.LogAllDiagnostics();
 
         if(comp.Diagnostics.AnyErrors)
         {
+            comp.Project.LogAllDiagnostics();
             CLILogger.Abort();
         }
 
+        comp.Build(!disableopt);
         return comp;
     }
 
@@ -227,6 +226,11 @@ public static partial class Program
         }
         catch(Exception e) 
         {
+            if(e is CLILogger.AbortException)
+            {
+                return false;
+            }
+
             Console.ForegroundColor = ConsoleColor.Red;
 
             Console.WriteLine("An error occured: " + e.Message);
@@ -238,6 +242,7 @@ public static partial class Program
             {
                 Console.WriteLine();
                 Console.Write(e.ToString());
+                Console.WriteLine();
             }
 #endif
 

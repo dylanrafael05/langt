@@ -6,7 +6,7 @@ public struct LowerStructFieldAccess : ILowerImplementation<BoundStructFieldAcce
 {
     public void LowerImpl(CodeGenerator cg, BoundStructFieldAccess node)
     {
-        var (ty, ptr) = LowerHelpers.BuildStructGEP(cg, node, node.FieldIndex, node.Field, node.DebugSourceName);
+        var (ty, ptr) = LowerHelpers.BuildStructGEP(cg, node, node.Field.Index, node.Field, node.DebugSourceName);
         cg.PushValue
         (
             ty, 

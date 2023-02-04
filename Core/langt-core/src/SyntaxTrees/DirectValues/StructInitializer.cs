@@ -28,7 +28,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
         var args = Args.Values.ToList();
 
-        if(type.Structure!.Fields.Count != args.Count)
+        if(type.Structure!.Fields().Count() != args.Count)
         {
             return builder.WithDgnError($"Incorrect number of fields for structure initializer of type {type.Name}", Range)
                 .BuildError<BoundASTNode>();
@@ -39,7 +39,8 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
             args.Indexed(),
             a => 
             {
-                var f = type.Structure!.Fields[a.Index];
+                // TODO: improve performance here!
+                var f = type.Structure!.Fields().First(f => f.Index == a.Index);
                 
                 var ftype = f.Type;
                 var fname = f.Name;

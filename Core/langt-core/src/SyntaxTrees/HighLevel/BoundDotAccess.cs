@@ -8,7 +8,6 @@ public record BoundStructFieldAccess(DotAccess SourceNode, BoundASTNode Left) : 
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left};
 
     public required LangtStructureField Field {get; init;}
-    public required int FieldIndex {get; init;}
 
     public override LangtType Type => Field.Type;
     public override bool IsAssignable => Left.IsAssignable;

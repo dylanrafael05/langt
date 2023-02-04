@@ -19,4 +19,19 @@ public class LangtPointerType : LangtTypeWithElement
         
         return CreateElementType<LangtPointerType>(elem => new(elem), elem, range);
     }
+
+    public override LangtType ReplaceGeneric(LangtType gen, LangtType rep)
+    {
+        if(ElementType.Contains(gen)) 
+        {
+            var newElem = ElementType.ReplaceGeneric(gen, rep);
+            return Create(newElem).Expect();
+        }
+        
+        return this;
+    }
+
+    public override bool Equals(LangtType? other)
+        => base.Equals(other) 
+        && other!.IsPointer;
 }

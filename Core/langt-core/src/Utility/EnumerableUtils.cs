@@ -32,6 +32,12 @@ public static class EnumerableExtensions
     public static IEnumerable<(int Index, T Value)> Indexed<T>(this IEnumerable<T> e) 
         => e.Select((t, i) => (i, t));
 
+    public static IEnumerable<T> Without<T>(this IEnumerable<T> t, T value)
+        => t.Where(x => x?.Equals(value) ?? (value is null));
+
+    public static IEnumerable<T> OrEmpty<T>(IEnumerable<T>? t) 
+        => t ?? Array.Empty<T>();
+
     [Flags]
     private enum MergeSide 
     {

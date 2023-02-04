@@ -58,14 +58,15 @@ public class TokenHandler : SemanticTokensHandlerBase
         {
             var spec = reference.Item switch 
             {
-                LangtFunction or LangtFunctionGroup => SemanticToken.From(STT.Function),
-                LangtVariable v when v.IsParameter  => SemanticToken.From(STT.Parameter),
-                LangtVariable v when !v.IsParameter => SemanticToken.From(STT.Variable),
-                LangtType t when t.IsStructure      => SemanticToken.From(STT.Struct),
-                LangtType t when t.IsAlias          => SemanticToken.From(STT.Type, SemanticToken.Alias),
-                LangtType t when t.IsBuiltin        => SemanticToken.From(STT.Type, SemanticToken.Builtin),
-                LangtNamespace                      => SemanticToken.From(STT.Namespace),
-                _                                   => SemanticToken.None
+                LangtFunction or LangtFunctionGroup   => SemanticToken.From(STT.Function),
+                LangtVariable v when v.IsParameter    => SemanticToken.From(STT.Parameter),
+                LangtVariable v when !v.IsParameter   => SemanticToken.From(STT.Variable),
+                LangtType t when t.IsStructure        => SemanticToken.From(STT.Struct),
+                LangtType t when t.IsAlias            => SemanticToken.From(STT.Type, SemanticToken.Alias),
+                LangtType t when t.IsBuiltin          => SemanticToken.From(STT.Type, SemanticToken.Builtin),
+                LangtType t when t.IsGenericParameter => SemanticToken.From(STT.Type, SemanticTokenModifier.Abstract),
+                LangtNamespace                        => SemanticToken.From(STT.Namespace),
+                _                                     => SemanticToken.None
             };
 
             builder.Push(reference.Range.ToVS(), spec.Type, spec.Modifiers);

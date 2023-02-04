@@ -4,11 +4,11 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, SeparatedCollection<DefineStructField> Fields, ASTToken Close) : ASTNode
+public record DefineStruct(ASTToken Struct, ASTToken Name, GenericParameterSpecification? Generic, ASTToken Open, SeparatedCollection<DefineStructField> Fields, ASTToken Close) : ASTNode
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Struct, Name, Open, Fields, Close};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Struct, Name, Generic, Open, Fields, Close};
 
-    public LangtStructureType? StructureType {get; private set;}
+    public LangtNamedStructureType? StructureType {get; private set;}
 
     public override Result HandleDefinitions(ASTPassState state)
     {
@@ -16,10 +16,24 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
         var dt = state.CTX.ResolutionScope.Define
         (
-            s => new LangtStructureType(Name.ContentStr, s)
+            s => 
             {
-                DefinitionRange = Range,
-                Documentation = Struct.Documentation
+                var typeScope = new LangtScope(s);
+                var genericTypes = new List<LangtType>();
+
+                foreach(var spec in EnumerableExtensions.OrEmpty(Generic?.TypeSpecs.Values))
+                {
+                    var newty = typeScope.Define(s => new LangtGenericParameterType(spec.ContentStr, s) {DefinitionRange = spec.Range}, spec.Range);
+                    builder.AddData(newty);
+
+                    if(newty) genericTypes.Add(newty.Value);
+                }
+
+                return new LangtNamedStructureType(Name.ContentStr, s, typeScope, genericTypes)
+                {
+                    DefinitionRange = Range,
+                    Documentation = Struct.Documentation
+                };
             }, 
 
             Range,
@@ -29,6 +43,7 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
 
             out var t
         );
+
         builder.AddData(dt);
 
         if(!dt) return dt;
@@ -42,23 +57,33 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, ASTToken Open, Separa
     {
         var builder = ResultBuilder.Empty();
 
+        if(StructureType is null) return Result.Error(SilentError.Create());
+
+        state.CTX.RedirectScope(StructureType.TypeScope);
+
         foreach(var f in Fields.Values) 
         {
             var sfr = f.Field(state);
             builder.AddData(sfr);
 
-            if(!sfr) return builder.Build();
+            if(!sfr) 
+            {
+                state.CTX.RestoreScope();
+                return builder.Build();
+            }
 
             var sf = sfr.Value;
 
             if(StructureType!.HasField(sf.Name))
             {
+                state.CTX.RestoreScope();
                 return builder.WithDgnError($"Cannot redefine field {sf.Name}", Range).Build();
             }
 
-            StructureType.Fields.Add(sf);
+            StructureType.AddField(sf.Name, sf.Ty);
         }
 
+        state.CTX.RestoreScope();
         return builder.Build();
     }
 }

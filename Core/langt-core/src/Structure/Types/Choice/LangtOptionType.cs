@@ -35,6 +35,37 @@ public class LangtOptionType : LangtType
             return Result.Error<LangtOptionType>(Diagnostic.Error("Cannot create an option type with only one option", range));
         }
 
+        foreach(var o in options)
+        {
+            Expect.That(o.IsConstructed, "Option types must contain only constructed types");
+        }
+
         return Result.Success(new LangtOptionType(options));
     }
+
+    public override bool Equals(LangtType? other)
+        => other is not null
+        && other.IsOption
+        && OptionTypes.SetEquals(other.OptionTypes);
+
+    public override LangtType ReplaceGeneric(LangtType gen, LangtType rep)
+    {
+        if(OptionTypes.Contains(gen))
+        {
+            var newTypes = new HashSet<LangtType>();
+
+            foreach(var optTy in OptionTypes)
+            {
+                var k = optTy.ReplaceGeneric(gen, rep);
+                newTypes.Add(k);
+            }
+
+            return Create(newTypes).Expect();
+        }
+
+        return this;
+    }
+    
+    public override bool Contains(LangtType ty)
+        => OptionTypes.Any(t => t.Contains(ty)) || base.Contains(ty);
 }

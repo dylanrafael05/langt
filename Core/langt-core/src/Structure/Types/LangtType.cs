@@ -3,6 +3,7 @@ using Langt.Structure;
 using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
 using Langt.Structure.Resolutions;
+using Langt.AST;
 
 namespace Langt.Structure;
 
@@ -15,6 +16,12 @@ public abstract class LangtResolvableType : LangtType, IResolution
 
     public required SourceRange? DefinitionRange {get; init;}
     public new IScope HoldingScope {get;}
+
+    public override bool Equals(LangtType? other)
+        => other is not null 
+        && other.IsResolution 
+        && Name == other.Name 
+        && HoldingScope == other.HoldingScope;
 }
 
 public abstract class LangtType : INamed, IEquatable<LangtType>
@@ -56,8 +63,8 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
     public LangtReferenceType? Reference => this as LangtReferenceType;
     public virtual LangtType? ElementType => null;
 
-    [MemberNotNullWhen(true, nameof(Structure))] public bool IsStructure => this is LangtStructureType;
-    public LangtStructureType? Structure => this as LangtStructureType;
+    [MemberNotNullWhen(true, nameof(Structure))] public bool IsStructure => this is IStructureType;
+    public IStructureType? Structure => this as IStructureType;
 
     [MemberNotNullWhen(true, nameof(Function))] public bool IsFunction => this is LangtFunctionType;
     public LangtFunctionType? Function => this as LangtFunctionType;
@@ -67,7 +74,6 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
     public bool IsAlias => this is LangtAliasType;
     public LangtAliasType? Alias => this as LangtAliasType;
     public virtual LangtType? AliasBaseType => null;
-    
 
 
     [MemberNotNullWhen(true, nameof(OptionTypes)), MemberNotNullWhen(true, nameof(OptionTypeMap)), MemberNotNullWhen(true, nameof(Option))] 
@@ -79,35 +85,54 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
     [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsResolution => this is IResolution;
     public IScope? HoldingScope => (this as IResolution)?.HoldingScope;
 
+    [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsGenericParameter => this is LangtGenericParameterType;
+
+    public virtual bool IsConstructed => true;
+    public virtual IReadOnlyList<LangtType> GenericParameters => Array.Empty<LangtType>();
+    
     public virtual bool IsBuiltin => false;
 
-    // public abstract LLVMTypeRef Lower(Context context);
-
-
-    public bool Equals(LangtType? other) 
+    /// <summary>
+    /// Replace a given parameter type with another; should only be called in generation code.
+    /// Any errors will be failed out with.
+    /// </summary>
+    public virtual LangtType ReplaceGeneric(LangtType ty, LangtType newty)
     {
-        if(other is null) return false;
-
-        //* Expects builtins are uniquely named
-        if(IsBuiltin)   return other.IsBuiltin && Name == other.Name;
-        if(IsPointer)   return other.IsPointer && ElementType == other.ElementType;
-        if(IsReference) return other.IsReference && ElementType == other.ElementType;
-        
-        //* Expects these to be the only requirements for function type equality
-        if(IsFunction) return other.IsFunction
-                           && Function.ReturnType == other.Function.ReturnType
-                           && Function.ParameterTypes.SequenceEqual(other.Function.ParameterTypes)
-                           && Function.IsVararg == other.Function.IsVararg;
-
-        //* Expects that scopes cannot hold duplicates
-        if(IsResolution) return HoldingScope == other.HoldingScope
-                             && Name == other.Name;
-
-        if(IsOption) return other.IsOption 
-                         && OptionTypes.SetEquals(other.OptionTypes);
-
-        throw new NotImplementedException($"Cannot check equality for types {GetType().FullName} and {other.GetType().FullName}");
+        return this == ty ? newty : this;
     }
+
+    /// <summary>
+    /// Replace a all parameters with the given types.
+    /// </summary>
+    public LangtType ReplaceAllGenerics(IReadOnlyList<LangtType> ty, IReadOnlyList<LangtType> newty)
+    {
+        Expect.That(ty.Count == newty.Count, "Input and output replacements must be of equal length");
+
+        var r = this;
+        for(int i = 0; i < ty.Count; i++)
+        {
+            r = r.ReplaceGeneric(ty[i], newty[i]);
+        }
+
+        return r;
+    }
+
+    /// <summary>
+    /// Check if this type contains any references to the given type
+    /// </summary>
+    public virtual bool Contains(LangtType ty)
+    {
+        return this == ty;
+    }
+
+    public Result<LangtType> RequireConstructed(SourceRange range = default)
+    {
+        if(IsConstructed) return Result.Success(this);
+
+        return Result.Error<LangtType>(Diagnostic.Error($"Cannot use unconstructed type {this} in this context", range));
+    }
+
+    public abstract bool Equals(LangtType? other);
 
     public sealed override bool Equals(object? obj)
         => obj is LangtType lt && Equals(lt);
@@ -115,9 +140,8 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
     public sealed override string ToString()
         => FullName;
 
-    // TODO: reimpl? optimize FullName?
     public override int GetHashCode()
-        => FullName.GetHashCode();
+        => HashCode.Combine(Name, HoldingScope);
 
     public static bool operator ==(LangtType? a, LangtType? b) 
         => a is null ? b is null : a.Equals(b);
@@ -132,6 +156,11 @@ public abstract class LangtType : INamed, IEquatable<LangtType>
         
         // public override LLVMTypeRef Lower(Context context) => llvm;
         public override bool IsBuiltin => true;
+
+        public override bool Equals(LangtType? other)
+            => other is not null
+            && other.IsBuiltin
+            && Name == other.Name;
     }
 
     public static readonly LangtType Real64 = new BasicType(LangtWords.Real64) {RealBitDepth = 64};

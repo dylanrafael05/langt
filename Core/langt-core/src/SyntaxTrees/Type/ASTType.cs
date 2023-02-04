@@ -2,6 +2,7 @@ using Langt.Structure;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
 using Langt.Utility;
+using Langt.Structure.Resolutions;
 
 namespace Langt.AST;
 
@@ -21,11 +22,11 @@ public record FunctionPtrType(ASTToken Star, ASTToken Fn, ASTToken Open, Separat
     {
         var builder = ResultBuilder.Empty();
 
-        var retResult = ReturnType.Bind(state);
+        var retResult = ReturnType.Resolve(state);
         var argsResult = ResultGroup.GreedyForeach
         (
             Arguments.Values,
-            t => t.Bind(state)
+            t => t.Resolve(state)
         ).Combine();
 
         builder.WithData(retResult).WithData(argsResult);
@@ -33,10 +34,9 @@ public record FunctionPtrType(ASTToken Star, ASTToken Fn, ASTToken Open, Separat
         var fType = LangtFunctionType.Create
         (
             parameterTypes: argsResult
-                .Map(k => k.Select(x => x.Resolution as LangtType))
                 .Or(Arguments.Values.Select(_ => LangtType.Error))!
                 .ToArray()!,
-            returnType: retResult.Map(k => k.Resolution as LangtType).Or(LangtType.Error)!, 
+            returnType: retResult.Or(LangtType.Error)!, 
             isVararg: Ellipsis is not null
         );
 

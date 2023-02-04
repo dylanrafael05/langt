@@ -60,7 +60,7 @@ public class LangtProject
             );
         }
 
-        Logger.Note("Refining definitions . . . ");
+        Logger.Note("Refining type definitions . . . ");
         foreach(var f in Files)
         {
             Context.Open(f);

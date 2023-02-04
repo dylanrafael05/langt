@@ -86,7 +86,7 @@ public class Context : IProjectDependency
     /// <summary>
     /// Whether or not the resolution scope is the same as the current scope.
     /// </summary>
-    public bool ResolutionScopeIsRedirected {get; private set;}
+    public bool ResolutionScopeIsRedirected => scopeRedirects.Count > 0;
     /// <summary>
     /// The current file this code generator is working with.
     /// </summary>
@@ -107,6 +107,8 @@ public class Context : IProjectDependency
         ResolutionScope = CurrentScope = file.Scope;
         CurrentNamespace = null;
     }
+
+    private readonly Stack<IScope> scopeRedirects = new();
 
     private readonly List<IConversionProvider> conversions = new();
 
@@ -178,6 +180,17 @@ public class Context : IProjectDependency
         };
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
+    }
+
+    public void RedirectScope(IScope scope) 
+    {
+        scopeRedirects.Push(scope);
+        ResolutionScope = scope;
+    }
+
+    public void RestoreScope()
+    {
+        ResolutionScope = scopeRedirects.Pop();
     }
 
     public void DefineBinaryOperator(TokenType op, LangtType a, LangtType b, LangtType r)

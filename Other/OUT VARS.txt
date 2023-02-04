@@ -1,0 +1,30 @@
+#########################
+# Question: overloads?
+# How will they work?
+#########################
+
+# IDEA 1 #
+let main() none 
+{
+     var x = 0
+}
+with
+{
+     out x int32
+}
+
+let test() none
+{
+     print("{}", main::x)
+}
+
+# IDEA 2 #
+let main() none
+{
+     out var x = 0
+}
+
+let test() none
+{
+     print("{}", main::x)
+}

@@ -32,7 +32,7 @@ public class HoverHandler : HoverHandlerBase
                 => $"let {lv.FullName} {lv.Type.FullName}",
             LangtVariable lv
                 => $"{lv.FullName} {lv.Type.FullName}",
-            LangtType lt when lt is LangtStructureType 
+            LangtType lt when lt is LangtNamedStructureType 
                 => $"struct {lt.FullName}",
             LangtType lt when lt is LangtAliasType 
                 => $"alias {lt.FullName} = {lt.AliasBaseType!.FullName}",

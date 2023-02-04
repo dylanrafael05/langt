@@ -6,7 +6,7 @@ public struct LowerStructFieldAssignment : ILowerImplementation<BoundStructField
 {
     public void LowerImpl(CodeGenerator cg, BoundStructFieldAssignment node)
     {
-        var l = LowerHelpers.BuildStructGEP(cg, node, node.FieldIndex, node.Field, node.DebugSourceName);
+        var l = LowerHelpers.BuildStructGEP(cg, node, node.Field.Index, node.Field, node.DebugSourceName);
         
         cg.Lower(node.Right);
         var r = cg.PopValue(node.DebugSourceName);

@@ -22,23 +22,52 @@ public class LangtFunctionType : LangtType
                                                    LangtType returnType,
                                                    SourceRange range = default,
                                                    string[]? parameterNames = null,
-                                                   bool isVararg = false,
-                                                   string? externType = null)
+                                                   bool isVararg = false)
     {
-        if(externType is null && isVararg)
-        {
-            return Result.Error<LangtFunctionType>(Diagnostic.Error($"Cannot define a variable argument function that is not extern C", range));
-        }
-
         for(var i = 0; i < parameterTypes.Length; i++)
         {
             if(parameterTypes[i] == None) 
             {
-                return Result.Error<LangtFunctionType>(Diagnostic.Error($"Parameter {parameterNames?[i] ?? "(unnamed)"} cannot have type 'none'", range));
+                return Result.Error<LangtFunctionType>(Diagnostic.Error($"Parameter {(parameterNames is not null ? parameterNames[i] + " " : "")}cannot have type 'none'", range));
             }
+
+            Expect.That(parameterTypes[i].IsConstructed, "Function types can only contain constructed types");
         }
+        
+        Expect.That(returnType.IsConstructed, "Function types can only contain constructed types");
 
         return Result.Success<LangtFunctionType>(new(returnType, parameterTypes, isVararg));
+    }
+
+    public override bool Equals(LangtType? other)
+        => other is not null
+        && other.IsFunction
+        && ParameterTypes.SequenceEqual(other.Function.ParameterTypes)
+        && ReturnType == other.Function.ReturnType
+        && IsVararg == other.Function.IsVararg;
+
+    public override LangtType ReplaceGeneric(LangtType gen, LangtType rep)
+    {
+        var changed = false;
+
+        LangtType? retTy = null;
+        LangtType[]? pTys = null;
+
+        if(gen == ReturnType)
+        {
+            changed = true;
+            retTy = rep;
+        }
+
+        if(ParameterTypes.Contains(rep))
+        {
+            changed = true;
+            pTys = ParameterTypes.Select(x => x.ReplaceGeneric(gen, rep)).ToArray();
+        }
+
+        if(changed) return Create(pTys ?? ParameterTypes, retTy ?? ReturnType, isVararg: IsVararg).Expect();
+
+        return this;
     }
 
     public LangtType ReturnType {get; private init;}

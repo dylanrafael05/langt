@@ -7,7 +7,6 @@ namespace Langt.AST;
 public record BoundStructFieldAssignment(Assignment Source, BoundStructFieldAccess Left, BoundASTNode Right) : BoundASTNode(Source)
 {
     public BoundASTNode LeftValue => Left.Left;
-    public int FieldIndex => Left.FieldIndex;
     public LangtStructureField Field => Left.Field;
     public override TreeItemContainer<BoundASTNode> ChildContainer => new() {Left, Right};
     public override LangtType Type => LangtType.None;

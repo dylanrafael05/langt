@@ -5,6 +5,10 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
+public record GenericParameterSpecification(ASTToken Start, SeparatedCollection<ASTToken> TypeSpecs, ASTToken End) : ASTNode 
+{
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Start, TypeSpecs, End};
+}
 public record ArgumentSpec(ASTToken Name, ASTType Type) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
@@ -89,14 +93,20 @@ public record FunctionDefinition(ASTToken Let,
             argc++;
         }
 
+        if(Let.Type is not TokenType.Extern && VarargSpec is not null)
+        {
+            return builder
+                .WithDgnError($"Cannot define a function as variable argument if it is not also extern", Range)
+                .Build();
+        }
+
         var fnres = LangtFunctionType.Create
         (
             ArgTypes!, 
             retType, 
             range: DefinitionRange,
             parameterNames: ArgSpec.Values.Select(k => k.Name.ContentStr).ToArray(),
-            isVararg: VarargSpec is not null,
-            externType: (Let.Type is TokenType.Extern ? "C" : "")
+            isVararg: VarargSpec is not null
         );
         builder.AddData(fnres);
 

@@ -22,13 +22,15 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         var left = iptResult.Value;
         var hasResolution = left.HasResolution;
 
-        if(!left.Type.IsReference || left.Type.ElementType is not LangtStructureType structureType)
+        if(!left.Type.IsStructure)
         {
             return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
                 .BuildError<BoundASTNode>();
         }
 
-        if(!structureType.TryResolveField(Right.ContentStr, out var field, out var index))
+        var structureType = left.Type.Structure;
+
+        if(!structureType.ResolveField(Right.ContentStr, out var field))
         {
             return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range)
                 .BuildError<BoundASTNode>();
@@ -36,8 +38,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         var result = new BoundStructFieldAccess(this, left)
         {
-            Field = field!,
-            FieldIndex = index
+            Field = field
         };
 
         return builder.Build<BoundASTNode>(result);
