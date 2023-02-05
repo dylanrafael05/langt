@@ -20,7 +20,7 @@ public static class LLVMUtil
             return;
         }
 
-        if(!engine.TryFindFunction(CodeGenerator.GetGeneratedFunctionName("main", false), out var f))
+        if(!engine.TryFindFunction("_L1X4main0", out var f))
         {
             logger.Error("No function named 'main' found in given code.");
             return;

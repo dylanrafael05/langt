@@ -249,13 +249,14 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
     public GenericParameterSpecification? GenericParameterSpecification(ParserState state)
     {
-        if(CurrentType is TT.OpenIndex)
+        if(CurrentType is TT.Exclamation)
         {
-            var open  = Grab();
-            var types = SeparatedCollection(state, p => Require(TT.Identifier), t => t is TT.Comma, t => t is TT.CloseIndex);
-            var close = Require(TT.CloseIndex);
+            var gen   = Grab();
+            var open  = Require(TT.LessThan);
+            var types = SeparatedCollection(state, p => Require(TT.Identifier), t => t is TT.Comma, t => t is TT.GreaterThan);
+            var close = Require(TT.GreaterThan);
 
-            return new(open, types, close);
+            return new(gen, open, types, close);
         }
 
         return null;
@@ -411,13 +412,14 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
 
             result = new OptionType(result, pipe, next);
         }
-        else if(CurrentType is TT.OpenIndex)
+        else if(CurrentType is TT.Exclamation)
         {
-            var open = Grab();
-            var args = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.CloseIndex, false);
-            var close = Require(TT.CloseIndex);
+            var gen = Grab();
+            var open = Require(TT.LessThan);
+            var args = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.GreaterThan, false);
+            var close = Require(TT.GreaterThan);
 
-            result = new ConsGenericStructType(result, open, args, close);
+            result = new ConsGenericStructType(result, gen, open, args, close);
         }
 
         return result;

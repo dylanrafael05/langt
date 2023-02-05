@@ -8,14 +8,7 @@ public class FunctionBuilder : Builder<LangtFunction, LLVMValueRef>
     {
         return CG.Module.AddFunction
         (
-            CodeGenerator.GetFunctionName
-            (
-                fn.IsExtern,
-                fn.Name,
-                fn.FullName,
-                fn.Type.IsVararg,
-                fn.Type.ParameterTypes
-            ), 
+            fn.IsExtern ? fn.Name : fn.MangledName(), 
             CG.Binder.Get(fn.Type)
         );
     }

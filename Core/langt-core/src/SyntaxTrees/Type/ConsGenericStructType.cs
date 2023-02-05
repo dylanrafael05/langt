@@ -2,9 +2,9 @@ using Langt.Structure;
 
 namespace Langt.AST;
 
-public record ConsGenericStructType(ASTType Type, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken Close) : ASTType
+public record ConsGenericStructType(ASTType Type, ASTToken GenTok, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken Close) : ASTType
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, Open, Arguments, Close};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, GenTok, Open, Arguments, Close};
 
     public override Result<LangtType> Resolve(ASTPassState state)
     {

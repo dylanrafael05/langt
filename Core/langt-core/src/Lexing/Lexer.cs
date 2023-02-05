@@ -167,6 +167,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
         },
 
         '!' when Next.Nullable() is '=' => Grab(2, TT.NotEquals),
+        '!'                             => Grab(1, TT.Exclamation),
 
         '>' => Next.Nullable() switch 
         {

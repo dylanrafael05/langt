@@ -5,9 +5,9 @@ using Langt.Structure.Visitors;
 
 namespace Langt.AST;
 
-public record GenericParameterSpecification(ASTToken Start, SeparatedCollection<ASTToken> TypeSpecs, ASTToken End) : ASTNode 
+public record GenericParameterSpecification(ASTToken Bang, ASTToken Start, SeparatedCollection<ASTToken> TypeSpecs, ASTToken End) : ASTNode 
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Start, TypeSpecs, End};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {Bang, Start, TypeSpecs, End};
 }
 public record ArgumentSpec(ASTToken Name, ASTType Type) : ASTNode
 {

@@ -11,6 +11,7 @@ public enum TokenType
     Struct,
 
     ArrowRight,
+    Exclamation,
 
     Let,
     Extern,

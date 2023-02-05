@@ -18,9 +18,12 @@ public class LangtConsGenericStructureType : LangtType, IStructureType
     private readonly IStructureType baseType;
     private readonly LangtType[] constructionArguments;
 
-    public override string Name        => baseType.Name        + $"[{constructionArguments.Stringify(k => k.Name)}]";
-    public override string DisplayName => baseType.DisplayName + $"[{constructionArguments.Stringify(k => k.DisplayName)}]";
-    public override string FullName    => baseType.FullName    + $"[{constructionArguments.Stringify(k => k.FullName)}]";
+    public IStructureType BaseType => baseType;
+    public IReadOnlyList<LangtType> ConstructionArguments => constructionArguments;
+
+    public override string Name        => baseType.Name        + $"!<{constructionArguments.Stringify(k => k.Name)}>";
+    public override string DisplayName => baseType.DisplayName + $"!<{constructionArguments.Stringify(k => k.DisplayName)}>";
+    public override string FullName    => baseType.FullName    + $"!<{constructionArguments.Stringify(k => k.FullName)}>";
 
     public IScope? TypeScope => baseType.TypeScope;
 

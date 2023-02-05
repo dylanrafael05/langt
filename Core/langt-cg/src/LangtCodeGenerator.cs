@@ -12,7 +12,6 @@ namespace Langt.CG;
 public class CodeGenerator
 {
     public delegate LLVMValueRef Applicator(LLVMValueRef input);
-    public const string LangtIdentifierPrepend = "<lgt>";
 
     public CodeGenerator(LangtCompilation compilation)
     {
@@ -226,15 +225,4 @@ public class CodeGenerator
             return v;
         }
     }
-
-    public static string GetFunctionName(bool isExtern, string name, string fullName, bool isVararg, params LangtType[] paramTypes)
-    {
-        if(isExtern) return name;
-        return GetGeneratedFunctionName(fullName, isVararg, paramTypes);
-    }
-
-    public static string GetGeneratedFunctionName(string fullName, bool isVararg, params LangtType[] paramTypes) 
-        => LangtIdentifierPrepend
-            + fullName
-            + LangtFunctionType.GetFullSignatureString(isVararg, paramTypes);
 }

@@ -57,9 +57,9 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
 
     public LLVMTypeRef BuildStructure(IStructureType ty)
     {
-        var name = ty is LangtStructureType ? ("anon`" + StructCount++) : ty.FullName;
+        var name = ty is LangtStructureType ? ("_anon_" + StructCount++) : (ty as LangtType)!.MangledName();
 
-        var s = CG.LLVMContext.CreateNamedStruct(CodeGenerator.LangtIdentifierPrepend + name);
+        var s = CG.LLVMContext.CreateNamedStruct(name);
         s.StructSetBody(ty.Fields().Select(f => f.Type).Select(CG.Binder.Get).ToArray(), false);
 
         return s;
@@ -75,7 +75,7 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
             LLVMTypeRef.Int8 // Tag
         };
 
-        var s = CG.LLVMContext.CreateNamedStruct(ty.FullName);
+        var s = CG.LLVMContext.CreateNamedStruct(ty.MangledName());
         s.StructSetBody(elems.ToArray(), false);
 
         return s;
