@@ -24,7 +24,7 @@ public abstract class LangtResolvableType : LangtType, IResolution
         && HoldingScope == other.HoldingScope;
 }
 
-public abstract class LangtType : INamed, IEquatable<LangtType>
+public abstract class LangtType : IFullNamed, IEquatable<LangtType>
 {
     public LangtType(string name)
     {

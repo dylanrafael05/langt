@@ -1,0 +1,30 @@
+TODO: 
+
+- Redo scopes
+
+- Create Weak<T>, which will be the type of all resolutions from a scope
+  Weak<T> behazes similar to a lazy object, in that its value is determined
+  on use. It's main purpose is to mitigate recursive circumstances.
+
+  For instance, the field types of a structure should be stored as Weak<LangtType>, 
+  as to prevent self-referential structures from incurring errors while permitting
+  full immutability.
+
+  There is the implication that Weak<T> and T must be able to check for some form of 
+  'resolution' equality. This can be implemented either by using the name of an object,
+  or by using some sort of fast check if two objects share the same 'resolution identifier'.
+
+  Using these 'resolution' equality checks, we can catch recursion errors, like, for instance:
+  
+     alias a = a
+     
+     // in code
+     if(baseType.ResolutionEqual(weakCurrentType))
+     { /*Report error*/ }
+
+  This does also suggest the need for a way to determine the 'current' weak object being
+  constructed (the weak reference instance which is currently being populated with true value
+  data). This should likely be passed in the weak reference's constructorfunction:
+
+     // int for example; likely not permissible in real code
+     new Weak<int>(c => c.ResolutionEqual(someOther) ? 1 : 0)

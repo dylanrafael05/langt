@@ -98,7 +98,7 @@ public class CodeGenerator
 
     public void InitializeScope(IScope scope)
     {
-        foreach(var variable in scope!.NamedItems.Values.OfType<LangtVariable>())
+        foreach(var variable in scope!.Items.Values.OfType<LangtVariable>())
         {
             var llvm = Builder.BuildAlloca(Binder.Get(variable.Type), "var."+variable.Name);
             

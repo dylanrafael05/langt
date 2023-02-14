@@ -1,4 +1,5 @@
 using System.Collections;
+using System.Runtime.InteropServices;
 
 namespace Langt.Utility;
 
@@ -37,6 +38,9 @@ public static class EnumerableExtensions
 
     public static IEnumerable<T> OrEmpty<T>(IEnumerable<T>? t) 
         => t ?? Array.Empty<T>();
+
+    public static ref V? GetOrAddDefaultRef<K, V>(this Dictionary<K, V> d, K key, out bool exists) where K : notnull
+        => ref CollectionsMarshal.GetValueRefOrAddDefault(d, key, out exists);
 
     [Flags]
     private enum MergeSide 

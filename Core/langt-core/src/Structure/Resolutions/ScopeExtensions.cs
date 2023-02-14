@@ -3,9 +3,29 @@ using Resolutions;
 
 public static class ScopeExtensions
 {
-    public static Result DefineProxy<T>(this IScope scope, T item, SourceRange range) where T : INamed
+    public static string FullNameDefault(this INamed item) 
     {
-        return scope.Define<IProxyResolution<T>>(s => new ProxyResolution<T>(item, s), range).Drop();
+        var name = item is IFullNamed fn ? fn.DisplayName : item.Name;
+
+        if(item is not IResolution resolution)  
+            return name;
+        
+        var holding = resolution.HoldingScope;
+
+        while(holding is not INamed && holding is not null)     
+            holding = holding.HoldingScope;
+
+        if(holding is null)
+            return name;
+
+        var upperName = FullNameDefault((INamed)holding);
+
+        return upperName + "::" + name;
+    }
+
+    public static Result DefineProxy<T>(this IScope scope, T item, SourceRange range) where T : IFullNamed
+    {
+        return scope.Define<IResolutionProducer<T>>(s => new ResolutionProxy<T>(item, s), range).Drop();
     }
 
     public static Result Define<TIn>(this IScope scope, Func<IScope, TIn> constructor, SourceRange sourceRange, out TIn? result) where TIn : IResolution
@@ -45,15 +65,15 @@ public static class ScopeExtensions
         return s.Drop();
     }
     
-    public static Result<LangtVariable> ResolveVariable(this IScope sc, string name, SourceRange range, bool propogate = true) 
-        => sc.Resolve<LangtVariable>(name, "variable", range, propogate: propogate);
-    public static Result<LangtType> ResolveType(this IScope sc, string name, SourceRange range, bool propogate = true) 
-        => sc.Resolve<LangtType>(name, "type", range, propogate: propogate);
-    public static Result<LangtFunctionGroup> ResolveFunctionGroup(this IScope sc, string name, SourceRange range, bool propogate = true) 
-        => sc.Resolve<LangtFunctionGroup>(name, "function", range, propogate: propogate);
-    public static Result<LangtNamespace> ResolveNamespace(this IScope sc, string name, SourceRange range, bool propogate = true) 
-        => sc.Resolve<LangtNamespace>(name, "namespace", range, propogate: propogate);
+    public static Result<WeakRes<LangtVariable>> ResolveVariable(this IScope sc, string name, SourceRange range) 
+        => sc.Resolve<LangtVariable>(name, "variable", range);
+    public static Result<WeakRes<LangtType>> ResolveType(this IScope sc, string name, SourceRange range) 
+        => sc.Resolve<LangtType>(name, "type", range);
+public static Result<WeakRes<LangtFunctionGroup>> ResolveFunctionGroup(this IScope sc, string name, SourceRange range) 
+        => sc.Resolve<LangtFunctionGroup>(name, "function", range);
+    public static Result<WeakRes<LangtNamespace>> ResolveNamespace(this IScope sc, string name, SourceRange range) 
+        => sc.Resolve<LangtNamespace>(name, "namespace", range);
 
-    public static Result<IResolution> Resolve(this IScope sc, string input, SourceRange range, bool propogate = true)
-        => sc.Resolve<IResolution>(input, "item", range, propogate);
+    public static Result<WeakRes<IResolution>> Resolve(this IScope sc, string input, SourceRange range)
+        => sc.Resolve<IResolution>(input, "item", range);
 }

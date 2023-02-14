@@ -1,7 +1,7 @@
 namespace Results;
 using Interfaces;
 
-public struct Result : IModdable<Result>, IResultlike, IResultOperators<Result>
+public struct Result : IModdableResultlike<Result>, IResultlike, IResultOperators<Result>
 {
     public bool HasErrors {get; private init;} = false;
     public bool HasMetadata {get; private init;} = false;

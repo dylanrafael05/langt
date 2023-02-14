@@ -1,7 +1,7 @@
 namespace Results;
 using Interfaces;
 
-public struct Result<T> : IModdable<Result<T>>, IValuedResultlike<T>, IResultOperators<Result<T>>
+public struct Result<T> : IModdableResultlike<Result<T>>, IValuedResultlike<T>, IResultOperators<Result<T>>
 {
     private T? valueStorage;
 

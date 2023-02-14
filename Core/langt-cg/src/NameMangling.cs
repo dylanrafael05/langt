@@ -75,7 +75,7 @@ public static class NameMangling
 
         while(sc is not null)
         {
-            if(sc is INamed nsc)
+            if(sc is IFullNamed nsc)
                 stack.Push(nsc.Name.Length + nsc.Name);
             
             sc = sc.HoldingScope;

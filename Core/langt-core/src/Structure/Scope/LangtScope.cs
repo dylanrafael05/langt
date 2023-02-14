@@ -1,4 +1,5 @@
 using System.Diagnostics.CodeAnalysis;
+using System.Runtime.InteropServices;
 using Langt.AST;
 using Langt.Structure;
 using Langt.Structure.Resolutions;
@@ -17,58 +18,60 @@ public class LangtScope : IScope
     public virtual bool IsNamespace => false;
     public bool IsGlobalScope => HoldingScope == null;
 
-    private readonly Dictionary<string, IResolution> namedItems = new();
-    public IReadOnlyDictionary<string, IResolution> NamedItems => namedItems;
+    private readonly Dictionary<string, IWeakRes> items = new();
+    public IReadOnlyDictionary<string, IWeakRes> Items => items;
 
-    public virtual Result<TOut> Resolve<TOut>(string input,
-                                              string outputType,
-                                              SourceRange range,
-                                              bool propogate = true) where TOut: INamed
+    public virtual Result<WeakRes<TOut>> ResolveSelf<TOut>(
+        string input,
+        string outputType,
+        SourceRange range) where TOut : INamed
     {
-        var builder = ResultBuilder.Empty();
-
         // Check if the item exists in the named items stored by this scope
-        if(namedItems.TryGetValue(input, out var r))
+        if(items.TryGetValue(input, out var r))
         {
-            if(r is TOut t)                       return builder.Build(t);
-            if(r is IProxyResolution<TOut> proxy) return builder.Build(proxy.Inner);
+            if(r is WeakRes<TOut> weak)
+                return Result.Success(weak);
         }
 
-        Result<TOut>? result = null;
-
-        // Attempt to propogate values if permitted
-        if(propogate)
-        {
-            // Check the upper scope if it exists
-            result = HoldingScope?.Resolve<TOut>(input, outputType, range, propogate);
-        }
-        
-        if(result is null)
-        {
-            builder.AddDgnError($"Could not find {outputType} named {input}", range);
-        }
-        else
-        {
-            builder.AddData(result.Value);
-        }
-
-        // Return the result, null or not
-        return result is null || builder.HasErrors ? builder.BuildError<TOut>() : builder.Build(result.Value.Value);
+        return Result.Error<WeakRes<TOut>>(Diagnostic.Error($"Could not find {outputType} named {input}", range))
+            .AsResolutionNotFound();
     }
 
-    public virtual Result<T> Define<T>(Func<IScope, T> constructor, SourceRange sourceRange) where T : IResolution
+    public virtual Result<WeakRes<TOut>> Resolve<TOut>(
+        string input,
+        string outputType,
+        SourceRange range) where TOut: INamed
+    {
+        var builder = ResultBuilder.Empty();
+        var result = ResolveSelf<TOut>(input, outputType, range);
+
+        // Check the upper scope if it exists
+        if(!result && HoldingScope is not null)
+        {
+            result = HoldingScope.Resolve<TOut>(input, outputType, range);
+        }
+        
+        builder.AddData(result);
+
+        // Return the result, null or not
+        return builder.HasErrors ? builder.BuildError<WeakRes<TOut>>() : builder.Build(result!.Value);
+    }
+
+    public virtual Result<WeakRes<T>> Define<T>(Func<IScope, WeakRes<T>> constructor, SourceRange sourceRange) where T : INamed
     {
         var obj = constructor(this);
 
-        if(namedItems.ContainsKey(obj.Name))
+        ref var item = ref items.GetOrAddDefaultRef(obj.Name, out var exists);
+
+        if(!exists)
         {
             return ResultBuilder
                 .Empty()
                 .WithDgnError($"Attempting to redefine name {obj.Name}", sourceRange)
-                .BuildError<T>();
+                .BuildError<WeakRes<T>>();
         }
 
-        namedItems.Add(obj.Name, obj);
+        item = obj;
         
         return Result.Success(obj);
     }

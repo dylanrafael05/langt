@@ -152,3 +152,4 @@ _NCrunch*
 
 # Pycache
 __pycache__/
+.fake

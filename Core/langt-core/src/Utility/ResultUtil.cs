@@ -15,9 +15,9 @@ public record StaticReference(SourceRange Range, IResolution Item, bool IsDefini
             : Range.CharStart.CompareTo(other.Range.CharStart);
 }
 
-public record BindingOptions(bool TargetTypeDependent, OrderedList<StaticReference> References) : IResultMonoid<BindingOptions>
+public record BindingOptions(bool TargetTypeDependent, bool ResolutionNotFound, OrderedList<StaticReference> References) : IResultMonoid<BindingOptions>
 {
-    public static BindingOptions Identity => new(false, new());
+    public static BindingOptions Identity => new(false, false, new());
 
     public void Add(StaticReference r) 
     {
@@ -32,8 +32,9 @@ public record BindingOptions(bool TargetTypeDependent, OrderedList<StaticReferen
 
         result = new BindingOptions
         (
-            this.TargetTypeDependent || opt.TargetTypeDependent,
-            this.References             .Merge(opt.References)
+            TargetTypeDependent || opt.TargetTypeDependent,
+            ResolutionNotFound  || opt.ResolutionNotFound,
+            References      .Merge(opt.References)
         );
 
         return true;
@@ -56,13 +57,20 @@ public static class ResultUtil
 
     public static BindingOptions GetBindingOptions(this IResultlike r)
         => r.GetSingleton<BindingOptions>();
-    public static R ModifyBindingOptions<R>(this R r, Func<BindingOptions, BindingOptions> modifier) where R : IResultlike, IModdable<R>
+    public static bool IsTargetTypeDependent(this IResultlike r)
+        => r.GetBindingOptions().TargetTypeDependent;
+    public static bool IsResolutionNotFound(this IResultlike r)
+        => r.GetBindingOptions().ResolutionNotFound;
+    
+    public static R ModifyBindingOptions<R>(this R r, Func<BindingOptions, BindingOptions> modifier) where R : IResultlike, IModdableResultlike<R>
         => r.ModifySingleton(modifier);
-    public static R AsTargetTypeDependent<R>(this R r) where R : IResultlike, IModdable<R>
+    public static R AsTargetTypeDependent<R>(this R r) where R : IResultlike, IModdableResultlike<R>
         => r.ModifyBindingOptions(b => b with {TargetTypeDependent = true});
-    public static R AddStaticReference<R>(this R r, StaticReference reference) where R : IResultlike, IModdable<R>
+    public static R AsResolutionNotFound<R>(this R r) where R : IResultlike, IModdableResultlike<R>
+        => r.ModifyBindingOptions(b => b with {ResolutionNotFound = true});
+    public static R AddStaticReference<R>(this R r, StaticReference reference) where R : IResultlike, IModdableResultlike<R>
         => r.ModifyBindingOptions(b => {b.Add(reference); return b;});
-    public static R AddStaticReference<R>(this R r, SourceRange reference, IResolution item, bool isDefinition = false) where R : IResultlike, IModdable<R>
+    public static R AddStaticReference<R>(this R r, SourceRange reference, IResolution item, bool isDefinition = false) where R : IResultlike, IModdableResultlike<R>
         => r.AddStaticReference(new(reference, item, isDefinition));
 
     public static ResultBuilder WithDgnError(this ResultBuilder builder, string message, SourceRange range)

@@ -2,7 +2,7 @@ using Results.Interfaces;
 
 namespace Results;
 
-public class ResultBuilder : IModdable<ResultBuilder>, IResultlike
+public class ResultBuilder : IModdableResultlike<ResultBuilder>, IResultlike
 {
     public static ResultBuilder Empty() => new();
     public static ResultBuilder From(IResultlike first, params IResultlike[] rest) => Empty().WithData(first).WithData(rest);

@@ -1,3 +1,4 @@
+using Langt.AST;
 using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
@@ -15,10 +16,18 @@ public class LangtNamespace : Resolution, IScope
         Name = name;
     }
 
-    public IReadOnlyDictionary<string, IResolution> NamedItems => innerScope.NamedItems;
+    public IReadOnlyDictionary<string, IResolutionProducer> Items => innerScope.Items;
 
-    public Result<TOut> Resolve<TOut>(string input, string outputType, SourceRange range, bool propogate = false) where TOut : INamed
-        => innerScope.Resolve<TOut>(input, outputType, range, propogate);
-    public Result<TIn> Define<TIn>(Func<IScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolution
-        => innerScope.Define(_ => constructor(this), sourceRange);
+    public Result<TOut>? ResolveSelfPossibly<TOut>(string input, string outputType, ASTPassState state, SourceRange range, TypeCheckOptions? optionsMaybe = null) where TOut : INamed
+    {
+        return ((IScope)innerScope).ResolveSelfPossibly<TOut>(input, outputType, state, range, optionsMaybe);
+    }
+    public Result<TOut> Resolve<TOut>(string input, string outputType, ASTPassState state, SourceRange range, TypeCheckOptions? optionsMaybe = null) where TOut : INamed
+    {
+        return ((IScope)innerScope).Resolve<TOut>(input, outputType, state, range, optionsMaybe);
+    }
+    public Result<TIn> Define<TIn>(Func<IScope, TIn> constructor, SourceRange sourceRange) where TIn : IResolutionProducer
+    {
+        return ((IScope)innerScope).Define(constructor, sourceRange);
+    }
 }

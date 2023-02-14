@@ -2,7 +2,7 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public interface IStructureType : INamed
+public interface IStructureType : IFullNamed
 {
     bool ResolveField(string name, out LangtStructureField field);
     bool HasField(string name);

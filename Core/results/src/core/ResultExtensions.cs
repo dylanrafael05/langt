@@ -4,17 +4,17 @@ namespace Results;
 
 public static class ResultExtensions
 {
-    public static R WithError<R>(this R r, IResultError err) where R : IModdable<R>
+    public static R WithError<R>(this R r, IResultError err) where R : IModdableResultlike<R>
         => r.WithErrors(new IResultError[] {err});
-    public static R WithMetadata<R>(this R r, IResultMetadata meta) where R : IModdable<R>
+    public static R WithMetadata<R>(this R r, IResultMetadata meta) where R : IModdableResultlike<R>
         => r.WithMetadata(new IResultMetadata[] {meta});
 
-    public static R WithDataFrom<R>(this R r, IResultlike other) where R : IModdable<R>
+    public static R WithDataFrom<R>(this R r, IResultlike other) where R : IModdableResultlike<R>
         => r.WithErrors(other.Errors).WithMetadata(other.Metadata);
 
-    public static R WithoutError<R>(this R r, IResultError err) where R : IModdable<R>, IResultlike
+    public static R WithoutError<R>(this R r, IResultError err) where R : IModdableResultlike<R>, IResultlike
         => r.ClearErrors().WithErrors(r.Errors.Except(new[] {err}));
-    public static R WithoutMetadata<R>(this R r, IResultMetadata err) where R : IModdable<R>, IResultlike
+    public static R WithoutMetadata<R>(this R r, IResultMetadata err) where R : IModdableResultlike<R>, IResultlike
         => r.ClearMetadata().WithMetadata(r.Metadata.Except(new[] {err}));
 
     public static T Or<R, T>(this R r, T orValue) where R : IResultlike, IValued<T>
@@ -22,12 +22,12 @@ public static class ResultExtensions
     public static T Or<R, T>(this R r, Func<T> orValueProvider) where R : IResultlike, IValued<T>
         => r.HasValue ? r.Value : orValueProvider();
 
-    public static R Forgive<R, T>(this R r, Func<T> defaultValue) where R : IModdable<R>, IValueModdable<R, T>, IValued<T>, IResultlike
+    public static R Forgive<R, T>(this R r, Func<T> defaultValue) where R : IModdableResultlike<R>, IValueModdable<R, T>, IValued<T>, IResultlike
         => r.Forgive().WithValue(r.Or(defaultValue)!);
-    public static R Forgive<R, T>(this R r, T defaultValue) where R : IModdable<R>, IValueModdable<R, T>, IValued<T>, IResultlike
+    public static R Forgive<R, T>(this R r, T defaultValue) where R : IModdableResultlike<R>, IValueModdable<R, T>, IValued<T>, IResultlike
         => r.Forgive(() => defaultValue);
     
-    public static R Forgive<R>(this R r) where R : IModdable<R>, IResultlike
+    public static R Forgive<R>(this R r) where R : IModdableResultlike<R>, IResultlike
     {
         var nmeta = from e in r.Errors let t = e.TryDemote() where t is not null select t;
         return r
@@ -45,7 +45,7 @@ public static class ResultExtensions
         => r.Metadata.OfType<T>().FirstOrDefault(T.Identity);
     public static R ModifySingleton<T, R>(this R r, Func<T, T> modifier) 
         where T : IResultMonoid<T> 
-        where R : IResultlike, IModdable<R>
+        where R : IResultlike, IModdableResultlike<R>
     {
         var instances = r.Metadata.OfType<T>().ToArray();
 
@@ -59,12 +59,13 @@ public static class ResultExtensions
             var inst = instances[0];
             var newinst = modifier(inst);
 
-            if(object.ReferenceEquals(inst, newinst))
+            if(ReferenceEquals(inst, newinst))
             {
                 return r;
             }
 
-            return r.WithoutMetadata(inst).WithMetadata(newinst);
+            return r.WithoutMetadata(inst)
+                    .WithMetadata(newinst);
         }
     }
 
