@@ -11,14 +11,14 @@ namespace Langt.AST;
 /// </summary>
 public abstract record ASTType() : ASTNode //TODO: implement distinction between type definition and implementation
 {
-    public abstract Result<LangtType> Resolve(ASTPassState state);
+    public abstract Result<Weak<LangtType>> Resolve(ASTPassState state);
 }
 
 public record FunctionPtrType(ASTToken Star, ASTToken Fn, ASTToken Open, SeparatedCollection<ASTType> Arguments, ASTToken? Ellipsis, ASTToken Close, ASTType ReturnType) : ASTType
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Star, Fn, Open, Arguments, Ellipsis, Close, ReturnType};
 
-    public override Result<LangtType> Resolve(ASTPassState state)
+    public override Result<Weak<LangtType>> Resolve(ASTPassState state)
     {
         var builder = ResultBuilder.Empty();
 
@@ -42,11 +42,14 @@ public record FunctionPtrType(ASTToken Star, ASTToken Fn, ASTToken Open, Separat
 
         builder.WithData(fType);
 
-        if(!builder) return builder.BuildError<LangtType>();
+        if(!builder) return builder.BuildError<Weak<LangtType>>();
 
-        return builder.Build<LangtType>
+        return builder.Build<Weak<LangtType>>
         (
-            LangtPointerType.Create(fType.Value).Expect()
+            Weak.Wrapping
+            (
+                LangtPointerType.Create(fType.Value).Expect()
+            )
         );
     }
 }

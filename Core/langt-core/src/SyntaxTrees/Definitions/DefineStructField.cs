@@ -10,7 +10,7 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 
     // TODO: move resolution logic to TypeCheckRaw?
-    public Result<(string Name, LangtType Ty)> Field(ASTPassState state) 
+    public Result<(string Name, Weak<LangtType> Ty)> Field(ASTPassState state) 
     {
         var t = Type.Resolve(state);
         if(!t) return t.ErrorCast<(string, LangtType)>();

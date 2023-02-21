@@ -1,4 +1,4 @@
-namespace Langt.Structure.Resolutions;
+namespace Langt.Structure;
 
 public interface INamed
 {

@@ -4,9 +4,9 @@ namespace Langt.Structure;
 
 public class LangtNamedStructureType : LangtResolvableType, IStructureType
 {
-    public LangtNamedStructureType(string name, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
+    public LangtNamedStructureType(string name, IReadOnlyDictionary<string, LangtStructureField> fields, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
     {
-        inner = new(typeScope);
+        inner = new(typeScope, fields);
         GenericParameters = genericParameters;
 
         TypeScope = typeScope;
@@ -31,9 +31,4 @@ public class LangtNamedStructureType : LangtResolvableType, IStructureType
 
     public bool HasField(string name)
         => inner.HasField(name);
-
-    public void AddField(string name, LangtType ty)
-    {
-        ((IStructureType)inner).AddField(name, ty);
-    }
 }

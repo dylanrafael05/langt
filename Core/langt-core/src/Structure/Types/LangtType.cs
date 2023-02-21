@@ -7,7 +7,7 @@ using Langt.AST;
 
 namespace Langt.Structure;
 
-public abstract class LangtResolvableType : LangtType, IResolution
+public abstract class LangtResolvableType : LangtType, IResolvable
 {
     public LangtResolvableType(string name, IScope scope) : base(name)
     {
@@ -19,9 +19,11 @@ public abstract class LangtResolvableType : LangtType, IResolution
 
     public override bool Equals(LangtType? other)
         => other is not null 
-        && other.IsResolution 
+        && other.IsResolvable 
         && Name == other.Name 
         && HoldingScope == other.HoldingScope;
+
+    public static string TypeName => "type";
 }
 
 public abstract class LangtType : IFullNamed, IEquatable<LangtType>
@@ -82,8 +84,8 @@ public abstract class LangtType : IFullNamed, IEquatable<LangtType>
     public virtual IReadOnlySet<LangtType>? OptionTypes => null;
     public virtual IReadOnlyDictionary<LangtType, int>? OptionTypeMap => null;
 
-    [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsResolution => this is IResolution;
-    public IScope? HoldingScope => (this as IResolution)?.HoldingScope;
+    [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsResolvable => this is IResolvable;
+    public IScope? HoldingScope => (this as IResolvable)?.HoldingScope;
 
     [MemberNotNullWhen(true, nameof(HoldingScope))] public bool IsGenericParameter => this is LangtGenericParameterType;
 

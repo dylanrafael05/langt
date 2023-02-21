@@ -11,6 +11,4 @@ public interface IStructureType : IFullNamed
     IReadOnlyList<LangtType> GenericParameters {get;}
 
     IScope? TypeScope {get;}
-
-    void AddField(string name, LangtType ty);
 }

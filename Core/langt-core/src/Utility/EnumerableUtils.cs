@@ -36,7 +36,7 @@ public static class EnumerableExtensions
     public static IEnumerable<T> Without<T>(this IEnumerable<T> t, T value)
         => t.Where(x => x?.Equals(value) ?? (value is null));
 
-    public static IEnumerable<T> OrEmpty<T>(IEnumerable<T>? t) 
+    public static IEnumerable<T> OrEmpty<T>(this IEnumerable<T>? t) 
         => t ?? Array.Empty<T>();
 
     public static ref V? GetOrAddDefaultRef<K, V>(this Dictionary<K, V> d, K key, out bool exists) where K : notnull

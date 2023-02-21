@@ -245,11 +245,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
     /// <seealso cref="HasResolution"/>
     /// <seealso cref="INamedScoped"/>
     [MemberNotNullWhen(true, nameof(HasResolution))]
-    public virtual IResolution? Resolution {get; init;}
-
-    public LangtType ExpectType => Expect.Is<LangtType>(Resolution, "Expected a type");
-    public LangtVariable ExpectVariable => Expect.Is<LangtVariable>(Resolution, "Expected a variable");
-    public LangtNamespace ExpectNamespace => Expect.Is<LangtNamespace>(Resolution, "Expected a namespace");
+    public virtual IResolvable? Resolution {get; init;}
 
     /// <summary>
     /// Attempt to apply a dereference if this node is an l-value and is a pointer.

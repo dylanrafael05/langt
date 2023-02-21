@@ -4,7 +4,7 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public class LangtVariable : Resolution
+public class LangtVariable : Resolvable
 {
     public LangtVariable(string name, LangtType type, IScope scope) : base(scope)
     {

@@ -3,7 +3,7 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public class LangtFunction : Resolution
+public class LangtFunction : Resolvable
 {
     public LangtFunction(LangtFunctionGroup group) : base(group.HoldingScope)
     {

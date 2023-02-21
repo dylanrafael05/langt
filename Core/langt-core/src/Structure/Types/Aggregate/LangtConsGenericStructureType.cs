@@ -64,9 +64,4 @@ public class LangtConsGenericStructureType : LangtType, IStructureType
     {
         return baseType.HasField(name);
     }
-
-    public void AddField(string name, LangtType ty)
-    {
-        baseType.AddField(name, ty);
-    }
 }

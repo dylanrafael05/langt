@@ -14,6 +14,64 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, GenericParameterSpeci
     {
         var builder = ResultBuilder.Empty();
 
+        var w = new WeakResolution
+        (
+            new ResolutionIdentifier(Name.ContentStr, state.CTX.ResolutionScope),
+
+            w => 
+            {
+                var builder = ResultBuilder.Empty();
+
+                var typeScope = new SimpleScope {Parent = w.Identifier.HoldingScope};
+                var genericTypes = new List<LangtType>();
+
+                foreach(var spec in Generic?.TypeSpecs.Values.OrEmpty()!)
+                {
+                    var gen = new LangtGenericParameterType(spec.ContentStr, w.Identifier.HoldingScope) {DefinitionRange = spec.Range};
+
+                    var newty = typeScope.Define(WeakResolution.Wrapping(gen), spec.Range);
+                    builder.AddData(newty);
+
+                    if(newty) 
+                        genericTypes.Add(gen);
+                }
+
+                if(!builder) 
+                    return builder.BuildError<IResolvable>();
+
+                var sb = new StructureTypeBuilder(typeScope)
+                    .WithGenericTypes(genericTypes.ToArray());
+
+                foreach(var f in Fields.Values) 
+                {
+                    var sfr = f.Field(state);
+                    builder.AddData(sfr);
+
+                    if(!sfr) 
+                    {
+                        state.CTX.RestoreScope();
+                        return builder.BuildError<IResolvable>();
+                    }
+
+                    var sf = sfr.Value;
+
+                    if(StructureType!.HasField(sf.Name))
+                    {
+                        state.CTX.RestoreScope();
+                        return builder.WithDgnError($"Cannot redefine field {sf.Name}", Range)
+                            .BuildError<IResolvable>();
+                    }
+
+                    sb.AddField(sf.Name, sf.Ty);
+                }
+
+                return Result.Success<IResolvable>
+                (
+                    new LangtNamedStructureType()
+                );
+            }
+        );
+
         var dt = state.CTX.ResolutionScope.Define
         (
             s => 

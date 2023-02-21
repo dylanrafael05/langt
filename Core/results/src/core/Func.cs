@@ -1,5 +1,6 @@
 namespace Results;
 
+public delegate Result<R> ResultFunc<R>();
 public delegate Result<R> ResultFunc<T1, R>(T1 a);
 public delegate Result<R> ResultFunc<T1, T2, R>(T1 a, T2 b);
 public delegate Result<R> ResultFunc<T1, T2, T3, R>(T1 a, T2 b, T3 c);
@@ -10,6 +11,7 @@ public delegate Result<R> ResultFunc<T1, T2, T3, T4, T5, T6, T7, R>(T1 a, T2 b, 
 public delegate Result<R> ResultFunc<T1, T2, T3, T4, T5, T6, T7, T8, R>(T1 a, T2 b, T3 c, T4 d, T5 e, T6 f, T7 g, T8 h);
 
 
+public delegate Result ResultAction();
 public delegate Result ResultAction<T1>(T1 a);
 public delegate Result ResultAction<T1, T2>(T1 a, T2 b);
 public delegate Result ResultAction<T1, T2, T3>(T1 a, T2 b, T3 c);
