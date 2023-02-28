@@ -9,11 +9,11 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
 
-        var resolution = state.CTX.ResolutionScope.Resolve(Tok.ContentStr, Range);
+        var resolution = ctx.ResolutionScope.Resolve(Tok.ContentStr, Range, ctx);
         builder.AddData(resolution);
         if(!resolution) return builder.BuildError<BoundASTNode>();
 

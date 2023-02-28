@@ -1,3 +1,4 @@
+using Langt.AST;
 using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
@@ -5,16 +6,29 @@ namespace Langt.Structure;
 public class LangtAliasType : LangtResolvableType
 {
     public override LangtType? AliasBaseType => baseType;
-    private LangtType? baseType;
+    private LangtType baseType;
+    private readonly ISymbol<LangtType> baseSymbol;
 
-    public LangtAliasType(string name, IScope scope) : base(name, scope)
-    {}
-
-    public void SetBase(LangtType? baseType)
+    public LangtAliasType(string name, IScope scope, ISymbol<LangtType> baseSymbol) : base(name, scope)
     {
-        this.baseType = baseType;
+        this.baseSymbol = baseSymbol;
+        baseType = Error;
+    }
 
-        if(baseType is not null)
-            Expect.That(baseType.IsConstructed, "Alias types can only contain constructed types");
+    public override Result Complete(Context ctx)
+    {
+        var tyRes = baseSymbol.Unravel(ctx);
+        if(!tyRes) return tyRes.Drop();
+
+        var ty = tyRes.Value;
+
+        if(ty.Contains(this))
+        {
+            return Result.Error(Diagnostic.Error($"Alias types cannot refer to themselves!", baseSymbol.Range));
+        }
+
+        baseType = ty;
+        
+        return Result.Success();
     }
 }

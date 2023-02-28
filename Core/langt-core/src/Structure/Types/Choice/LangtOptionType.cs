@@ -1,9 +1,46 @@
+using Langt.AST;
+
 namespace Langt.Structure;
+
+public class OptionTypeSymbol : Symbol<LangtType>
+{
+    public required IEnumerable<ISymbol<LangtType>> OptionSymbols {get; init;}
+
+    public override Result<LangtType> Unravel(Context ctx)
+    {
+        var optionSymbols = OptionSymbols.ToList();
+
+        var options = new HashSet<LangtType>();
+        var builder = ResultBuilder.Empty();
+
+        foreach(var symbol in optionSymbols)
+        {
+            var res = symbol.Unravel(ctx);
+            builder.AddData(res);
+
+            if(!res) continue;
+
+            var ty = res.Value;
+
+            if(options.Contains(ty))
+            {
+                builder.AddDgnError($"Duplicate type {ty.FullName} in option", symbol.Range);
+                continue;
+            }
+
+            options.Add(ty);
+        }
+
+        return Result.Success<LangtType>(new LangtOptionType(options));
+    }
+}
 
 public class LangtOptionType : LangtType
 {
-    private LangtOptionType(IReadOnlySet<LangtType> opts) 
+    public LangtOptionType(IReadOnlySet<LangtType> opts) 
     {
+        Expect.That(opts.Count > 2);
+
         // Generate sorted type map
         var optsSort = opts.OrderBy(t => t.Name).Indexed().ToList();
 
@@ -23,25 +60,6 @@ public class LangtOptionType : LangtType
 
     public const uint TagLocation = 1;
 
-    public static Result<LangtOptionType> Create(IReadOnlySet<LangtType> options, SourceRange range = default)
-    {
-        if(options.Count == 0)
-        {
-            return Result.Error<LangtOptionType>(Diagnostic.Error("Cannot create an option type with no options", range));
-        }
-
-        if(options.Count == 1)
-        {
-            return Result.Error<LangtOptionType>(Diagnostic.Error("Cannot create an option type with only one option", range));
-        }
-
-        foreach(var o in options)
-        {
-            Expect.That(o.IsConstructed, "Option types must contain only constructed types");
-        }
-
-        return Result.Success(new LangtOptionType(options));
-    }
 
     public override bool Equals(LangtType? other)
         => other is not null
@@ -60,7 +78,9 @@ public class LangtOptionType : LangtType
                 newTypes.Add(k);
             }
 
-            return Create(newTypes).Expect();
+            if(newTypes.Count == 1) return newTypes.First();
+
+            return new LangtOptionType(newTypes);
         }
 
         return this;
@@ -68,4 +88,6 @@ public class LangtOptionType : LangtType
     
     public override bool Contains(LangtType ty)
         => OptionTypes.Any(t => t.Contains(ty)) || base.Contains(ty);
+    public override bool Stores(LangtType ty)
+        => OptionTypes.Any(t => t.Stores(ty)) || base.Stores(ty);
 }

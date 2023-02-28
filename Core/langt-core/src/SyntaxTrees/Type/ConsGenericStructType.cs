@@ -6,19 +6,19 @@ public record ConsGenericStructType(ASTType Type, ASTToken GenTok, ASTToken Open
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, GenTok, Open, Arguments, Close};
 
-    public override Result<LangtType> Resolve(ASTPassState state)
+    public override Result<LangtType> Resolve(Context ctx)
     {
         var builder = ResultBuilder.Empty();
 
         var argASTVals = Arguments.Values.ToArray();
 
-        var baseTyRes = Type.Resolve(state);
+        var baseTyRes = Type.Resolve(ctx);
         builder.AddData(baseTyRes);
         if(!builder) return builder.BuildError<LangtType>();
 
         var baseTy = baseTyRes.Value;
         
-        var bparamsRes = ResultGroup.GreedyForeach(Arguments.Values, t => t.Resolve(state)).Combine();
+        var bparamsRes = ResultGroup.GreedyForeach(Arguments.Values, t => t.Resolve(ctx)).Combine();
         builder.AddData(bparamsRes);
         if(!builder) return builder.BuildError<LangtType>();
 

@@ -15,7 +15,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         LangtType exprType;
         LangtType? natType = null;

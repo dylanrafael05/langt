@@ -8,6 +8,6 @@ public record PointerType(ASTToken Ptr, ASTType Type) : ASTType
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Ptr, Type};
 
-    public override Result<LangtType> Resolve(ASTPassState state)
-        => Type.Resolve(state).Map(t => LangtPointerType.Create(t, Range)).As<LangtType>();
+    public override ISymbol<LangtType> GetSymbol(Context ctx)
+        => new PointerTypeSymbol {ElementType = Type.GetSymbol(ctx)};
 }

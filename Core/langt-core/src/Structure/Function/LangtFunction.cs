@@ -3,9 +3,9 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public class LangtFunction : Resolvable
+public class LangtFunction : IFullNamed
 {
-    public LangtFunction(LangtFunctionGroup group) : base(group.HoldingScope)
+    public LangtFunction(LangtFunctionGroup group)
     {
         Group = group;
     }
@@ -16,7 +16,7 @@ public class LangtFunction : Resolvable
     public required string[] ParameterNames {get; init;}
     public required bool IsExtern {get; init;}
 
-    public override string Name => Group.Name;
-    public override string DisplayName => Group.DisplayName;
-    public override string FullName => Group.FullName;
+    public string Name => Group.Name;
+    public string DisplayName => Group.DisplayName;
+    public string FullName => Group.FullNameSimple();
 }

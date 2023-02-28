@@ -22,12 +22,12 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, As, Type};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var results = Result.All
         (
-            Value.Bind(state),
-            Type.Resolve(state)
+            Value.Bind(ctx),
+            Type.Resolve(ctx)
         );
         var builder = ResultBuilder.From(results);
 
@@ -54,7 +54,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         }
 
         // Conversion
-        var cv = state.CTX.ResolveConversion(val.Type, type, Range);
+        var cv = ctx.ResolveConversion(val.Type, type, Range);
         builder.AddData(cv);
 
         if(!cv) return builder.BuildError<BoundASTNode>();

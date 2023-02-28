@@ -14,7 +14,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Let, Identifier, Type, Eq, Value};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         LangtType varT;
         BoundASTNode boundValue;
@@ -23,13 +23,13 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
 
         if(Type is not null)
         {
-            var tn = Type.Resolve(state);
+            var tn = Type.UnravelSymbol(ctx);
             builder.AddData(tn);
             if(!tn) return builder.BuildError<BoundASTNode>();
 
             varT = tn.Value;
             
-            var bn = Value.BindMatchingExprType(state, varT);
+            var bn = Value.BindMatchingExprType(ctx, varT);
             builder.AddData(bn);
             if(!bn) return builder.BuildError<BoundASTNode>();
 
@@ -37,7 +37,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
         }
         else
         {
-            var bn = Value.Bind(state);
+            var bn = Value.Bind(ctx);
             builder.AddData(bn);
 
             if(!bn) return builder.BuildError<BoundASTNode>();
@@ -47,7 +47,7 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
             varT = boundValue.NaturalType ?? boundValue.Type;
         }
 
-        var couldDef = state.CTX.ResolutionScope.Define
+        var couldDef = ctx.ResolutionScope.Define
         (
             s => new LangtVariable(Identifier.ContentStr, varT, s) 
             {

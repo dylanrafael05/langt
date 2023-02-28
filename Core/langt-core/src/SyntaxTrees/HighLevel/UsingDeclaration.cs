@@ -7,13 +7,13 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Using, Identifier};
 
-    public override Result HandleDefinitions(ASTPassState state)
+    public override Result HandleDefinitions(Context ctx)
     {
-        var ns = Identifier.Resolve(state);
+        var ns = Identifier.Resolve(ctx);
 
         if(ns)
         {
-            state.CTX.CurrentFile!.IncludeNamespace(ns.Value);
+            ctx.CurrentFile!.IncludeNamespace(ns.Value);
         }
 
         return ns.Drop();

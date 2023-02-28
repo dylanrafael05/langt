@@ -19,7 +19,7 @@ public class LangtProject
     }
 
     public Context Context {get;}
-    public LangtScope GlobalScope {get;} = new(null);
+    public IScope GlobalScope {get;} = new SimpleScope {Parent = null};
     public List<LangtFile> Files {get;} = new();
     public DiagnosticCollection Diagnostics {get;} = new();
     public OrderedList<StaticReference> References {get;} = new();

@@ -95,7 +95,7 @@ public class Context : IProjectDependency
     /// The current namespace as declared by 'namespace' directives.
     /// Will be null if in the global namespace or uninitialized/unrun.
     /// </summary>
-    public LangtNamespace? CurrentNamespace {get; private set;}
+    public Namespace? CurrentNamespace {get; private set;}
 
     /// <summary>
     /// Open the given langt file with this code generator.
@@ -146,7 +146,7 @@ public class Context : IProjectDependency
 
         foreach(var op in AllMagicNames)
         {
-            Project.GlobalScope.Define(s => new LangtFunctionGroup(op, s), SourceRange.Default).Expect();
+            Project.GlobalScope.Define(new LangtFunctionGroup(op, Project.GlobalScope), SourceRange.Default).Expect();
         }
 
         BuiltinOperators.Initialize(this);
@@ -154,7 +154,7 @@ public class Context : IProjectDependency
 
     public LangtFunctionGroup GetGlobalFunction(string name)
     {
-        return Project.GlobalScope.ResolveFunctionGroup(name, SourceRange.Default, false).Expect("Operators that are known must exist in the global scope.");
+        return (LangtFunctionGroup)Project.GlobalScope.Resolve(name, SourceRange.Default, this).Expect("Operators that are known must exist in the global scope.");
     }
     public LangtFunctionGroup GetOperator(OperatorSpec op)
     {
@@ -170,7 +170,7 @@ public class Context : IProjectDependency
     {
         var opfn = GetOperator(new(OperatorType.Unary, op));
 
-        var ftype = LangtFunctionType.Create(new[] {x}, r).Expect();
+        var ftype = new LangtFunctionType(r, new[] {x}, false);
 
         var fn = new LangtFunction(opfn)
         {
@@ -197,7 +197,7 @@ public class Context : IProjectDependency
     {
         var opfn = GetOperator(new(OperatorType.Binary, op));
 
-        var ftype = LangtFunctionType.Create(new[] {a, b}, r).Expect();
+        var ftype = new LangtFunctionType(r, new[] {a, b}, false);
 
         var fn = new LangtFunction(opfn)
         { 
@@ -209,7 +209,7 @@ public class Context : IProjectDependency
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
     }
 
-    public void SetCurrentNamespace(LangtNamespace ns)
+    public void SetCurrentNamespace(Namespace ns)
     {
         Expect.ArgNonNull(ns, "Cannot set file namespace to null!");
 
@@ -225,10 +225,10 @@ public class Context : IProjectDependency
     }
 
     public IScope OpenScope()
-        => ResolutionScope = new LangtScope(ResolutionScope);
+        => ResolutionScope = new SimpleScope {Parent = ResolutionScope};
     public void CloseScope()
     {
-        ResolutionScope = ResolutionScope.HoldingScope ?? throw new Exception("Cannot close scope; the current scope is the global scope!");
+        ResolutionScope = ResolutionScope.Parent ?? throw new Exception("Cannot close scope; the current scope is the global scope!");
     }
 
     public Result<LangtConversion> ResolveConversion(LangtType input, LangtType output, SourceRange range) 

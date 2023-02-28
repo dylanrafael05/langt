@@ -4,15 +4,15 @@ using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
-public class LangtVariable : Resolvable
+public class LangtVariable : ImmediateResolvable
 {
-    public LangtVariable(string name, LangtType type, IScope scope) : base(scope)
+    public LangtVariable(string name, LangtType type, IScope scope)
     {
         Name = name;
         Type = type;
+        HoldingScope = scope;
     }
 
-    public override string Name {get;}
     public LangtType Type {get; init;}
 
     public bool IsWriteable {get; init;} = true;

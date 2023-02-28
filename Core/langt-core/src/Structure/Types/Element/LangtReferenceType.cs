@@ -1,35 +1,48 @@
+using Langt.AST;
+
 namespace Langt.Structure;
 
-// TODO: use this class to replace LValue
-public class LangtReferenceType : LangtTypeWithElement
+public class ReferenceTypeSymbol : Symbol<LangtType>
 {
-    private LangtReferenceType(LangtType ptrType) : base(ptrType)
-    {}
+    public required ISymbol<LangtType> ElementType {get; init;}
 
-    protected override string ModifyName(string nameIn)
-        => "&" + nameIn;
-
-    public static Result<LangtReferenceType> Create(LangtType elem, SourceRange range = default)
+    public override Result<LangtType> Unravel(Context ctx)
     {
-        if(elem.IsReference)
+        var tyRes = ElementType.Unravel(ctx);
+        if(!tyRes) return tyRes;
+
+        var ty = tyRes.Value;
+        
+        if(ty.IsReference)
         {
-            return Result.Error<LangtReferenceType>(
+            return Result.Error<LangtType>(
                 Diagnostic.Error(
                     "Cannot create a nested reference type",
-                    range
+                    Range
                 )
             );
         }
 
-        return CreateElementType<LangtReferenceType>(elem => new(elem), elem, range);
+        return Result.Success<LangtType>(new LangtReferenceType(ty));
     }
+}
+
+public class LangtReferenceType : LangtTypeWithElement
+{
+    public LangtReferenceType(LangtType ptrType) : base(ptrType)
+    {
+        Expect.Not(ptrType.IsReference);
+    }
+
+    protected override string ModifyName(string nameIn)
+        => "&" + nameIn;
     
     public override LangtType ReplaceGeneric(LangtType gen, LangtType rep)
     {
         if(ElementType.Contains(gen)) 
         {
             var newElem = ElementType.ReplaceGeneric(gen, rep);
-            return Create(newElem).Expect();
+            return new LangtReferenceType(newElem);
         }
         
         return this;

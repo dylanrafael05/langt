@@ -7,34 +7,36 @@ namespace Langt.AST;
 /// <summary>
 /// A special case of ASTNode which represents something which is known at compile time to be a namespace
 /// </summary>
-public abstract record ASTNamespace : ASTNode // TODO: permit only one namespace declaration per file; emit warnings for duplicate usings
+public abstract record ASTNamespace : ASTNode, ISymbolProvider<Namespace> // TODO: permit only one namespace declaration per file; emit warnings for duplicate usings
 {
-    public abstract Result<LangtNamespace> Resolve(ASTPassState state, TypeCheckOptions? optionsMaybe = null);
-    protected Result<LangtNamespace> ResolveFrom(IScope from, string name, SourceRange? nameRange = null, [NotNullWhen(true)] bool allowDefinitions = false)
-    {
-        var builder = ResultBuilder.Empty();
+    public abstract ISymbol<Namespace> GetSymbol(Context ctx);
 
-        var nsResult = from.ResolveNamespace(name, Range);
-        builder.AddData(nsResult);
+    // public abstract Result<LangtNamespace> Resolve(Context ctx, TypeCheckOptions? optionsMaybe = null);
+    // protected Result<LangtNamespace> ResolveFrom(IScope from, string name, SourceRange? nameRange = null, [NotNullWhen(true)] bool allowDefinitions = false)
+    // {
+    //     var builder = ResultBuilder.Empty();
 
-        if(!nsResult)
-        {
-            if(allowDefinitions)
-            {
-                var dr = from.Define
-                (
-                    s => new LangtNamespace(s, name) 
-                    {
-                        DefinitionRange = nameRange ?? Range
-                    }, 
+    //     var nsResult = from.ResolveNamespace(name, Range);
+    //     builder.AddData(nsResult);
 
-                    Range
-                );
+    //     if(!nsResult)
+    //     {
+    //         if(allowDefinitions)
+    //         {
+    //             var dr = from.Define
+    //             (
+    //                 s => new LangtNamespace(s, name) 
+    //                 {
+    //                     DefinitionRange = nameRange ?? Range
+    //                 }, 
+
+    //                 Range
+    //             );
                 
-                return dr;
-            }
-        }
+    //             return dr;
+    //         }
+    //     }
 
-        return nsResult;
-    }
+    //     return nsResult;
+    // }
 }

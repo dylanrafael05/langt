@@ -13,12 +13,12 @@ public record WhileStatement(ASTToken While, ASTNode Condition, Block Block) : A
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {While, Condition, Block};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var results = Result.All
         (
-            Condition.BindMatchingExprType(state, LangtType.Bool),
-            Block.Bind(state)
+            Condition.BindMatchingExprType(ctx, LangtType.Bool),
+            Block.Bind(ctx)
         );
 
         if(!results) return results.ErrorCast<BoundASTNode>();

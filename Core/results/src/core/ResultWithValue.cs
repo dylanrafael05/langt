@@ -1,5 +1,6 @@
 namespace Results;
 using Interfaces;
+using System.Diagnostics.CodeAnalysis;
 
 public struct Result<T> : IModdableResultlike<Result<T>>, IValuedResultlike<T>, IResultOperators<Result<T>>
 {
@@ -98,7 +99,7 @@ public struct Result<T> : IModdableResultlike<Result<T>>, IValuedResultlike<T>, 
         return Value;
     }
 
-    public T? Or(T? def) 
+    [return: NotNullIfNotNull(nameof(def))] public T? Or(T? def) 
     {
         if(HasErrors) return def;
         return Value;

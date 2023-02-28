@@ -9,34 +9,44 @@ namespace Langt.Structure;
 // * and have them take in a source range.
 // * Create "forcing" variants to allow for pre-built types.
 
+public class FunctionTypeSymbol : Symbol<LangtType>
+{
+    public required ISymbol<LangtType> ReturnType {get; init;}
+    public required ISymbol<LangtType>[] ParameterTypes {get; init;}
+    public required bool IsVararg {get; init;}
+
+    public string[]? ParameterNames {get; init;}
+
+    public override Result<LangtType> Unravel(Context ctx)
+    {
+        var builder = ResultBuilder.Empty();
+
+        var retRes = ReturnType.Unravel(ctx);
+        builder.AddData(retRes);
+
+        var retTy = retRes.Or(LangtType.Error);
+
+        var parameterTypes = new List<LangtType>();
+
+        foreach(var paramSym in ParameterTypes)
+        {
+            var paramRes = paramSym.Unravel(ctx);
+            builder.AddData(paramRes);
+
+            parameterTypes.Add(paramRes.Or(LangtType.Error));
+        }
+
+        return builder.Build<LangtType>(new LangtFunctionType(retTy, parameterTypes.ToArray(), IsVararg));
+    }
+}
+
 public class LangtFunctionType : LangtType
 {
-    private LangtFunctionType(LangtType ret, LangtType[] param, bool varg) 
+    public LangtFunctionType(LangtType ret, LangtType[] param, bool varg) 
     {
         ReturnType = ret;
         ParameterTypes = param;
         IsVararg = varg;
-    }
-
-    public static Result<LangtFunctionType> Create(LangtType[] parameterTypes,
-                                                   LangtType returnType,
-                                                   SourceRange range = default,
-                                                   string[]? parameterNames = null,
-                                                   bool isVararg = false)
-    {
-        for(var i = 0; i < parameterTypes.Length; i++)
-        {
-            if(parameterTypes[i] == None) 
-            {
-                return Result.Error<LangtFunctionType>(Diagnostic.Error($"Parameter {(parameterNames is not null ? parameterNames[i] + " " : "")}cannot have type 'none'", range));
-            }
-
-            Expect.That(parameterTypes[i].IsConstructed, "Function types can only contain constructed types");
-        }
-        
-        Expect.That(returnType.IsConstructed, "Function types can only contain constructed types");
-
-        return Result.Success<LangtFunctionType>(new(returnType, parameterTypes, isVararg));
     }
 
     public override bool Equals(LangtType? other)
@@ -65,7 +75,7 @@ public class LangtFunctionType : LangtType
             pTys = ParameterTypes.Select(x => x.ReplaceGeneric(gen, rep)).ToArray();
         }
 
-        if(changed) return Create(pTys ?? ParameterTypes, retTy ?? ReturnType, isVararg: IsVararg).Expect();
+        if(changed) return new LangtFunctionType(retTy ?? ReturnType, pTys ?? ParameterTypes, IsVararg);
 
         return this;
     }
@@ -94,13 +104,13 @@ public class LangtFunctionType : LangtType
         
         public int ParameterCount => Parameters.Length;
 
-        public Result<BoundASTNode> GetBoundTo(int n, ASTPassState state, LangtType? t, out bool coerced)
+        public Result<BoundASTNode> GetBoundTo(int n, Context ctx, LangtType? t, out bool coerced)
         {
             Result<BoundASTNode> current;
 
             if(CachedBoundParameters[n] is null)
             {
-                current = Parameters[n].Bind(state, new TypeCheckOptions {TargetType = t});
+                current = Parameters[n].Bind(ctx, new TypeCheckOptions {TargetType = t});
                 
                 if(!current.GetBindingOptions().TargetTypeDependent)
                     CachedBoundParameters[n] = current;
@@ -112,11 +122,11 @@ public class LangtFunctionType : LangtType
 
             coerced = false;
             if(t is null || !current) return current;
-            return current.Value.MatchExprType(state, t, out coerced);
+            return current.Value.MatchExprType(ctx, t, out coerced);
         }
 
-        public Result<BoundASTNode> Get(int n, ASTPassState state) 
-            => GetBoundTo(n, state, null, out _);
+        public Result<BoundASTNode> Get(int n, Context ctx) 
+            => GetBoundTo(n, ctx, null, out _);
     }
 
     public static string GetName(LangtType ret, LangtType[] param, bool varg) 
@@ -135,7 +145,7 @@ public class LangtFunctionType : LangtType
 
     public string SignatureString => GetFullSignatureString(IsVararg, ParameterTypes);
 
-    public MatchSignatureResult MatchSignature(ASTPassState state, SourceRange range, MutableMatchSignatureInput ipt)
+    public MatchSignatureResult MatchSignature(Context ctx, SourceRange range, MutableMatchSignatureInput ipt)
     {
         var level = SignatureMatchLevel.None;
 
@@ -161,12 +171,12 @@ public class LangtFunctionType : LangtType
             {
                 if(index >= ParameterTypes.Length)
                 {
-                    var r = ipt.Get(index, state);
+                    var r = ipt.Get(index, ctx);
 
                     return r;
                 }
 
-                var op = ipt.GetBoundTo(index, state, ParameterTypes[index], out var coerced);
+                var op = ipt.GetBoundTo(index, ctx, ParameterTypes[index], out var coerced);
 
                 var clevel = coerced ? SignatureMatchLevel.Coerced : SignatureMatchLevel.Exact;
 
@@ -182,6 +192,6 @@ public class LangtFunctionType : LangtType
         return new(group.Combine().Map(k => k.ToArray()), level);
     }
 
-    public MatchSignatureResult MatchSignature(ASTPassState state, SourceRange range, ASTNode[] parameters)
-        => MatchSignature(state, range, MutableMatchSignatureInput.From(parameters));
+    public MatchSignatureResult MatchSignature(Context ctx, SourceRange range, ASTNode[] parameters)
+        => MatchSignature(ctx, range, MutableMatchSignatureInput.From(parameters));
 }

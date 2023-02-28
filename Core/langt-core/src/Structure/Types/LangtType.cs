@@ -24,6 +24,18 @@ public abstract class LangtResolvableType : LangtType, IResolvable
         && HoldingScope == other.HoldingScope;
 
     public static string TypeName => "type";
+
+    public CompletionState Completion {get; protected set;}
+    Result IResolvable.Complete(Context ctx)
+    {
+        Completion = CompletionState.InProgress;
+        var r = Complete(ctx);
+        Completion = CompletionState.Complete;
+
+        return r;
+    }
+
+    public abstract Result Complete(Context ctx);
 }
 
 public abstract class LangtType : IFullNamed, IEquatable<LangtType>
@@ -123,6 +135,10 @@ public abstract class LangtType : IFullNamed, IEquatable<LangtType>
     /// Check if this type contains any references to the given type
     /// </summary>
     public virtual bool Contains(LangtType ty)
+    {
+        return this == ty;
+    }
+    public virtual bool Stores(LangtType ty)
     {
         return this == ty;
     }

@@ -42,9 +42,9 @@ public record FunctionDefinition(ASTToken Let,
     private LangtFunction? Function {get; set;}
     private LangtType?[]? ArgTypes {get; set;}
 
-    public override Result HandleDefinitions(ASTPassState state)
+    public override Result HandleDefinitions(Context ctx)
     {
-        FunctionGroup = state.CTX.ResolutionScope.ResolveFunctionGroup
+        FunctionGroup = ctx.ResolutionScope.ResolveFunctionGroup
             (
                 Identifier.ContentStr, 
                 Range,
@@ -55,7 +55,7 @@ public record FunctionDefinition(ASTToken Let,
 
         if(FunctionGroup is null)
         {
-            return state.CTX.ResolutionScope.Define
+            return ctx.ResolutionScope.Define
             (
                 s => new LangtFunctionGroup(Identifier.ContentStr, s), Range, 
                 f => FunctionGroup = f
@@ -67,12 +67,12 @@ public record FunctionDefinition(ASTToken Let,
         }
     }
 
-    public override Result RefineDefinitions(ASTPassState state)
+    public override Result RefineDefinitions(Context ctx)
     {
-        state.CTX.Logger.Debug($"Entered .{nameof(RefineDefinitions)}", "results");
+        ctx.Logger.Debug($"Entered .{nameof(RefineDefinitions)}", "results");
         var builder = ResultBuilder.Empty();
 
-        var rtr = Type.Resolve(state);
+        var rtr = Type.Resolve(ctx);
         builder.AddData(rtr);
 
         if(!rtr) return builder.Build();
@@ -82,7 +82,7 @@ public record FunctionDefinition(ASTToken Let,
         ArgTypes = new LangtType[ArgSpec.Values.Count()];
         
         var argc = 0;
-        foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(state)))
+        foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(ctx)))
         {
             builder.AddData(a);
 
@@ -133,7 +133,7 @@ public record FunctionDefinition(ASTToken Let,
         return builder.Build();
     }
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
 
@@ -143,28 +143,28 @@ public record FunctionDefinition(ASTToken Let,
             return Result.Success<BoundASTNode>(new BoundEmpty(this));
         }
 
-        var previousFunction = state.CTX.CurrentFunction;
+        var previousFunction = ctx.CurrentFunction;
         
         Result<BoundASTNode> bodyResult;
 
-        state.CTX.CurrentFunction = Function;
-        var scope = state.CTX.OpenScope();
+        ctx.CurrentFunction = Function;
+        var scope = ctx.OpenScope();
         {
             DefineParametersInScope(builder, scope);
 
             if(Function.Type.ReturnType == LangtType.None || Body is FunctionBlockBody)
             {
-                bodyResult = Body!.Bind(state, new TypeCheckOptions {PredefinedBlockScope = scope});
+                bodyResult = Body!.Bind(ctx, new TypeCheckOptions {PredefinedBlockScope = scope});
             }
             else 
             {
-                bodyResult = Body!.Bind(state, new TypeCheckOptions {PredefinedBlockScope = scope, TargetType = Function.Type.ReturnType});
+                bodyResult = Body!.Bind(ctx, new TypeCheckOptions {PredefinedBlockScope = scope, TargetType = Function.Type.ReturnType});
             }
 
             if(!builder.WithData(bodyResult)) return builder.BuildError<BoundASTNode>();
         }
-        state.CTX.CloseScope();
-        state.CTX.CurrentFunction = previousFunction;
+        ctx.CloseScope();
+        ctx.CurrentFunction = previousFunction;
 
         return builder.Build<BoundASTNode>
         (

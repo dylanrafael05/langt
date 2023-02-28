@@ -14,11 +14,11 @@ public record FunctionExpressionBody(ASTToken Eq, ASTNode Expression) : Function
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Eq, Expression};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         Expect.NonNull(options.PredefinedBlockScope, "Cannot bind expression body without a provided scope");
 
-        var e = Expression.BindMatchingExprType(state, options.TargetType!);
+        var e = Expression.BindMatchingExprType(ctx, options.TargetType!);
         if(!e) return e;
 
         return e.Map<BoundASTNode>

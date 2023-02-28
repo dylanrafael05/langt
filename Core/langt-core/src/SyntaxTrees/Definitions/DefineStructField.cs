@@ -10,15 +10,6 @@ public record DefineStructField(ASTToken Name, ASTType Type) : ASTNode
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Name, Type};
 
     // TODO: move resolution logic to TypeCheckRaw?
-    public Result<(string Name, Weak<LangtType> Ty)> Field(ASTPassState state) 
-    {
-        var t = Type.Resolve(state);
-        if(!t) return t.ErrorCast<(string, LangtType)>();
-
-        if(!t.Value.IsConstructed) return t
-            .WithError(Diagnostic.Error($"Cannot have a field of the unconstructed type {t.Value}", Range))
-            .ErrorCast<(string, LangtType)>();
-
-        return Result.Success((Name.ContentStr, t.Value)).WithDataFrom(t);
-    }
+    public FieldSymbol Field(Context ctx) 
+        => new(Name.ContentStr, Type.GetSymbol(ctx), Range);
 }

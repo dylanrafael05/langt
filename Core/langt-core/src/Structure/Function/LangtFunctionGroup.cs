@@ -35,15 +35,14 @@ public class LangtFunctionGroup : Resolvable
 
     private Result<Resolution> HandleOverload(Resolution[] resolves, SourceRange range, IEnumerable<LangtType?> parameterTypes) 
     {
-        string Type()  => "type".Pluralize(parameterTypes.Count());
-        string Types() => parameterTypes.Stringify();
+        string Types() => "type".Pluralize(parameterTypes.Count()) + parameterTypes.Stringify();
 
         var builder = ResultBuilder.Empty();
 
         if(resolves.Length == 0) 
         {
             return builder.WithDgnError(
-                $"Could not resolve any matching overloads for call to {FullName} with parameter {Type()} {Types()}",
+                $"Could not resolve any matching overloads for call to {FullName} with parameter {Types()}",
                 range
             ).BuildError<Resolution>();
         }
@@ -62,7 +61,7 @@ public class LangtFunctionGroup : Resolvable
             if(byLevel.Length != 1)
             {
                 return builder.WithDgnError(
-                    $"Could not resolve any one matching overload for call to {FullName} with parameter {Type()} {Types()}, multiple overloads are valid",
+                    $"Could not resolve any one matching overload for call to {FullName} with parameter {Types()}, multiple overloads are valid",
                     range
                 ).BuildError<Resolution>();
             }
@@ -75,12 +74,12 @@ public class LangtFunctionGroup : Resolvable
         throw new UnreachableException("This point should never be reached.");
     }
 
-    public Result<Resolution> ResolveOverload(ASTNode[] parameters, SourceRange range, ASTPassState state) 
+    public Result<Resolution> ResolveOverload(ASTNode[] parameters, SourceRange range, Context ctx) 
     {
         var mmsi = LangtFunctionType.MutableMatchSignatureInput.From(parameters);
 
         var resolvesFirst = overloads
-            .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(state, range, mmsi)})
+            .Select(o => new {Value = o, Resolution = o.Type.MatchSignature(ctx, range, mmsi)})
             .ToArray();
 
         if(resolvesFirst.FirstOrDefault(p => p.Resolution.OutResult.HasErrors && !p.Resolution.OutResult.GetBindingOptions().TargetTypeDependent) is var p 

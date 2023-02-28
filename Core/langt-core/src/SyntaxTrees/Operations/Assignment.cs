@@ -53,16 +53,16 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Assign, Right};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         if(Left is IndexExpression idx)
         {
-            return BindIndexAssign(idx, state);
+            return BindIndexAssign(idx, ctx);
         }
         
         var builder = ResultBuilder.Empty();
 
-        var leftResult = Left.Bind(state, new TypeCheckOptions {AutoDeference = false});
+        var leftResult = Left.Bind(ctx, new TypeCheckOptions {AutoDeference = false});
         builder.AddData(leftResult);
         if(!leftResult) return builder.BuildError<BoundASTNode>();
 
@@ -73,7 +73,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
             return builder.WithDgnError($"Cannot assign to a non-assignable value", Range).BuildError<BoundASTNode>();
         }
 
-        var rightResult = Right.BindMatchingExprType(state, left.Type.ElementType!);
+        var rightResult = Right.BindMatchingExprType(ctx, left.Type.ElementType!);
         builder.AddData(rightResult);
         if(!rightResult) return builder.BuildError<BoundASTNode>();
 
@@ -92,20 +92,20 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         );
     }
 
-    private Result<BoundASTNode> BindIndexAssign(IndexExpression idxExpr, ASTPassState state)
+    private Result<BoundASTNode> BindIndexAssign(IndexExpression idxExpr, Context ctx)
     {
         // TODO! create and use Context.BindGlobalFunctionCall(ASTNode[] args, string name)
 
         var builder = ResultBuilder.Empty();
 
-        var op = state.CTX.GetGlobalFunction(LangtWords.MagicSetIndex);
+        var op = ctx.GetGlobalFunction(LangtWords.MagicSetIndex);
 
         var args = idxExpr.Arguments.Values
             .Prepend(idxExpr.Value)
             .Append(Right)
             .ToArray();
 
-        var fr = op.ResolveOverload(args, Range, state);
+        var fr = op.ResolveOverload(args, Range, ctx);
         builder.AddData(fr);
 
         if(!builder) return builder.BuildError<BoundASTNode>();

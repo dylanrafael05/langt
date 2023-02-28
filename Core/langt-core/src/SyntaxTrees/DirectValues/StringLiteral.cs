@@ -14,7 +14,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Tok};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var source = Tok.Content;
         var s = "";

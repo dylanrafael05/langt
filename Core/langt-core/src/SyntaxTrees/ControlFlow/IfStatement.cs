@@ -13,12 +13,12 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {If, Condition, Block, Else};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var results = Result.All
         (
-            Condition.BindMatchingExprType(state, LangtType.Bool),
-            Block.Bind(state)
+            Condition.BindMatchingExprType(ctx, LangtType.Bool),
+            Block.Bind(ctx)
         );
         var builder = ResultBuilder.From(results);
 
@@ -30,7 +30,7 @@ public record IfStatement(ASTToken If, ASTNode Condition, Block Block, ElseState
 
         if(Else is not null)
         {
-            var e = Else.Bind(state);
+            var e = Else.Bind(ctx);
             builder.AddData(e);
 
             if(!e) return builder.BuildError<BoundASTNode>();

@@ -22,7 +22,7 @@
 
 // public class WeakRes<T> : IWeakRes where T : INamed
 // {
-//     public delegate Result<T> ProducerFunc(ASTPassState state, TypeCheckOptions options); 
+//     public delegate Result<T> ProducerFunc(Context ctx, TypeCheckOptions options); 
 
 //     public WeakRes(string name, IScope holding, ProducerFunc producer)
 //     {
@@ -38,16 +38,16 @@
 //     public IScope HoldingScope {get;}
 //     public string Name {get;}
 
-//     public Result<T> Get(ASTPassState state, TypeCheckOptions? maybeOptions = null)
-//         => value ??= fn(state, maybeOptions ?? new());
+//     public Result<T> Get(Context ctx, TypeCheckOptions? maybeOptions = null)
+//         => value ??= fn(ctx, maybeOptions ?? new());
     
-//     Result<INamed> IWeakRes.Get(ASTPassState state, TypeCheckOptions? optionsMaybe)
-//         => Get(state, optionsMaybe).As<INamed>();
+//     Result<INamed> IWeakRes.Get(Context ctx, TypeCheckOptions? optionsMaybe)
+//         => Get(ctx, optionsMaybe).As<INamed>();
 // }
 
 // public interface IWeakRes 
 // {
-//     Result<INamed> Get(ASTPassState state, TypeCheckOptions? optionsMaybe = null);
+//     Result<INamed> Get(Context ctx, TypeCheckOptions? optionsMaybe = null);
 
 //     IScope HoldingScope {get;}
 //     string Name {get;}

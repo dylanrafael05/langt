@@ -1,8 +1,10 @@
 namespace Langt.Structure;
 
+public record struct FieldSymbol(string Name, ISymbol<LangtType> Type, SourceRange Range) : ISourceRanged;
+
 public readonly struct LangtStructureField : IEquatable<LangtStructureField>
 {
-    public LangtStructureField(string name, Weak<LangtType> type, int index) 
+    public LangtStructureField(string name, LangtType type, int index) 
     {
         Name = name;
         Type = type;
@@ -12,7 +14,7 @@ public readonly struct LangtStructureField : IEquatable<LangtStructureField>
     }
 
     public string Name {get; init;} 
-    public Weak<LangtType> Type {get; init;}
+    public LangtType Type {get; init;}
     public int Index {get; init;}
 
     public bool Equals(LangtStructureField other)

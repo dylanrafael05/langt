@@ -8,6 +8,6 @@ public record ElseStatement(ASTToken Else, ASTNode End) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Else, End};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
-        => End.Bind(state, options);
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
+        => End.Bind(ctx, options);
 }

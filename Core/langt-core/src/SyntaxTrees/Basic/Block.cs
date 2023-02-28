@@ -13,7 +13,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
     [MemberNotNullWhen(true, nameof(Scope))] 
     public bool HasScope => Scope is not null;
 
-    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, ASTPassState state, IScope? scope = null)
+    public static Result<BoundASTNode> BindFromNodes(ASTNode source, IEnumerable<ASTNode> nodes, Context ctx, IScope? scope = null)
     {
         var builder = ResultBuilder.Empty();
         var returns = false;
@@ -23,7 +23,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
 
         foreach(var n in nodes)
         {
-            var res = n.Bind(state);
+            var res = n.Bind(ctx);
             builder.AddData(res);
             
             var bast = res.Or(new BoundEmpty(n) {IsError = true})!;
@@ -62,18 +62,18 @@ public record Block(ASTToken Open, IList<ASTNode> Statements, ASTToken Close) : 
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Open, Statements, Close};
     public override bool BlockLike => true;
 
-    public override Result HandleDefinitions(ASTPassState state)
-        => ResultGroup.GreedyForeach(Statements, n => n.HandleDefinitions(state)).Combine();
-    public override Result RefineDefinitions(ASTPassState state)
-        => ResultGroup.GreedyForeach(Statements, n => n.RefineDefinitions(state)).Combine();
+    public override Result HandleDefinitions(Context ctx)
+        => ResultGroup.GreedyForeach(Statements, n => n.HandleDefinitions(ctx)).Combine();
+    public override Result RefineDefinitions(Context ctx)
+        => ResultGroup.GreedyForeach(Statements, n => n.RefineDefinitions(ctx)).Combine();
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
-        var scope = options.PredefinedBlockScope ?? state.CTX.OpenScope();
+        var scope = options.PredefinedBlockScope ?? ctx.OpenScope();
 
-        var r = BoundGroup.BindFromNodes(this, Statements, state, scope);
+        var r = BoundGroup.BindFromNodes(this, Statements, ctx, scope);
 
-        if(!options.HasPredefinedBlockScope) state.CTX.CloseScope();
+        if(!options.HasPredefinedBlockScope) ctx.CloseScope();
 
         return r;
     }

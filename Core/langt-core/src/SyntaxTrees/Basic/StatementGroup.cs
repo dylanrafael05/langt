@@ -9,10 +9,10 @@ public record StatementGroup(IList<ASTNode> Statements) : ASTNode
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Statements};
     public override bool BlockLike => true;
 
-    public override Result HandleDefinitions(ASTPassState state)
-        => ResultGroup.GreedyForeach(Statements, n => n.HandleDefinitions(state)).Combine();
-    public override Result RefineDefinitions(ASTPassState state)
-        => ResultGroup.GreedyForeach(Statements, n => n.RefineDefinitions(state)).Combine();
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
-        => BoundGroup.BindFromNodes(this, Statements, state);
+    public override Result HandleDefinitions(Context ctx)
+        => ResultGroup.GreedyForeach(Statements, n => n.HandleDefinitions(ctx)).Combine();
+    public override Result RefineDefinitions(Context ctx)
+        => ResultGroup.GreedyForeach(Statements, n => n.RefineDefinitions(ctx)).Combine();
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
+        => BoundGroup.BindFromNodes(this, Statements, ctx);
 }

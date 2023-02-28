@@ -8,6 +8,6 @@ public record ParentheticExpression(ASTToken Open, ASTNode Value, ASTToken End) 
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Open, Value, End};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
         => Value.Bind(state, options);
 }

@@ -8,43 +8,17 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
 
     public LangtAliasType? AliasType {get; private set;}
 
-    public override Result HandleDefinitions(ASTPassState state)
-    {
-        var builder = ResultBuilder.Empty();
-        
-        var dr = state.CTX.ResolutionScope.Define
-        (
-            s => new LangtAliasType(Name.ContentStr, s) 
+    public override Result HandleDefinitions(Context ctx)
+        => ctx.ResolutionScope.Define(
+            new LangtAliasType(
+                Name.ContentStr, 
+                ctx.ResolutionScope, 
+                Type.GetSymbol(ctx)
+            )
             {
-                Documentation = Alias.Documentation,
-                DefinitionRange = Range
-            }, 
-            
-            Range, 
-            Name.Range, 
-            
-            builder,
-            
-            out var t
+                DefinitionRange = Range,
+                Documentation = Alias.Documentation
+            },
+            Range
         );
-
-        builder.AddData(dr);
-        if(!dr) return dr;
-        
-        AliasType = t;
-
-        return Result.Success();
-    }
-
-    public override Result RefineDefinitions(ASTPassState state)
-    {
-        var tr = Type.Resolve(state);
-        if(!tr) return tr.Drop();
-
-        if(AliasType is null) return Result.Error(SilentError.Create());
-
-        AliasType.SetBase(tr.Value);
-
-        return Result.Success();
-    }
 }

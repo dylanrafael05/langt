@@ -10,138 +10,34 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, GenericParameterSpeci
 
     public LangtNamedStructureType? StructureType {get; private set;}
 
-    public override Result HandleDefinitions(ASTPassState state)
+    public override Result HandleDefinitions(Context ctx)
     {
-        var builder = ResultBuilder.Empty();
+        var scope = ctx.ResolutionScope;
+        var typeScope = new SimpleScope {Parent = scope};
 
-        var w = new WeakResolution
-        (
-            new ResolutionIdentifier(Name.ContentStr, state.CTX.ResolutionScope),
-
-            w => 
+        var genericParams = Generic?.TypeSpecs?.Values?.Select(
+            a => new LangtGenericParameterType(a.ContentStr, typeScope)
             {
-                var builder = ResultBuilder.Empty();
-
-                var typeScope = new SimpleScope {Parent = w.Identifier.HoldingScope};
-                var genericTypes = new List<LangtType>();
-
-                foreach(var spec in Generic?.TypeSpecs.Values.OrEmpty()!)
-                {
-                    var gen = new LangtGenericParameterType(spec.ContentStr, w.Identifier.HoldingScope) {DefinitionRange = spec.Range};
-
-                    var newty = typeScope.Define(WeakResolution.Wrapping(gen), spec.Range);
-                    builder.AddData(newty);
-
-                    if(newty) 
-                        genericTypes.Add(gen);
-                }
-
-                if(!builder) 
-                    return builder.BuildError<IResolvable>();
-
-                var sb = new StructureTypeBuilder(typeScope)
-                    .WithGenericTypes(genericTypes.ToArray());
-
-                foreach(var f in Fields.Values) 
-                {
-                    var sfr = f.Field(state);
-                    builder.AddData(sfr);
-
-                    if(!sfr) 
-                    {
-                        state.CTX.RestoreScope();
-                        return builder.BuildError<IResolvable>();
-                    }
-
-                    var sf = sfr.Value;
-
-                    if(StructureType!.HasField(sf.Name))
-                    {
-                        state.CTX.RestoreScope();
-                        return builder.WithDgnError($"Cannot redefine field {sf.Name}", Range)
-                            .BuildError<IResolvable>();
-                    }
-
-                    sb.AddField(sf.Name, sf.Ty);
-                }
-
-                return Result.Success<IResolvable>
-                (
-                    new LangtNamedStructureType()
-                );
+                DefinitionRange = a.Range
             }
+        ) ?? Enumerable.Empty<LangtGenericParameterType>();
+
+        ctx.RedirectScope(typeScope);
+        var result = scope.Define(
+            new LangtNamedStructureType(
+                Name.ContentStr, 
+                Fields.Values.Select(f => f.Field(ctx)), 
+                scope, 
+                typeScope, 
+                genericParams.Cast<LangtType>().ToList()
+            )
+            {
+                DefinitionRange = Name.Range
+            },
+            Name.Range
         );
+        ctx.CloseScope();
 
-        var dt = state.CTX.ResolutionScope.Define
-        (
-            s => 
-            {
-                var typeScope = new LangtScope(s);
-                var genericTypes = new List<LangtType>();
-
-                foreach(var spec in EnumerableExtensions.OrEmpty(Generic?.TypeSpecs.Values))
-                {
-                    var newty = typeScope.Define(s => new LangtGenericParameterType(spec.ContentStr, s) {DefinitionRange = spec.Range}, spec.Range);
-                    builder.AddData(newty);
-
-                    if(newty) genericTypes.Add(newty.Value);
-                }
-
-                return new LangtNamedStructureType(Name.ContentStr, s, typeScope, genericTypes)
-                {
-                    DefinitionRange = Range,
-                    Documentation = Struct.Documentation
-                };
-            }, 
-
-            Range,
-            Name.Range,
-
-            builder,
-
-            out var t
-        );
-
-        builder.AddData(dt);
-
-        if(!dt) return dt;
-
-        StructureType = t;
-
-        return builder.Build();
-    }
-
-    public override Result RefineDefinitions(ASTPassState state)
-    {
-        var builder = ResultBuilder.Empty();
-
-        if(StructureType is null) return Result.Error(SilentError.Create());
-
-        state.CTX.RedirectScope(StructureType.TypeScope);
-
-        foreach(var f in Fields.Values) 
-        {
-            var sfr = f.Field(state);
-            builder.AddData(sfr);
-
-            if(!sfr) 
-            {
-                state.CTX.RestoreScope();
-                return builder.Build();
-            }
-
-            var sf = sfr.Value;
-
-            if(StructureType!.HasField(sf.Name))
-            {
-                state.CTX.RestoreScope();
-                return builder.WithDgnError($"Cannot redefine field {sf.Name}", Range).Build();
-            }
-
-            StructureType.AddField(sf.Name, sf.Ty);
-        }
-
-        state.CTX.RestoreScope();
-        return builder.Build();
+        return result;
     }
 }

@@ -1,34 +1,76 @@
+using Langt.AST;
 using Langt.Structure.Resolutions;
 
 namespace Langt.Structure;
 
 public class LangtNamedStructureType : LangtResolvableType, IStructureType
 {
-    public LangtNamedStructureType(string name, IReadOnlyDictionary<string, LangtStructureField> fields, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
+    public LangtNamedStructureType(string name, IEnumerable<FieldSymbol> fieldSymbols, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
     {
-        inner = new(typeScope, fields);
         GenericParameters = genericParameters;
-
         TypeScope = typeScope;
+        fieldDict = new();
+
+        this.fieldSymbols = fieldSymbols;
     }
 
-    private readonly LangtStructureType inner;
-    
-    public override IReadOnlyList<LangtType> GenericParameters {get;}
-    public override bool IsConstructed => GenericParameters.Count == 0;
+    public IScope TypeScope {get;}
+    private readonly IEnumerable<FieldSymbol> fieldSymbols;
 
-    [NotNull] public IScope? TypeScope {get;}
+    public IEnumerable<string> FieldNames => fieldDict.Keys;
+    private readonly Dictionary<string, LangtStructureField> fieldDict;
 
-    public override bool IsBuiltin => true;
+    public virtual bool ResolveField(string name, out LangtStructureField field) 
+    {
+        if(!fieldDict.ContainsKey(name))
+        {
+            field = default;
+            return false;
+        }
 
-    public IEnumerable<string> FieldNames => ((IStructureType)inner).FieldNames;
+        field = fieldDict[name];
+        return true;
+    }
+    public bool HasField(string name) => fieldDict.ContainsKey(name);
 
     public override bool Contains(LangtType ty)
-        => inner.Contains(ty);
+        => this.Fields().Any(k => k.Type.Contains(ty)) || base.Contains(ty);
+    public override bool Stores(LangtType ty)
+        => this.Fields().Any(k => k.Type.Stores(ty)) || base.Stores(ty);
 
-    public bool ResolveField(string name, out LangtStructureField field)
-        => inner.ResolveField(name, out field);
+    public override bool Equals(LangtType? other)
+        => other is not null
+        && other.IsStructure
+        && this.Fields().SequenceEqual(other.Structure.Fields());
 
-    public bool HasField(string name)
-        => inner.HasField(name);
+    public override Result Complete(Context ctx)
+    {
+        var builder = ResultBuilder.Empty();
+
+        foreach(var fs in fieldSymbols)
+        {
+            if(fieldDict.ContainsKey(fs.Name))
+            {
+                builder.AddDgnError($"Cannot redefine field {FullName}.{fs.Name}", fs.Range);
+                continue;
+            }
+            
+            var tyRes = fs.Type.Unravel(ctx);
+            builder.AddData(tyRes);
+
+            var ty = tyRes.Or(Error);
+
+            if(ty.Stores(this))
+            {
+                builder.AddDgnError($"Field {FullName}.{fs.Name} creates a cyclic type layout", fs.Range);
+            }
+
+            fieldDict.Add(fs.Name, new LangtStructureField(fs.Name, ty, fieldDict.Count));
+        }
+
+        return builder.Build();
+    }
+
+    public override IReadOnlyList<LangtType> GenericParameters {get;}
+    public override bool IsConstructed => GenericParameters.Count == 0;
 }

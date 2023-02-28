@@ -19,10 +19,10 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {FunctionAST, Open, Arguments, End};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         // Get all input results
-        var iptResult = FunctionAST.Bind(state);
+        var iptResult = FunctionAST.Bind(ctx);
         if(!iptResult) return iptResult;
 
         // Create output result builder from input
@@ -37,7 +37,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
 
         if(fn.HasResolution && fn.Resolution is LangtFunctionGroup functionGroup)
         {
-            var resolveResult = functionGroup.ResolveOverload(givenArgs, Range, state);
+            var resolveResult = functionGroup.ResolveOverload(givenArgs, Range, ctx);
             builder.AddData(resolveResult);
 
             if(!resolveResult) return builder.BuildError<BoundASTNode>();
@@ -72,7 +72,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         {
             var funcType = (LangtFunctionType)fn.Type.ElementType!;
 
-            var smatch = funcType.MatchSignature(state, Range, givenArgs);
+            var smatch = funcType.MatchSignature(ctx, Range, givenArgs);
             builder.AddData(smatch.OutResult);
 
             boundArgs = smatch.OutResult.Value;

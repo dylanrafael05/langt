@@ -13,9 +13,9 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Type, Open, Args, Close};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
-        var tn = Type.Resolve(state);
+        var tn = Type.Resolve(ctx);
         var builder = ResultBuilder.From(tn);
         if(!tn) return tn.ErrorCast<BoundASTNode>();
 
@@ -45,7 +45,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
                 var ftype = f.Type;
                 var fname = f.Name;
 
-                var r = a.Value.BindMatchingExprType(state, ftype);
+                var r = a.Value.BindMatchingExprType(ctx, ftype);
 
                 if(!r) return Result.Error<BoundASTNode>
                 (

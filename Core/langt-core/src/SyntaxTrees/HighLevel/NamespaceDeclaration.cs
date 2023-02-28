@@ -2,34 +2,52 @@ using Langt.Structure;
 
 namespace Langt.AST;
 
-public record NamespaceDeclaration(ASTToken Namespace, ASTNamespace Identifier) : ASTNode
+public record NamespaceDeclaration(ASTToken NamespaceTok, ASTNamespace Ns) : ASTNode
 {
-    public override TreeItemContainer<ASTNode> ChildContainer => new() {Namespace, Identifier};
+    public override TreeItemContainer<ASTNode> ChildContainer => new() {NamespaceTok, Ns};
 
-    public LangtNamespace? LNamespace {get; set;}
+    public Namespace? Namespace {get; set;}
 
-    public override Result HandleDefinitions(ASTPassState state)
+    public override Result HandleDefinitions(Context ctx)
     {
-        var n = Identifier.Resolve(state, new TypeCheckOptions {AllowNamespaceDefinitions=true});
-        if(!n) return n.Drop();
+        var baseNs = Ns.GetSymbol(ctx);
+        
+        var n = baseNs.As<IScope>("scope");
+        var names = new Stack<string>();
 
-        LNamespace = n.Value;
+        while(n is ResolutionSymbol ressym)
+        {
+            names.Push(ressym.Name);
+            n = ressym.SearchScope;
+        }
 
-        state.CTX.SetCurrentNamespace(LNamespace);
+        names.Push(((DirectResolutionSymbol)n).Name);
+
+        IScope scope = ctx.Project.GlobalScope;
+        foreach(var name in names.Reverse())
+        {
+            var ns = new Namespace(scope, name);
+            scope.Define(ns, Range);
+            scope = ns;
+        }
+
+        Namespace = (Namespace)scope;
+
+        ctx.SetCurrentNamespace(Namespace);
 
         return Result.Success();
     }
 
-    public override Result RefineDefinitions(ASTPassState state)
+    public override Result RefineDefinitions(Context ctx)
     {
-        if(LNamespace is not null) state.CTX.SetCurrentNamespace(LNamespace!);
+        if(Namespace is not null) ctx.SetCurrentNamespace(Namespace!);
 
         return Result.Success();
     }
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
-        if(LNamespace is not null) state.CTX.SetCurrentNamespace(LNamespace!);
+        if(Namespace is not null) ctx.SetCurrentNamespace(Namespace!);
 
         return Result.Success<BoundASTNode>(new BoundEmpty(this));
     }

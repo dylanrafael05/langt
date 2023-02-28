@@ -13,13 +13,13 @@ public record Return(ASTToken ReturnTok, ASTNode? Value = null) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {ReturnTok, Value};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         if(Value is null) return Result.Success<BoundASTNode>(new BoundReturn(this, null) {Returns = true});
 
-        var rtype = state.CTX.CurrentFunction!.Type.ReturnType;
+        var rtype = ctx.CurrentFunction!.Type.ReturnType;
 
-        var vr = Value.BindMatchingExprType(state, rtype);
+        var vr = Value.BindMatchingExprType(ctx, rtype);
         if(!vr) return vr;
 
         var builder = ResultBuilder.From(vr);

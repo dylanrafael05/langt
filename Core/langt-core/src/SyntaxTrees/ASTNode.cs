@@ -259,7 +259,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         return new BoundConversion(this, LangtConversion.DereferenceFor(Type));
     }
 
-    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target, out bool coerced)
+    public Result<BoundASTNode> MatchExprType(Context ctx, LangtType target, out bool coerced)
     {
         coerced = false;
 
@@ -305,7 +305,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         coerced = true;
 
         // Attempt to find a conversion
-        var convResult = state.CTX.ResolveConversion(Type, target, Range);
+        var convResult = ctx.ResolveConversion(Type, target, Range);
         if(!convResult) return builder.WithData(convResult).BuildError<BoundASTNode>()
                         .AsTargetTypeDependent();
 
@@ -326,8 +326,8 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         return builder.Build<BoundASTNode>(res)
             .AsTargetTypeDependent();
     }
-    public Result<BoundASTNode> MatchExprType(ASTPassState state, LangtType target) 
-        => MatchExprType(state, target, out _);
+    public Result<BoundASTNode> MatchExprType(Context ctx, LangtType target) 
+        => MatchExprType(ctx, target, out _);
 }
 
 public record BoundEmpty(ASTNode Source) : BoundASTNode(Source)
@@ -367,17 +367,17 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>
     public bool ContainsInvalid => IsInvalid || Children.Any(c => c.ContainsInvalid);
 
 
-    public virtual Result HandleDefinitions(ASTPassState state) => Result.Success();
-    public virtual Result RefineDefinitions(ASTPassState state) => Result.Success();
+    public virtual Result HandleDefinitions(Context ctx) => Result.Success();
+    public virtual Result RefineDefinitions(Context ctx) => Result.Success();
 
-    protected virtual Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options) 
+    protected virtual Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options) 
         => Result.Success(new BoundEmpty(this) as BoundASTNode);
 
-    public Result<BoundASTNode> Bind(ASTPassState state, TypeCheckOptions? optionsMaybe = null) 
+    public Result<BoundASTNode> Bind(Context ctx, TypeCheckOptions? optionsMaybe = null) 
     {
         var options = optionsMaybe ?? new();
 
-        var result = BindSelf(state, options);
+        var result = BindSelf(ctx, options);
         if(!result) return result;
 
         var bast = result.Value;
@@ -395,13 +395,13 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>
         return result.Map(_ => bast);
     }
 
-    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, out bool coerced, TypeCheckOptions? optionsMaybe = null)
+    public Result<BoundASTNode> BindMatchingExprType(Context ctx, LangtType type, out bool coerced, TypeCheckOptions? optionsMaybe = null)
     {
         var options = optionsMaybe ?? new();
 
         coerced = false;
 
-        var binding = Bind(state, options with 
+        var binding = Bind(ctx, options with 
         {
             TargetType = type // TODO: should this always be passed this way?
         });
@@ -411,12 +411,12 @@ public abstract record ASTNode : SourcedTreeNode<ASTNode>
 
         var bast = binding.Value;
         
-        var nbast = bast.MatchExprType(state, type, out coerced);
+        var nbast = bast.MatchExprType(ctx, type, out coerced);
         builder.AddData(nbast);
 
         if(!nbast) return builder.BuildError<BoundASTNode>();
         return builder.Build(nbast.Value);
     }
-    public Result<BoundASTNode> BindMatchingExprType(ASTPassState state, LangtType type, TypeCheckOptions? optionsMaybe = null)
-        => BindMatchingExprType(state, type, out _, optionsMaybe);
+    public Result<BoundASTNode> BindMatchingExprType(Context ctx, LangtType type, TypeCheckOptions? optionsMaybe = null)
+        => BindMatchingExprType(ctx, type, out _, optionsMaybe);
 }

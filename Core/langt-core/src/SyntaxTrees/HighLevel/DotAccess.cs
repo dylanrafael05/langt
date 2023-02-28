@@ -9,10 +9,10 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Dot, Right};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         // Get all input results
-        var iptResult = Left.Bind(state, new TypeCheckOptions {AutoDeference = false});
+        var iptResult = Left.Bind(ctx, new TypeCheckOptions {AutoDeference = false});
         if(!iptResult) return iptResult;
 
         // Create output result builder from input

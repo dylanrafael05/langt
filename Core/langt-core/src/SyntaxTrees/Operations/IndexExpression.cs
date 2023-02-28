@@ -14,14 +14,14 @@ public record IndexExpression(ASTNode Value, ASTToken Open, SeparatedCollection<
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Value, Open, Arguments, Close};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
 
-        var op = state.CTX.GetGlobalFunction(LangtWords.MagicIndex);
+        var op = ctx.GetGlobalFunction(LangtWords.MagicIndex);
         var args = Arguments.Values.Prepend(Value).ToArray();
 
-        var fr = op.ResolveOverload(args, Range, state);
+        var fr = op.ResolveOverload(args, Range, ctx);
         builder.AddData(fr);
 
         if(!builder) return builder.BuildError<BoundASTNode>();

@@ -25,10 +25,10 @@ public record ASTInvalid(SourceRange ErrRange) : ASTNode
     public override TreeItemContainer<ASTNode> ChildContainer => new();
     public override SourceRange Range => ErrRange;
 
-    public override Result HandleDefinitions(ASTPassState state)
+    public override Result HandleDefinitions(Context ctx)
         => Result.Error(SilentError.Create());
-    public override Result RefineDefinitions(ASTPassState state)
+    public override Result RefineDefinitions(Context ctx)
         => Result.Error(SilentError.Create());
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
         => Result.Error<BoundASTNode>(SilentError.Create());
 }

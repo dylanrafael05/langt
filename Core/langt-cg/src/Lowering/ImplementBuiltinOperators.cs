@@ -108,7 +108,7 @@ public static class ImplementBuiltinOperators
                     LangtWords.MagicGreatEq => isI ? (win.Signedness is Signedness.Signed ? cg.Builder.BuildICmp(LLVMIntSGE, x, y) : cg.Builder.BuildICmp(LLVMIntUGE, x, y)) 
                                                    : cg.Builder.BuildFCmp(LLVMRealOGE, x, y),
 
-                    _ => throw new NotSupportedException("Unreachable")
+                    _ => throw new UnreachableException()
                 };
             });
         }

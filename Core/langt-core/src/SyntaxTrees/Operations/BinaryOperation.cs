@@ -29,7 +29,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Operator, Right};
 
-    protected override Result<BoundASTNode> BindSelf(ASTPassState state, TypeCheckOptions options)
+    protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
         var builder = ResultBuilder.Empty();
         var invertResult = false;
@@ -39,8 +39,8 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         {
             var results = Result.GreedyAll
             (
-                Left.BindMatchingExprType(state, LangtType.Bool),
-                Right.BindMatchingExprType(state, LangtType.Bool)
+                Left.BindMatchingExprType(ctx, LangtType.Bool),
+                Right.BindMatchingExprType(ctx, LangtType.Bool)
             );
             builder.AddData(results);
 
@@ -57,14 +57,14 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         }
 
         // Get function overload //
-        var fn = state.CTX.GetOperator(new(Parsing.OperatorType.Binary, Operator.Type));
-        var fr = fn.ResolveOverload(new[] {Left, Right}, Range, state);
+        var fn = ctx.GetOperator(new(Parsing.OperatorType.Binary, Operator.Type));
+        var fr = fn.ResolveOverload(new[] {Left, Right}, Range, ctx);
 
         // Pointer arithmetic //
         if(Operator.Type is TT.Plus or TT.Minus && !fr) 
         {
             // Get left and right (usize)
-            var (lr, rr) = (Left.Bind(state), Right.Bind(state));
+            var (lr, rr) = (Left.Bind(ctx), Right.Bind(ctx));
 
             // Pointer diff
             if(Operator.Type is TT.Plus && !!lr && !!rr && lr.Value.Type == rr.Value.Type && lr.Value.Type.IsPointer)
@@ -79,8 +79,8 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
             }
 
             // Pointer arith
-            if(rr) rr = rr.Map(t => t.MatchExprType(state, LangtType.UIntSZ));
-            if(rr) rr = rr.Map(t => t.MatchExprType(state, LangtType.IntSZ));
+            if(rr) rr = rr.Map(t => t.MatchExprType(ctx, LangtType.UIntSZ));
+            if(rr) rr = rr.Map(t => t.MatchExprType(ctx, LangtType.IntSZ));
 
             builder.AddData(lr);
             builder.AddData(rr);
@@ -105,7 +105,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
         // Not-equals generation //
         if(Operator.Type is TT.NotEquals && !fr)
         {
-            fr = state.CTX.GetOperator(new(Parsing.OperatorType.Binary, TT.DoubleEquals)).ResolveOverload(new[] {Left, Right}, Range, state);
+            fr = ctx.GetOperator(new(Parsing.OperatorType.Binary, TT.DoubleEquals)).ResolveOverload(new[] {Left, Right}, Range, ctx);
             invertResult = true;
         }
 
@@ -121,7 +121,7 @@ public record BinaryOperation(ASTNode Left, ASTToken Operator, ASTNode Right) : 
 
         if(invertResult) 
         {
-            var not = state.CTX.GetOperator(new(Parsing.OperatorType.Unary, TT.Not))
+            var not = ctx.GetOperator(new(Parsing.OperatorType.Unary, TT.Not))
                 .ResolveExactOverload(new[] {LangtType.Bool}, false, Range)
                 .Expect()
                 .Function;

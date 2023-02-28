@@ -6,38 +6,26 @@ public record OptionType(ASTType Left, ASTToken Pipe, ASTType Right) : ASTType
 {
     public override TreeItemContainer<ASTNode> ChildContainer => new() {Left, Pipe, Right};
 
-    public override Result<LangtType> Resolve(ASTPassState state)
+    public override ISymbol<LangtType> GetSymbol(Context ctx)
     {
-        var builder = ResultBuilder.Empty();
+        var l = Left.GetSymbol(ctx);
+        var r = Right.GetSymbol(ctx);
 
-        var l = Left.Resolve(state);
-        builder.AddData(l);
-        if(!l) return builder.BuildError<LangtType>();
+        var options = new List<ISymbol<LangtType>> {l};
 
-        var r = Right.Resolve(state);
-        builder.AddData(r);
-        if(!r) return builder.BuildError<LangtType>();
-
-        Result<LangtType> Dup() 
-            => builder!.WithDgnError($"Duplicate option {l.Value.FullName}", Left.Range).BuildError<LangtType>();
-
-        IEnumerable<LangtType> resOpts;
-
-        if(r.Value is LangtOptionType opt) 
+        if(r is OptionTypeSymbol ro)
         {
-            if(opt.OptionTypes.Contains(l.Value)) return Dup();
-
-            resOpts = opt.OptionTypes.Append(l.Value);
+            options.AddRange(ro.OptionSymbols);
         }
         else 
         {
-            if(l.Value == r.Value) return Dup();
-
-            resOpts = new[] {l.Value, r.Value};
+            options.Add(r);
         }
 
-        var k = LangtOptionType.Create(resOpts.ToHashSet(), Range);
-        builder.AddData(k);
-        return builder.Build<LangtType>(k.PossibleValue!);
+        return new OptionTypeSymbol
+        {
+            Range = Range,
+            OptionSymbols = options
+        };
     }
 }

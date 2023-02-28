@@ -21,16 +21,6 @@ public abstract class LangtTypeWithElement : LangtType
 
     public override bool Contains(LangtType ty)
         => ElementType.Contains(ty) || base.Contains(ty);
-
-    protected static Result<T> CreateElementType<T>(Func<LangtType, T> constructor, LangtType elem, SourceRange range = default) where T : LangtTypeWithElement
-    {
-        Expect.That(elem.IsConstructed, "Element types must contain only constructed types");
-
-        if(elem == None)
-        {
-            return Result.Error<T>(Diagnostic.Error($"Cannot have a pointer to none", range));
-        }
-
-        return Result.Success(constructor(elem));
-    }
+    public override bool Stores(LangtType ty)
+        => false;
 }
