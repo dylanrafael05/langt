@@ -47,21 +47,13 @@ public record VariableDefinition(ASTToken Let, ASTToken Identifier, ASTType? Typ
             varT = boundValue.NaturalType ?? boundValue.Type;
         }
 
-        var couldDef = ctx.ResolutionScope.Define
-        (
-            s => new LangtVariable(Identifier.ContentStr, varT, s) 
-            {
-                DefinitionRange = Range,
-                Documentation = Let.Documentation
-            }, 
-            
-            Range,
-            Identifier.Range,
+        var variable = new LangtVariable(Identifier.ContentStr, varT, ctx.ResolutionScope) 
+        {
+            DefinitionRange = Range,
+            Documentation = Let.Documentation
+        };
 
-            builder,
-
-            out var variable
-        );
+        var couldDef = ctx.ResolutionScope.Define(variable, Identifier.Range);
         builder.AddData(couldDef);
 
         if(!couldDef) return builder.BuildError<BoundASTNode>();

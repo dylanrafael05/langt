@@ -1,5 +1,5 @@
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 using System.Diagnostics.CodeAnalysis;
 
 namespace Langt.AST;

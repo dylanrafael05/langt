@@ -15,7 +15,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
     protected override Result<BoundASTNode> BindSelf(Context ctx, TypeCheckOptions options)
     {
-        var tn = Type.Resolve(ctx);
+        var tn = Type.UnravelSymbol(ctx);
         var builder = ResultBuilder.From(tn);
         if(!tn) return tn.ErrorCast<BoundASTNode>();
 

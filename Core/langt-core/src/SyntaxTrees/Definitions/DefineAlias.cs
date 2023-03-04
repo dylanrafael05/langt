@@ -9,16 +9,24 @@ public record DefineAlias(ASTToken Alias, ASTToken Name, ASTToken Eq, ASTType Ty
     public LangtAliasType? AliasType {get; private set;}
 
     public override Result HandleDefinitions(Context ctx)
-        => ctx.ResolutionScope.Define(
-            new LangtAliasType(
-                Name.ContentStr, 
-                ctx.ResolutionScope, 
-                Type.GetSymbol(ctx)
-            )
-            {
-                DefinitionRange = Range,
-                Documentation = Alias.Documentation
-            },
-            Range
-        );
+    {
+        AliasType = new LangtAliasType
+        (
+            Name.ContentStr, 
+            ctx.ResolutionScope, 
+            Type.GetSymbol(ctx)
+        )
+        {
+            DefinitionRange = Range,
+            Documentation = Alias.Documentation
+        };
+
+        var r = ctx.ResolutionScope.Define(AliasType, Range);
+        if (!r) AliasType = null;
+
+        return r;
+    }
+    
+    public override Result RefineDefinitions(Context ctx)
+        => AliasType?.Complete(ctx) ?? Result.Success();
 }

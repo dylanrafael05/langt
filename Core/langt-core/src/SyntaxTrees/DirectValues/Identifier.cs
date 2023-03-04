@@ -13,7 +13,7 @@ public record Identifier(ASTToken Tok) : ASTNode, IDirectValue
     {
         var builder = ResultBuilder.Empty();
 
-        var resolution = ctx.ResolutionScope.Resolve(Tok.ContentStr, Range, ctx);
+        var resolution = ctx.ResolutionScope.ResolveDirect(Tok.ContentStr, Range, ctx);
         builder.AddData(resolution);
         if(!resolution) return builder.BuildError<BoundASTNode>();
 

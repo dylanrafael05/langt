@@ -33,7 +33,8 @@ public static class ImplementBuiltinOperators
                 foreach(var o in cg
                     .Project
                     .GlobalScope
-                    .ResolveFunctionGroup(n, SourceRange.Default)
+                    .ResolveDirect(n, SourceRange.Default, cg.Context)
+                    .As<LangtFunctionGroup>()
                     .Expect()
                     .Overloads)
                     yield return o;

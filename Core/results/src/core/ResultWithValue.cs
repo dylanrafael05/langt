@@ -142,6 +142,11 @@ public struct Result<T> : IModdableResultlike<Result<T>>, IValuedResultlike<T>, 
         if(HasValue) return Result.Success((TOut)(object)Value!).WithDataFrom(this);
         else         return ErrorCast<TOut>();
     }
+    public Result<TOut?> AsOr<TOut>(TOut? value)
+    {
+        if(HasValue) return Result.Success((object)Value! is var x && x is TOut ? value : (TOut)x!).WithDataFrom(this);
+        else         return ErrorCast<TOut?>();
+    }
 
     public Result<TOut> Combine<TOther, TOut>(Result<TOther> other, Func<T, TOther, TOut> combinator)
     {

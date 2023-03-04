@@ -86,8 +86,6 @@ public class LangtOptionType : LangtType
         return this;
     }
     
-    public override bool Contains(LangtType ty)
-        => OptionTypes.Any(t => t.Contains(ty)) || base.Contains(ty);
-    public override bool Stores(LangtType ty)
-        => OptionTypes.Any(t => t.Stores(ty)) || base.Stores(ty);
+    public override bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this) ?? OptionTypes.FloatingAny(t => t.TestAgainstFloating(pred));
 }

@@ -1,11 +1,12 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
 
 public class LangtVariable : ImmediateResolvable
 {
+    [SetsRequiredMembers]
     public LangtVariable(string name, LangtType type, IScope scope)
     {
         Name = name;

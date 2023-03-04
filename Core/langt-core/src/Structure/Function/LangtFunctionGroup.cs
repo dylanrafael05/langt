@@ -1,16 +1,17 @@
 using Langt.AST;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
 
-public class LangtFunctionGroup : Resolvable
+public class LangtFunctionGroup : ImmediateResolvable
 {
-    public LangtFunctionGroup(string name, IScope scope) : base(scope)
+    [SetsRequiredMembers]
+    public LangtFunctionGroup(string name, IScope scope)
     {
         Name = name;
+        HoldingScope = scope;
     }
 
-    public override string Name {get;}
     public override string DisplayName => Context.DisplayableFunctionGroupName(Name);
 
     public record struct Resolution(LangtFunction Function, Result<BoundASTNode[]> OutputParameters, SignatureMatchLevel MatchLevel);

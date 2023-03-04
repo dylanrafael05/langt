@@ -1,6 +1,6 @@
 using Langt.Lexing;
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 using Langt.Structure.Visitors;
 
 namespace Langt.AST;
@@ -44,22 +44,21 @@ public record FunctionDefinition(ASTToken Let,
 
     public override Result HandleDefinitions(Context ctx)
     {
-        FunctionGroup = ctx.ResolutionScope.ResolveFunctionGroup
+        FunctionGroup = ctx.ResolutionScope.ResolveDirect
             (
                 Identifier.ContentStr, 
                 Range,
-                propogate: false
+                ctx,
+                false
             )
+            .AsOr<LangtFunctionGroup>(null)
             .OrDefault()
         ;
 
         if(FunctionGroup is null)
         {
-            return ctx.ResolutionScope.Define
-            (
-                s => new LangtFunctionGroup(Identifier.ContentStr, s), Range, 
-                f => FunctionGroup = f
-            ); 
+            FunctionGroup = new LangtFunctionGroup(Identifier.ContentStr, ctx.ResolutionScope);
+            return ctx.ResolutionScope.Define(FunctionGroup, Range); 
         }
         else
         {
@@ -69,29 +68,7 @@ public record FunctionDefinition(ASTToken Let,
 
     public override Result RefineDefinitions(Context ctx)
     {
-        ctx.Logger.Debug($"Entered .{nameof(RefineDefinitions)}", "results");
         var builder = ResultBuilder.Empty();
-
-        var rtr = Type.Resolve(ctx);
-        builder.AddData(rtr);
-
-        if(!rtr) return builder.Build();
-
-        var retType = rtr.Value;
-
-        ArgTypes = new LangtType[ArgSpec.Values.Count()];
-        
-        var argc = 0;
-        foreach(var a in ArgSpec.Values.Select(s => s.Type.Resolve(ctx)))
-        {
-            builder.AddData(a);
-
-            if(!a) return builder.Build();
-
-            ArgTypes[argc] = a.Value;
-
-            argc++;
-        }
 
         if(Let.Type is not TokenType.Extern && VarargSpec is not null)
         {
@@ -100,20 +77,22 @@ public record FunctionDefinition(ASTToken Let,
                 .Build();
         }
 
-        var fnres = LangtFunctionType.Create
-        (
-            ArgTypes!, 
-            retType, 
-            range: DefinitionRange,
-            parameterNames: ArgSpec.Values.Select(k => k.Name.ContentStr).ToArray(),
-            isVararg: VarargSpec is not null
-        );
+        var fsym = new FunctionTypeSymbol
+        {
+            ReturnType     = Type.GetSymbol(ctx),
+            ParameterTypes = ArgSpec.Values.Select(a => a.Type.GetSymbol(ctx)).ToArray(), 
+            IsVararg       = VarargSpec is not null,
+            ParameterNames = ArgSpec.Values.Select(k => k.Name.ContentStr).ToArray()
+        };
+
+        var fnres = fsym.Unravel(ctx);
         builder.AddData(fnres);
 
         if(!builder) return builder.Build();
 
-        var fnType = fnres.Value;
-        
+        if (fnres.Value is not LangtFunctionType fnType)
+            throw new UnreachableException();
+
         Function = new LangtFunction(FunctionGroup!)
         {
             Type            = fnType,
@@ -181,19 +160,23 @@ public record FunctionDefinition(ASTToken Let,
 
             if(t is null) continue;
 
+            var variable = new LangtVariable(argspec.Name.ContentStr, t, scope)
+            {
+                ParameterNumber = count
+            };
+
             var defineResult = scope.Define
             (
-                s => new LangtVariable(argspec.Name.ContentStr, t, s)
+                new LangtVariable(argspec.Name.ContentStr, t, scope)
                 {
                     ParameterNumber = count
                 }, 
-                Range, 
-                out var variable
+                Range
             );
 
             builder.AddData(defineResult);
 
-            if(variable is not null)
+            if(defineResult)
                 builder.AddStaticReference(argspec.Name.Range, variable, true);
 
             count++;

@@ -1,11 +1,11 @@
 using Langt.AST;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
 
 public class LangtNamedStructureType : LangtResolvableType, IStructureType
 {
-    public LangtNamedStructureType(string name, IEnumerable<FieldSymbol> fieldSymbols, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
+    public LangtNamedStructureType(string name, FieldSymbol[] fieldSymbols, IScope scope, IScope typeScope, IReadOnlyList<LangtType> genericParameters) : base(name, scope)
     {
         GenericParameters = genericParameters;
         TypeScope = typeScope;
@@ -15,7 +15,7 @@ public class LangtNamedStructureType : LangtResolvableType, IStructureType
     }
 
     public IScope TypeScope {get;}
-    private readonly IEnumerable<FieldSymbol> fieldSymbols;
+    private readonly FieldSymbol[] fieldSymbols;
 
     public IEnumerable<string> FieldNames => fieldDict.Keys;
     private readonly Dictionary<string, LangtStructureField> fieldDict;
@@ -33,17 +33,15 @@ public class LangtNamedStructureType : LangtResolvableType, IStructureType
     }
     public bool HasField(string name) => fieldDict.ContainsKey(name);
 
-    public override bool Contains(LangtType ty)
-        => this.Fields().Any(k => k.Type.Contains(ty)) || base.Contains(ty);
-    public override bool Stores(LangtType ty)
-        => this.Fields().Any(k => k.Type.Stores(ty)) || base.Stores(ty);
+    public override bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this) ?? this.Fields().FloatingAny(f => f.Type.TestAgainstFloating(pred));
 
     public override bool Equals(LangtType? other)
         => other is not null
         && other.IsStructure
         && this.Fields().SequenceEqual(other.Structure.Fields());
 
-    public override Result Complete(Context ctx)
+    protected override Result CompleteInternal(Context ctx)
     {
         var builder = ResultBuilder.Empty();
 

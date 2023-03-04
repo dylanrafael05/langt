@@ -1,6 +1,6 @@
 using Langt.AST;
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.CG.Lowering;
 

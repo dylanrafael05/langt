@@ -58,7 +58,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
         (
             new BoundStringLiteral(this, s) 
             {
-                Type = LangtPointerType.Create(LangtType.UInt8).Expect()
+                Type = new LangtPointerType(LangtType.UInt8)
             }
         );
     }

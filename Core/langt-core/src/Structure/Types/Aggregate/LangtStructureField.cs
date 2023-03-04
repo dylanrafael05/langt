@@ -10,7 +10,7 @@ public readonly struct LangtStructureField : IEquatable<LangtStructureField>
         Type = type;
         Index = index;
 
-        // Expect.That(Type.IsConstructed, "Structure types can only contain constructed types");
+        Expect.That(Type.IsConstructed, "Structure types can only contain constructed types");
     }
 
     public string Name {get; init;} 

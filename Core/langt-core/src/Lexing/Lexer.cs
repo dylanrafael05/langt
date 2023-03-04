@@ -323,7 +323,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
     {
         var lexer = GetLexer(src, project);
         var result = lexer.LexInternal();
-        return new(result);
+        return new(new(result));
     }
 
     public static Lexer GetLexer(Source src, LangtProject project) 

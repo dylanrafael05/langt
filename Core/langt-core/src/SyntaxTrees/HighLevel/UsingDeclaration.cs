@@ -9,12 +9,9 @@ public record UsingDeclaration(ASTToken Using, ASTNamespace Identifier) : ASTNod
 
     public override Result HandleDefinitions(Context ctx)
     {
-        var ns = Identifier.Resolve(ctx);
+        var ns = Identifier.UnravelSymbol(ctx);
 
-        if(ns)
-        {
-            ctx.CurrentFile!.IncludeNamespace(ns.Value);
-        }
+        if(ns) ctx.CurrentFile!.IncludeNamespace(ns.Value);
 
         return ns.Drop();
     }

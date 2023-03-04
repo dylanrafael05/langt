@@ -4,7 +4,7 @@ namespace Langt;
 /// Represents a contiguous segment of a source object by line, character, and column.
 /// May be Default, indicating no source is available.
 /// </summary>
-public readonly record struct SourceRange(int CharStart, int LineStart, int ColumnStart, int CharEnd, int LineEnd, int ColumnEnd, Source Source)
+public readonly record struct SourceRange(int CharStart, int LineStart, int ColumnStart, int CharEnd, int LineEnd, int ColumnEnd, Source Source) : IComparable<SourceRange>
 {
     public SourcePosition Start => new(CharStart, LineStart, ColumnStart, Source);
     public SourcePosition End => new(CharEnd, LineEnd, ColumnEnd, Source);
@@ -78,4 +78,7 @@ public readonly record struct SourceRange(int CharStart, int LineStart, int Colu
         => Combine(rangeds.Select(r => r?.Range));
     public static SourceRange CombineFrom(params ISourceRanged?[] rangeds)
         => CombineFrom((IEnumerable<ISourceRanged?>)rangeds);
+
+    public int CompareTo(SourceRange other)
+        => CharStart.CompareTo(other.CharStart);
 }

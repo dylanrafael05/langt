@@ -3,7 +3,7 @@ using Langt.Structure;
 using Langt.Lexing;
 using Langt.Parsing;
 using Langt.Structure.Visitors;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt;
 
@@ -154,7 +154,7 @@ public class Context : IProjectDependency
 
     public LangtFunctionGroup GetGlobalFunction(string name)
     {
-        return (LangtFunctionGroup)Project.GlobalScope.Resolve(name, SourceRange.Default, this).Expect("Operators that are known must exist in the global scope.");
+        return (LangtFunctionGroup)Project.GlobalScope.ResolveDirect(name, SourceRange.Default, this).Expect("Operators that are known must exist in the global scope.");
     }
     public LangtFunctionGroup GetOperator(OperatorSpec op)
     {
@@ -174,9 +174,11 @@ public class Context : IProjectDependency
 
         var fn = new LangtFunction(opfn)
         {
-            Type           = ftype,
-            ParameterNames = new[] {"__x"},
-            IsExtern       = false
+            Type            = ftype,
+            ParameterNames  = new[] {"__x"},
+            IsExtern        = false,
+            Documentation   = null,
+            DefinitionRange = null
         };
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");
@@ -201,9 +203,11 @@ public class Context : IProjectDependency
 
         var fn = new LangtFunction(opfn)
         { 
-            Type           = ftype,
-            ParameterNames = new[] {"__a", "__b"},
-            IsExtern       = false
+            Type            = ftype,
+            ParameterNames  = new[] {"__a", "__b"},
+            IsExtern        = false,
+            Documentation   = null,
+            DefinitionRange = null
         };
 
         opfn.AddFunctionOverload(fn, SourceRange.Default).Expect("Cannot redefine operator");

@@ -21,14 +21,28 @@ public record NamespaceDeclaration(ASTToken NamespaceTok, ASTNamespace Ns) : AST
             n = ressym.SearchScope;
         }
 
-        names.Push(((DirectResolutionSymbol)n).Name);
+        names.Push(((DirectResolutionSymbol)n.BaseSymbol).Name);
 
         IScope scope = ctx.Project.GlobalScope;
         foreach(var name in names.Reverse())
         {
-            var ns = new Namespace(scope, name);
-            scope.Define(ns, Range);
-            scope = ns;
+            var getns = scope.ResolveDirect(name, Range, ctx, false);
+
+            if(getns)
+            {
+                if(getns.Value is not Namespace ns) 
+                {
+                    return Result.Error(Diagnostic.Error($"Non-namespace already defined with this name; {name}", Range));
+                }
+
+                scope = ns;
+            }
+            else 
+            {
+                var ns = new Namespace(scope, name);
+                scope.Define(ns, Range);
+                scope = ns;
+            }
         }
 
         Namespace = (Namespace)scope;

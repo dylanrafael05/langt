@@ -6,7 +6,7 @@ using System.Runtime.CompilerServices;
 using System.Diagnostics.CodeAnalysis;
 using Langt.Utility;
 using Results;
-using Langt.Structure.Resolutions;
+
 using Spectre.Console;
 
 namespace Langt.AST;

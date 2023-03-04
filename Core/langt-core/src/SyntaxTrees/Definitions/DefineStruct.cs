@@ -15,29 +15,40 @@ public record DefineStruct(ASTToken Struct, ASTToken Name, GenericParameterSpeci
         var scope = ctx.ResolutionScope;
         var typeScope = new SimpleScope {Parent = scope};
 
+        var builder = ResultBuilder.Empty();
+
         var genericParams = Generic?.TypeSpecs?.Values?.Select(
-            a => new LangtGenericParameterType(a.ContentStr, typeScope)
-            {
-                DefinitionRange = a.Range
+            a => {
+                var r = new LangtGenericParameterType(a.ContentStr, typeScope)
+                {
+                    DefinitionRange = a.Range
+                };
+                builder.AddData(typeScope.Define(r, a.Range));
+                return r;
             }
         ) ?? Enumerable.Empty<LangtGenericParameterType>();
 
         ctx.RedirectScope(typeScope);
-        var result = scope.Define(
-            new LangtNamedStructureType(
+            StructureType = new LangtNamedStructureType
+            (
                 Name.ContentStr, 
-                Fields.Values.Select(f => f.Field(ctx)), 
+                Fields.Values.Select(f => f.Field(ctx)).ToArray(),
                 scope, 
                 typeScope, 
                 genericParams.Cast<LangtType>().ToList()
             )
             {
                 DefinitionRange = Name.Range
-            },
-            Name.Range
-        );
+            };
+            var result = scope.Define(StructureType, Name.Range);
+            builder.AddData(result);
         ctx.CloseScope();
 
-        return result;
+        if(!builder) StructureType = null;
+
+        return builder.Build();
     }
+
+    public override Result RefineDefinitions(Context ctx)
+        => StructureType?.Complete(ctx) ?? Result.Success();
 }

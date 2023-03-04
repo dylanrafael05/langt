@@ -65,7 +65,7 @@ public class TokenHandler : SemanticTokensHandlerBase
                 LangtType t when t.IsAlias            => SemanticToken.From(STT.Type, SemanticToken.Alias),
                 LangtType t when t.IsBuiltin          => SemanticToken.From(STT.Type, SemanticToken.Builtin),
                 LangtType t when t.IsGenericParameter => SemanticToken.From(STT.Type, SemanticTokenModifier.Abstract),
-                LangtNamespace                        => SemanticToken.From(STT.Namespace),
+                Namespace                             => SemanticToken.From(STT.Namespace),
                 _                                     => SemanticToken.None
             };
 

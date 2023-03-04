@@ -419,7 +419,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
             var args = SeparatedCollection(state, Type, t => t is TT.Comma, t => t is TT.GreaterThan, false);
             var close = Require(TT.GreaterThan);
 
-            result = new ConsGenericStructType(result, gen, open, args, close);
+            result = new ConsGenericType(result, gen, open, args, close);
         }
 
         return result;

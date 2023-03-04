@@ -1,5 +1,5 @@
 using Langt.AST;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
 
@@ -15,7 +15,7 @@ public class LangtAliasType : LangtResolvableType
         baseType = Error;
     }
 
-    public override Result Complete(Context ctx)
+    protected override Result CompleteInternal(Context ctx)
     {
         var tyRes = baseSymbol.Unravel(ctx);
         if(!tyRes) return tyRes.Drop();
@@ -31,4 +31,7 @@ public class LangtAliasType : LangtResolvableType
         
         return Result.Success();
     }
+
+    public override bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this) ?? baseType.TestAgainstFloating(pred);
 }

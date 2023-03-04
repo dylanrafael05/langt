@@ -1,5 +1,5 @@
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.CG;
 
@@ -11,7 +11,7 @@ public static class NameMangling
     {
         var n = Prepend;
 
-        n += MangledScope(fn.HoldingScope) + fn.Name.Length + fn.Name;
+        n += MangledScope(fn.Group.HoldingScope) + fn.Name.Length + fn.Name;
 
         n += fn.Type.ParameterTypes.Length;
         foreach(var p in fn.Type.ParameterTypes)
@@ -78,7 +78,7 @@ public static class NameMangling
             if(sc is IFullNamed nsc)
                 stack.Push(nsc.Name.Length + nsc.Name);
             
-            sc = sc.HoldingScope;
+            sc = sc.Parent;
         }
 
         var k = stack.Count + 1 + "X";

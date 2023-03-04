@@ -24,6 +24,8 @@ public class LangtProject
     public DiagnosticCollection Diagnostics {get;} = new();
     public OrderedList<StaticReference> References {get;} = new();
 
+    
+
     public ILogger Logger {get;}
     // public string LLVMModuleName {get;}
     
@@ -49,14 +51,12 @@ public class LangtProject
 
     public void BindSyntaxTrees()
     {
-        var startState = GeneralPassState.Start(Context);
-
         Logger.Note("Handling definitions . . . ");
         foreach(var f in Files)
         {
             Context.Open(f);
             HandleResult(
-                f.AST.HandleDefinitions(startState)
+                f.AST.HandleDefinitions(Context)
             );
         }
 
@@ -65,7 +65,7 @@ public class LangtProject
         {
             Context.Open(f);
             HandleResult(
-                f.AST.RefineDefinitions(startState)
+                f.AST.RefineDefinitions(Context)
             );
         }
         
@@ -73,7 +73,7 @@ public class LangtProject
         foreach(var f in Files)
         {  
             Context.Open(f);
-            var r = f.AST.Bind(startState);  
+            var r = f.AST.Bind(Context);  
             HandleResult(r);
 
             if(!r) continue;
@@ -85,7 +85,7 @@ public class LangtProject
     {
         if(Directory.Exists(input))
         {
-            var allFiles = Directory.EnumerateFiles(input, "*.lgt").ToList();
+            var allFiles = Directory.EnumerateFiles(input, "**.lgt").ToList();
 
             if(allFiles.Count == 0)
             {
@@ -108,7 +108,7 @@ public class LangtProject
     {
         foreach(var d in Diagnostics)
         {
-            Logger.Log(d.Severity, d.Message + " at " + d.Range);
+            Logger.Log(d.Severity, d.GetDisplayText(this));
         }
     }
 }

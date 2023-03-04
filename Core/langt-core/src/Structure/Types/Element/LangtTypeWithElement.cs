@@ -19,8 +19,6 @@ public abstract class LangtTypeWithElement : LangtType
         => other is not null
         && ElementType == other.ElementType;
 
-    public override bool Contains(LangtType ty)
-        => ElementType.Contains(ty) || base.Contains(ty);
-    public override bool Stores(LangtType ty)
-        => false;
+    public override bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this) ?? ElementType.TestAgainstFloating(pred);
 }

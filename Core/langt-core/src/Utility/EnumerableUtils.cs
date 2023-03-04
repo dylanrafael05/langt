@@ -1,10 +1,27 @@
 using System.Collections;
 using System.Runtime.InteropServices;
+using Langt.Structure;
 
 namespace Langt.Utility;
 
 public static class EnumerableExtensions
 {
+    public static bool? FloatingAny<T>(this IEnumerable<T> self, Func<T, bool?> pred) 
+    {
+        var soFar = default(bool?);
+
+        foreach(var v in self)
+        {
+            soFar = pred(v) ?? soFar;
+            if(soFar is true) return soFar;
+        }
+        
+        return soFar;
+    }
+
+    public static IEnumerable<T> Eager<T>(this IEnumerable<T> self) 
+        => self.ToList();
+
     public static IEnumerable<(T First, T Second)> Choose<T>(this IEnumerable<T> e, IEnumerable<T> other)
     {
         foreach(var x in e) 

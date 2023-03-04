@@ -57,7 +57,7 @@ public class TypeBuilder : Builder<LangtType, LLVMTypeRef>
 
     public LLVMTypeRef BuildStructure(IStructureType ty)
     {
-        var name = ty is LangtStructureType ? ("_anon_" + StructCount++) : (ty as LangtType)!.MangledName();
+        var name = (ty as LangtType)!.MangledName();
 
         var s = CG.LLVMContext.CreateNamedStruct(name);
         s.StructSetBody(ty.Fields().Select(f => f.Type).Select(CG.Binder.Get).ToArray(), false);

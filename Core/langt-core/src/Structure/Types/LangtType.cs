@@ -2,7 +2,7 @@ using Langt.Structure.Visitors;
 using Langt.Structure;
 using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
-using Langt.Structure.Resolutions;
+
 using Langt.AST;
 
 namespace Langt.Structure;
@@ -26,16 +26,16 @@ public abstract class LangtResolvableType : LangtType, IResolvable
     public static string TypeName => "type";
 
     public CompletionState Completion {get; protected set;}
-    Result IResolvable.Complete(Context ctx)
+    public Result Complete(Context ctx)
     {
         Completion = CompletionState.InProgress;
-        var r = Complete(ctx);
+        var r = CompleteInternal(ctx);
         Completion = CompletionState.Complete;
 
         return r;
     }
 
-    public abstract Result Complete(Context ctx);
+    protected abstract Result CompleteInternal(Context ctx);
 }
 
 public abstract class LangtType : IFullNamed, IEquatable<LangtType>
@@ -131,16 +131,24 @@ public abstract class LangtType : IFullNamed, IEquatable<LangtType>
         return r;
     }
 
+    public virtual bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this);
+    public bool TestAgainst(Func<LangtType, bool?> pred) 
+        => TestAgainstFloating(pred) is true;
+
     /// <summary>
     /// Check if this type contains any references to the given type
     /// </summary>
-    public virtual bool Contains(LangtType ty)
+    public bool Contains(LangtType ty)
+        => TestAgainst(t => t == ty);
+    public bool Stores(LangtType ty)
     {
-        return this == ty;
-    }
-    public virtual bool Stores(LangtType ty)
-    {
-        return this == ty;
+        return TestAgainst(t => 
+        {
+            if(t.IsPointer || t.IsReference) return default;
+
+            return t == ty;
+        });
     }
 
     public Result<LangtType> RequireConstructed(SourceRange range = default)

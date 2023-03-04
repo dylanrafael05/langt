@@ -1,9 +1,9 @@
 using System.Diagnostics.CodeAnalysis;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
 
-public class LangtFunction : IFullNamed
+public class LangtFunction : IResolutionlike
 {
     public LangtFunction(LangtFunctionGroup group)
     {
@@ -15,8 +15,12 @@ public class LangtFunction : IFullNamed
     public required LangtFunctionType Type {get; init;}
     public required string[] ParameterNames {get; init;}
     public required bool IsExtern {get; init;}
+    [NotNull] public required string? Documentation {get; init;}
+    [NotNull] public required SourceRange? DefinitionRange {get; init;}
 
     public string Name => Group.Name;
     public string DisplayName => Group.DisplayName;
     public string FullName => Group.FullNameSimple();
+
+    IScope IResolutionlike.HoldingScope => Group.HoldingScope;
 }

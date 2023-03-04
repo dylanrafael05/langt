@@ -1,5 +1,5 @@
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.AST;
 
@@ -28,7 +28,7 @@ public record StaticAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         }
 
         // Attempt to grab result
-        var resolutionResult = ns.Resolve(Right.ContentStr, Range, ctx);
+        var resolutionResult = ns.ResolveDirect(Right.ContentStr, Range, ctx);
         builder.AddData(resolutionResult);
 
         if(!builder) return builder.BuildError<BoundASTNode>();

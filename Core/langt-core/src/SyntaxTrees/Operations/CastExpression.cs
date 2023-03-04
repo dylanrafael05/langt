@@ -27,7 +27,7 @@ public record CastExpression(ASTNode Value, ASTToken As, ASTType Type) : ASTNode
         var results = Result.All
         (
             Value.Bind(ctx),
-            Type.Resolve(ctx)
+            Type.UnravelSymbol(ctx)
         );
         var builder = ResultBuilder.From(results);
 

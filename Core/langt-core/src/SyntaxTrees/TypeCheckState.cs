@@ -1,6 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.Structure;
-using Langt.Structure.Resolutions;
+
 using Langt.Utility;
 
 namespace Langt.AST;

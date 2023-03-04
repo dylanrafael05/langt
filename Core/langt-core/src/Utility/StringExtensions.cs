@@ -11,8 +11,11 @@ public static class StringExtensions
     public static string Stringify(this IEnumerable<string?> ipt, string sep = ", ")
         => string.Join(sep, ipt);
 
+    public static string PaddedSubstring(this string s, int start, int end) 
+        => " ".Repeat(-start) + s[Math.Max(0, start)..Math.Min(end, s.Length)] + " ".Repeat(end - s.Length);
+
     public static string ReString(this IEnumerable<char> ipt) 
-        => string.Join("", ipt.Select(c => c.ToString()));
+        => new(ipt.ToArray());
 
     public static string Pluralize<T>(this string str, string pluralForm, T num)
         where T: INumber<T>
@@ -30,10 +33,5 @@ public static class StringExtensions
         => str.Pluralize(str + "s", num);
     
     public static string Repeat(this string str, int count) 
-        => string.Concat(Enumerable.Repeat(str, count));
-
-    public static StringBuilder AppendLayered(this StringBuilder b, int depth, string txt)
-        => b.Append(".   ".Repeat(depth)).Append(txt).AppendLine();
-    public static StringBuilder AppendLayered(this StringBuilder b, int depth, ReadOnlySpan<char> txt)
-        => b.Append(".   ".Repeat(depth)).Append(txt).AppendLine();
+        => string.Concat(Enumerable.Repeat(str, Math.Max(count, 0)));
 }

@@ -2,11 +2,24 @@ using System.Collections;
 
 namespace Langt.Structure.Collections;
 
+public interface IOrderedList<T> : IList<T>
+{
+    int IndexGreaterThan(T item);
+    void IList<T>.Insert(int index, T item)
+        => throw new NotSupportedException("Cannot insert into an ordered list");
+}
+
+public interface IReadOnlyOrderedList<T> : IReadOnlyList<T>
+{
+    int IndexOf(T item);
+    int IndexGreaterThan(T item);
+}
+
 /// <summary>
 /// Represents a generic list which is sorted based on some provided comparer.
 /// Has the same functionality as a list, except for .Insert() which throws a NotSupportedException.
 /// </summary>
-public class OrderedList<T> : IList<T>
+public class OrderedList<T> : IOrderedList<T>, IReadOnlyOrderedList<T>
 {
     private List<T> inner;
     private readonly IComparer<T> comparer;
@@ -107,9 +120,6 @@ public class OrderedList<T> : IList<T>
             : idx
         ;
     }
-
-    public void Insert(int index, T item)
-        => throw new NotSupportedException("Cannot insert into an ordered list");
 
     public bool Remove(T item)
     {

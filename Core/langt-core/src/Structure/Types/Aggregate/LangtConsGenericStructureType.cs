@@ -1,6 +1,59 @@
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.Structure;
+
+public class GenericTypeSymbol : Symbol<LangtType>
+{
+    public required ISymbol<LangtType> Base {get; init;}
+    public required ISymbol<LangtType>[] Arguments {get; init;}
+
+    public override Result<LangtType> Unravel(Context ctx)
+    {
+        var builder = ResultBuilder.Empty();
+
+        var baseTyRes = Base.Unravel(ctx);
+        builder.AddData(baseTyRes);
+
+        if(!baseTyRes) return builder.Build(LangtType.Error);
+
+        var baseTy = baseTyRes.Value;
+
+        if(!baseTy.IsStructure || !baseTy.IsConstructed)
+        {
+            return builder
+                .WithDgnError($"Expected a generic type, got {baseTy.FullName}", Range)
+                .Build(LangtType.Error);
+        }
+
+        var args = new List<LangtType>();
+        foreach(var arg in Arguments)
+        {
+            var argRes = arg.Unravel(ctx);
+            builder.AddData(argRes);
+
+            args.Add(argRes.Or(LangtType.Error));
+        }
+        
+        if(Arguments.Length != baseTy.GenericParameters.Count)
+        {
+            return builder
+                .WithDgnError($"Cannot construct generic type from {baseTy.FullName} with arguments {args.Stringify(t => t.FullName)}; expected {baseTy.GenericParameters.Count} arguments, not {Arguments.Length}", Range)
+                .BuildError<LangtType>();
+        }
+        
+        foreach(var (idx, ty) in args.Indexed())
+        {
+            if(ty.IsReference)
+            {
+                builder.AddDgnError($"Cannot supply a reference type to a generic type", Arguments[idx].Range);
+            }
+        }
+
+        if(!builder) return builder.BuildError<LangtType>();
+
+        return builder.Build<LangtType>(new LangtConsGenericStructureType(baseTy.Structure, args.ToArray()));
+    }
+}
 
 public class LangtConsGenericStructureType : LangtType, IStructureType
 {
@@ -64,4 +117,7 @@ public class LangtConsGenericStructureType : LangtType, IStructureType
     {
         return baseType.HasField(name);
     }
+
+    public override bool? TestAgainstFloating(Func<LangtType, bool?> pred)
+        => pred(this) ?? this.Fields().FloatingAny(f => f.Type.TestAgainstFloating(pred));
 }

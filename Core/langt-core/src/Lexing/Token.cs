@@ -6,12 +6,7 @@ using TT = Langt.Lexing.TokenType;
 
 namespace Langt.Lexing;
 
-public interface ITokenlike // TODO: IMPLEMENT
-{
-
-}
-
-public readonly record struct Token(TT Type, SourceRange Range) : ISourceRanged, IElement<VisitDumper>
+public readonly record struct Token(TT Type, SourceRange Range) : ISourceRanged, IElement<VisitDumper>, IComparable<Token>
 {
     public override string ToString()
         => $"Token({Type}, {Range}): \"{Range.Content.ToString().ReplaceLineEndings("(newline)")}\"";
@@ -20,6 +15,9 @@ public readonly record struct Token(TT Type, SourceRange Range) : ISourceRanged,
     {
         dumper.PutString("\"" + ContentStr + "\"");
     }
+
+    public int CompareTo(Token other)
+        => Range.CompareTo(other.Range);
 
     public ReadOnlySpan<char> Content => Range.Content;
     public string ContentStr => Range.Content.ToString();

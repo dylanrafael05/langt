@@ -27,7 +27,7 @@ public class LangtPointerType : LangtTypeWithElement
 {
     public LangtPointerType(LangtType ptrType) : base(ptrType)
     {
-        Expect.That(ptrType.IsReference);
+        Expect.Not(ptrType.IsReference);
     }
 
     protected override string ModifyName(string nameIn)

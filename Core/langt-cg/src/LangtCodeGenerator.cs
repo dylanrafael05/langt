@@ -5,7 +5,7 @@ using Langt.Parsing;
 using Langt.CG.Bindings;
 using Langt.CG.Structure;
 using Langt.CG.Lowering;
-using Langt.Structure.Resolutions;
+
 
 namespace Langt.CG;
 
@@ -98,7 +98,7 @@ public class CodeGenerator
 
     public void InitializeScope(IScope scope)
     {
-        foreach(var variable in scope!.Items.Values.OfType<LangtVariable>())
+        foreach(var variable in scope!.Items(Context).OfType<LangtVariable>())
         {
             var llvm = Builder.BuildAlloca(Binder.Get(variable.Type), "var."+variable.Name);
             

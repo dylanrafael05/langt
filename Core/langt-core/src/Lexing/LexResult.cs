@@ -1,10 +1,12 @@
 using System.Collections;
+using Langt.Structure.Collections;
 
 namespace Langt.Lexing;
 
 public class LexResult : IReadOnlyList<Token>
 {
     private readonly List<Token> tokens;
+    public IReadOnlyList<Token> Tokens => tokens;
 
     public Token this[int index] => tokens[index];
     public int Count => tokens.Count;
@@ -19,8 +21,6 @@ public class LexResult : IReadOnlyList<Token>
     {
         this.tokens = tokens;
     }
-    public LexResult(IEnumerable<Token> tokens) : this(new(tokens))
-    {}
 
     public string Dump()
     {
