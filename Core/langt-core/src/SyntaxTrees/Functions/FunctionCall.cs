@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 
@@ -80,8 +81,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
             if(!builder)
             {
                 return builder.WithDgnError(
-                    $"Could not call a function pointer of type {funcType.Name} " +
-                    $"with arguments of type {string.Join(", ", boundArgs.Select(a => (a?.Type ?? LangtType.Error).FullName))}",
+                    Messages.Get("fn-bad-ptr-call", this, boundArgs.Select(a => a.Type.FullName).Stringify()),
                     Range
                 ).BuildError<BoundASTNode>();
             }
@@ -96,7 +96,7 @@ public record FunctionCall(ASTNode FunctionAST, ASTToken Open, SeparatedCollecti
         }
         else 
         {
-            return builder.WithDgnError("Cannot call a non-functional expression", Range).BuildError<BoundASTNode>();
+            return builder.WithDgnError(Messages.Get("call-non-fn"), Range).BuildError<BoundASTNode>();
         }
     }
 }

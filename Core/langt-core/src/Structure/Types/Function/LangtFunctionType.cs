@@ -1,4 +1,5 @@
 using Langt.AST;
+using Langt.Message;
 using Langt.Structure;
 
 namespace Langt.Structure;
@@ -156,7 +157,7 @@ public class LangtFunctionType : LangtType
             (
                 Result.Error<BoundASTNode[]>
                 (
-                    Diagnostic.Error("Incorrect number of parameters", range)
+                    Diagnostic.Error(Messages.Get("fn-bad-arg-count", this), range)
                 ),
                 SignatureMatchLevel.None
             );

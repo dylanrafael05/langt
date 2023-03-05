@@ -3,7 +3,7 @@ using Langt.Structure;
 using Langt.Lexing;
 using Langt.Parsing;
 using Langt.Structure.Visitors;
-
+using Langt.Message;
 
 namespace Langt;
 
@@ -242,7 +242,7 @@ public class Context : IProjectDependency
         if(conv is null)
         {
             return ResultBuilder.Empty()
-                .WithDgnError($"Could not find a conversion from {input.FullName} to {output.FullName}", range)
+                .WithDgnError(Messages.Get("conversion-no-found", input, output), range)
                 .BuildError<LangtConversion>()
             ;
         }

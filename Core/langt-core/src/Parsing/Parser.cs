@@ -5,6 +5,7 @@ using Langt.Lexing;
 using System.Runtime.CompilerServices;
 using TT = Langt.Lexing.TokenType;
 using Langt.Structure.Collections;
+using Langt.Message;
 
 namespace Langt.Parsing;
 
@@ -78,7 +79,7 @@ public sealed class Parser : LookaheadListStream<Token>, IProjectDependency
         catch(ParserException exc) 
         {
             Project.Logger.Note($"Found an error at ({Range}), attempting to recover . . . ");
-            Project.Diagnostics.Error(exc.Message, Range);
+            Project.Diagnostics.Error(Messages.Get("direct-REMOVE-ME", exc.Message), Range);
             var r = Range;
 
             Pass();

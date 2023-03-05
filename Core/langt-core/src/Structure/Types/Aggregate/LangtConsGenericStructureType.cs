@@ -1,5 +1,7 @@
 
 
+using Langt.Message;
+
 namespace Langt.Structure;
 
 public class GenericTypeSymbol : Symbol<LangtType>
@@ -21,7 +23,7 @@ public class GenericTypeSymbol : Symbol<LangtType>
         if(!baseTy.IsStructure || !baseTy.IsConstructed)
         {
             return builder
-                .WithDgnError($"Expected a generic type, got {baseTy.FullName}", Range)
+                .WithDgnError(Messages.Get("expected-generic", baseTy), Range)
                 .Build(LangtType.Error);
         }
 
@@ -37,7 +39,7 @@ public class GenericTypeSymbol : Symbol<LangtType>
         if(Arguments.Length != baseTy.GenericParameters.Count)
         {
             return builder
-                .WithDgnError($"Cannot construct generic type from {baseTy.FullName} with arguments {args.Stringify(t => t.FullName)}; expected {baseTy.GenericParameters.Count} arguments, not {Arguments.Length}", Range)
+                .WithDgnError(Messages.Get("generic-bad-arg-count", baseTy, args.Stringify(k => k.FullName), baseTy.GenericParameters.Count, Arguments.Length), Range)
                 .BuildError<LangtType>();
         }
         
@@ -45,7 +47,7 @@ public class GenericTypeSymbol : Symbol<LangtType>
         {
             if(ty.IsReference)
             {
-                builder.AddDgnError($"Cannot supply a reference type to a generic type", Arguments[idx].Range);
+                builder.AddDgnError(Messages.Get("generic-ref-arg"), Arguments[idx].Range);
             }
         }
 

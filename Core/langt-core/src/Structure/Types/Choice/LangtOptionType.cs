@@ -1,4 +1,5 @@
 using Langt.AST;
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -24,7 +25,7 @@ public class OptionTypeSymbol : Symbol<LangtType>
 
             if(options.Contains(ty))
             {
-                builder.AddDgnError($"Duplicate type {ty.FullName} in option", symbol.Range);
+                builder.AddDgnError(Messages.Get("option-dup", this, ty), symbol.Range);
                 continue;
             }
 

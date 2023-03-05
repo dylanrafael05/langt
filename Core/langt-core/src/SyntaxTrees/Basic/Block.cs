@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 
 using Langt.Structure.Visitors;
@@ -32,7 +33,7 @@ public record BoundGroup(ASTNode Source, IList<BoundASTNode> BoundNodes, IScope?
             {
                 if(!anyUnreachableLog)
                 {
-                    builder.AddWarning("Unreachable code", bast.Range);
+                    builder.AddWarning(Messages.Get("unreachable"), bast.Range);
                 }
 
                 bast.Unreachable = true;

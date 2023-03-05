@@ -2,6 +2,7 @@ using Langt.Structure;
 using Langt.Lexing;
 using Langt.Structure.Visitors;
 using Langt.Utility;
+using Langt.Message;
 
 namespace Langt.AST;
 
@@ -24,7 +25,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         if(!left.Type.IsStructure)
         {
-            return builder.WithDgnError($"Cannot use a '.' access on a non-structure type", Range)
+            return builder.WithDgnError(Messages.Get("dot-not-struct", left.Type), Range)
                 .BuildError<BoundASTNode>();
         }
 
@@ -32,7 +33,7 @@ public record DotAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
 
         if(!structureType.ResolveField(Right.ContentStr, out var field))
         {
-            return builder.WithDgnError($"Unknown field {Right.ContentStr} for type {structureType.Name}", Range)
+            return builder.WithDgnError(Messages.Get("dot-bad-field", left.Type, Right.ContentStr), Range)
                 .BuildError<BoundASTNode>();
         }
 

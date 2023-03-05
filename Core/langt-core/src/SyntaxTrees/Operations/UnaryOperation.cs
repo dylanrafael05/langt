@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 
@@ -25,10 +26,14 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
 
             if(Operator.Type is TT.Ampersand)
             {
+                /*
                 if(!v.Type.IsReference)
                 {
                     return builder.WithDgnError($"Cannot get a pointer to a non-reference", Range).BuildError<BoundASTNode>();
                 }
+                */
+
+                //TODO: THIS
 
                 return builder.Build<BoundASTNode>
                 (
@@ -38,10 +43,11 @@ public record UnaryOperation(ASTToken Operator, ASTNode Operand) : ASTNode, IDir
             else 
             {
                 v = v.TryDeference();
+                //TODO: THIS
                 
                 if(!v.Type.IsPointer)
                 {
-                    return builder.WithDgnError($"Cannot dereference a non-pointer", Range).BuildError<BoundASTNode>();
+                    return builder.WithDgnError(Messages.Get("ptr-bad-deref"), Range).BuildError<BoundASTNode>();
                 }
 
                 return builder.Build<BoundASTNode>

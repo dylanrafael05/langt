@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 
@@ -23,14 +24,15 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
         if(!type.IsStructure)
         {
-            return builder.WithDgnError($"Unknown structure type {type.Name}", Range).BuildError<BoundASTNode>();
+            return builder.WithDgnError(Messages.Get("struct-init-not-struct", type), Range).BuildError<BoundASTNode>();
         }
 
         var args = Args.Values.ToList();
+        var fieldCount = type.Structure!.Fields().Count();
 
-        if(type.Structure!.Fields().Count() != args.Count)
+        if(fieldCount != args.Count)
         {
-            return builder.WithDgnError($"Incorrect number of fields for structure initializer of type {type.Name}", Range)
+            return builder.WithDgnError(Messages.Get("struct-init-bad-arg-count", this, fieldCount, args.Count), Range)
                 .BuildError<BoundASTNode>();
         }
 
@@ -49,7 +51,7 @@ public record StructInitializer(ASTType Type, ASTToken Open, SeparatedCollection
 
                 if(!r) return Result.Error<BoundASTNode>
                 (
-                    Diagnostic.Error($"Incorrect type for field '{fname}' in struct initializer for struct {type.Name}", Range)
+                    Diagnostic.Error(Messages.Get("struct-init-bad-arg-type", this, fname, ftype), Range)
                 );
 
                 return r;

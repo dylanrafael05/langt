@@ -1,4 +1,5 @@
 using Langt.AST;
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -17,7 +18,7 @@ public class ReferenceTypeSymbol : Symbol<LangtType>
         {
             return Result.Error<LangtType>(
                 Diagnostic.Error(
-                    "Cannot create a nested reference type",
+                    Messages.Get("ref-to-ref"),
                     Range
                 )
             );

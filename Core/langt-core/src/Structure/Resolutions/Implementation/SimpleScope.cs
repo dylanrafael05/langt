@@ -1,3 +1,5 @@
+using Langt.Message;
+
 namespace Langt.Structure;
 
 public class SimpleScope : IScope
@@ -33,7 +35,7 @@ public class SimpleScope : IScope
         }
         else 
         {
-            return Result.Error<IResolvable>(Diagnostic.Error($"No item named {identifier} found in scope", range));
+            return Result.Error<IResolvable>(Diagnostic.Error(Messages.Get("no-found", identifier), range));
         }
     }
     public Result<IFullNamed> Resolve(string identifier, SourceRange range, Context ctx, bool upwards = true)
@@ -43,7 +45,7 @@ public class SimpleScope : IScope
     {
         if (items.ContainsKey(value.Name))
         {
-            return Result.Error(Diagnostic.Error($"Attempt to redefine {value.FullName}", range));
+            return Result.Error(Diagnostic.Error(Messages.Get("redefine", value.Name), range));
         }
 
         items.Add(value.Name, value);

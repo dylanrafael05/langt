@@ -1,3 +1,5 @@
+using Langt.Message;
+
 namespace Langt.Structure;
 
 public static class SymbolExtensions
@@ -19,7 +21,7 @@ public static class SymbolExtensions
             if(k.Value is not T)
             {
                 return k
-                    .WithError(Diagnostic.Error($"Expected to find a {TypeName} but did not", Range))
+                    .WithError(Diagnostic.Error(Messages.Get("expected", TypeName), Range))
                     .ErrorCast<T>();
             }
 

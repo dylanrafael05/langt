@@ -1,3 +1,4 @@
+using Langt.Message;
 using Langt.Structure;
 
 
@@ -23,7 +24,7 @@ public record StaticAccess(ASTNode Left, ASTToken Dot, ASTToken Right) : ASTNode
         // Fail if attempting to perform a static access on something which is not a scope
         if(!hasResolution || left.Resolution is not IScope ns)
         {
-            return builder.WithDgnError($"'::' access requires a scope to access from.", Range)
+            return builder.WithDgnError(Messages.Get("cc-bad-lhs"), Range)
                 .BuildError<BoundASTNode>();
         }
 

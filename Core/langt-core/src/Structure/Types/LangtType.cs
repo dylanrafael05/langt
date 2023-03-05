@@ -4,6 +4,7 @@ using Langt.Utility;
 using System.Diagnostics.CodeAnalysis;
 
 using Langt.AST;
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -155,7 +156,7 @@ public abstract class LangtType : IFullNamed, IEquatable<LangtType>
     {
         if(IsConstructed) return Result.Success(this);
 
-        return Result.Error<LangtType>(Diagnostic.Error($"Cannot use unconstructed type {this} in this context", range));
+        return Result.Error<LangtType>(Diagnostic.Error(Messages.Get("ty-not-constructed", this), range));
     }
 
     public abstract bool Equals(LangtType? other);

@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 
@@ -70,7 +71,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
         
         if(!left.IsAssignable)
         {
-            return builder.WithDgnError($"Cannot assign to a non-assignable value", Range).BuildError<BoundASTNode>();
+            return builder.WithDgnError(Messages.Get("assign-bad-lhs"), Range).BuildError<BoundASTNode>();
         }
 
         var rightResult = Right.BindMatchingExprType(ctx, left.Type.ElementType!);
@@ -115,7 +116,7 @@ public record Assignment(ASTNode Left, ASTToken Assign, ASTNode Right) : ASTNode
 
         if(!outputParams[0].IsAssignable)
         {
-            return builder.WithDgnError($"Cannot index-assign to a non-assignable variable", Range)
+            return builder.WithDgnError(Messages.Get("assign-bad-index-lhs"), Range)
                 .BuildError<BoundASTNode>();
         }
 

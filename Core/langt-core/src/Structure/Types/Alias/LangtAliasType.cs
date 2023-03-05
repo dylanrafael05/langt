@@ -1,5 +1,5 @@
 using Langt.AST;
-
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -24,7 +24,7 @@ public class LangtAliasType : LangtResolvableType
 
         if(ty.Contains(this))
         {
-            return Result.Error(Diagnostic.Error($"Alias types cannot refer to themselves!", baseSymbol.Range));
+            return Result.Error(Diagnostic.Error(Messages.Get("alias-recursion", this), baseSymbol.Range));
         }
 
         baseType = ty;

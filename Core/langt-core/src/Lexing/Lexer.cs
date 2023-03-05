@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using Langt.Structure;
+using Langt.Message;
 using Langt.Structure.Collections;
 using TT = Langt.Lexing.TokenType;
 
@@ -42,9 +43,9 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
     }
 
     // Tokenizers
-    private Token Error(string message) 
+    private Token Unknown(char tok) 
     {
-        Project.Diagnostics.Error(message, Range);
+        Project.Diagnostics.Error(Messages.Get("unknown-char", tok), Range);
         return Grab(1, TT.Error);
     }
 
@@ -124,7 +125,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
                 case (null, _): 
                 {
-                    Project.Diagnostics.Error("Unterminated block comment", Range);
+                    Project.Diagnostics.Error(Messages.Get("block-comment"), Range);
                     return TT.Error;
                 }
 
@@ -222,7 +223,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
                 if(Current.Nullable() is '\n' or '\r')
                 {
-                    Project.Diagnostics.Error("Unterminated string literal.", Range);
+                    Project.Diagnostics.Error(Messages.Get("escape-char", Current.Value), Range);
                 }
             } 
             while(Last.Nullable() is '\\' && Current.Nullable() is '"');
@@ -251,7 +252,7 @@ public sealed class Lexer : LookaheadListStream<char>, IProjectDependency
 
         null => Grab(1, TT.EndOfFile),
 
-        _ => Error($"Unknown character '{Current.Value}'")
+        _ => Unknown(Current.Value)
     };
 
     private TT MapKeywordType(string str) => str switch 

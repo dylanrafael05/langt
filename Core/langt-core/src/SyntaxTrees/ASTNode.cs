@@ -8,6 +8,7 @@ using Langt.Utility;
 using Results;
 
 using Spectre.Console;
+using Langt.Message;
 
 namespace Langt.AST;
 
@@ -273,7 +274,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
                 if(!target.IsFunctionPtr)
                 {
                     return builder
-                        .WithDgnError("Cannot target type a function reference to a non-functional type", Range)
+                        .WithDgnError(Messages.Get("fn-ref-impossible"), Range)
                         .BuildError<BoundASTNode>()
                         .AsTargetTypeDependent();
                 }
@@ -293,11 +294,6 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
             }
         }
 
-        // Fail if expression has type of 'none'
-        if(Type == LangtType.None) return builder
-            .WithDgnError($"Expression must have a value", Range)
-            .BuildError<BoundASTNode>();
-
         // Return here if types match
         if(target == Type) return builder.Build(this);
         
@@ -315,7 +311,7 @@ public abstract record BoundASTNode(ASTNode ASTSource) : SourcedTreeNode<BoundAS
         if(!conv.IsImplicit)
         {
             return builder
-                .WithDgnError($"Could not find conversion from {Type.FullName} to {target.FullName} (an explicit conversion exists)", Range)
+                .WithDgnError(Messages.Get("conversion-no-found-explicit", conv.Input, conv.Output), Range)
                 .BuildError<BoundASTNode>()
                 .AsTargetTypeDependent()
             ;

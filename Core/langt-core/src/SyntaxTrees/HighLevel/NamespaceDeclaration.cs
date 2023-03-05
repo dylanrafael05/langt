@@ -1,3 +1,4 @@
+using Langt.Message;
 using Langt.Structure;
 
 namespace Langt.AST;
@@ -32,7 +33,7 @@ public record NamespaceDeclaration(ASTToken NamespaceTok, ASTNamespace Ns) : AST
             {
                 if(getns.Value is not Namespace ns) 
                 {
-                    return Result.Error(Diagnostic.Error($"Non-namespace already defined with this name; {name}", Range));
+                    return Result.Error(Diagnostic.Error(Messages.Get("redefine", getns.Value.Name), Range));
                 }
 
                 scope = ns;

@@ -3,6 +3,7 @@ using Langt.Structure;
 using Langt.Utility;
 using Langt.Structure.Visitors;
 using System.Numerics;
+using Langt.Message;
 
 namespace Langt.AST;
 
@@ -60,7 +61,7 @@ public record NumericLiteral(ASTToken Tok) : ASTNode, IDirectValue
                 // Throw an error if value does not fit within type
                 if(intVal > maxVal) return Result.Error<BoundASTNode>
                 (
-                    Diagnostic.Error($"Integer {intVal} out of range for type {options.TargetType}", Range)
+                    Diagnostic.Error(Messages.Get("int-range", Tok.ContentStr, options.TargetType), Range)
                 );
 
                 // Change expression and natural type to match target

@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 
 using Langt.Structure.Visitors;
@@ -73,7 +74,7 @@ public record FunctionDefinition(ASTToken Let,
         if(Let.Type is not TokenType.Extern && VarargSpec is not null)
         {
             return builder
-                .WithDgnError($"Cannot define a function as variable argument if it is not also extern", Range)
+                .WithDgnError(Messages.Get("fn-not-extern-vararg"), Range)
                 .Build();
         }
 

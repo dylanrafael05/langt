@@ -1,12 +1,16 @@
 using Langt.Lexing;
+using Langt.Message;
 
 namespace Langt;
 
-public record struct Diagnostic(MessageSeverity Severity, string Message, SourceRange Range) : IResultMetadata, IResultError
+public record struct Diagnostic(MessageSeverity Severity, string Message, int ID, SourceRange Range) : IResultMetadata, IResultError
 {
-    public static Diagnostic Error(string message, SourceRange range) => new(MessageSeverity.Error, message, range);
-    public static Diagnostic Warning(string message, SourceRange range) => new(MessageSeverity.Warning, message, range);
-    public static Diagnostic Note(string message, SourceRange range) => new(MessageSeverity.Note, message, range);
+    public static Diagnostic Error(MsgInfo info, SourceRange range) => new(MessageSeverity.Error, info, range);
+    public static Diagnostic Warning(MsgInfo info, SourceRange range) => new(MessageSeverity.Warning, info, range);
+    public static Diagnostic Note(MsgInfo info, SourceRange range) => new(MessageSeverity.Note, info, range);
+
+    public Diagnostic(MessageSeverity severity, MsgInfo info, SourceRange range) : this(severity, info.Message, info.ID, range)
+    {}
 
     public IResultMetadata? TryDemote()
         => this;

@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.AST;
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -16,7 +17,7 @@ public class PointerTypeSymbol : Symbol<LangtType>
 
         if(ty.IsReference)
         {
-            return Result.Error<LangtType>(Diagnostic.Error("Cannot create a pointer to a reference", Range));
+            return Result.Error<LangtType>(Diagnostic.Error(Messages.Get("ptr-to-ref"), Range));
         }
         
         return Result.Success<LangtType>(new LangtPointerType(ty));

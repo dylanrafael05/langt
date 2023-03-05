@@ -1,4 +1,5 @@
 using System.Collections;
+using Langt.Message;
 using Results.Interfaces;
 
 namespace Langt;
@@ -23,13 +24,13 @@ public class DiagnosticCollection : ICollection<Diagnostic>
     public int Count => items.Count;
     public bool IsReadOnly => false;
 
-    public void Note(string message, SourceRange range)
+    public void Note(MsgInfo message, SourceRange range)
         => Add(new(MessageSeverity.Note, message, range));
-    public void Warning(string message, SourceRange range)
+    public void Warning(MsgInfo message, SourceRange range)
         => Add(new(MessageSeverity.Warning, message, range));
-    public void Error(string message, SourceRange range)
+    public void Error(MsgInfo message, SourceRange range)
         => Add(new(MessageSeverity.Error, message, range));
-    public void Fatal(string message, SourceRange range)
+    public void Fatal(MsgInfo message, SourceRange range)
         => Add(new(MessageSeverity.Fatal, message, range));
 
     public void AddResult(IResultlike r)

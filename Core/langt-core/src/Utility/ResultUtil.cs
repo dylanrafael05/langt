@@ -1,5 +1,6 @@
 using System.Diagnostics.CodeAnalysis;
 using Langt.AST;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Collections;
 
@@ -48,12 +49,12 @@ public struct SilentError : IResultError
 
 public static class ResultUtil
 {
-    public static Result<T> DiagError<T>(string message, SourceRange range)
-        => Result.Error<T>(Diagnostic.Error(message, range));
-    public static Result<T> AppendWarning<T>(this Result<T> w, string message, SourceRange range)
-        => w.WithMetadata(Diagnostic.Warning(message, range));
-    public static Result<T> AppendNote<T>(this Result<T> w, string message, SourceRange range)
-        => w.WithMetadata(Diagnostic.Note(message, range));
+    public static Result<T> DiagError<T>(MsgInfo info, SourceRange range)
+        => Result.Error<T>(Diagnostic.Error(info, range));
+    public static Result<T> AppendWarning<T>(this Result<T> w, MsgInfo info, SourceRange range)
+        => w.WithMetadata(Diagnostic.Warning(info, range));
+    public static Result<T> AppendNote<T>(this Result<T> w, MsgInfo info, SourceRange range)
+        => w.WithMetadata(Diagnostic.Note(info, range));
 
     public static BindingOptions GetBindingOptions(this IResultlike r)
         => r.GetSingleton<BindingOptions>();
@@ -73,12 +74,12 @@ public static class ResultUtil
     public static R AddStaticReference<R>(this R r, SourceRange reference, IResolutionlike item, bool isDefinition = false) where R : IResultlike, IModdableResultlike<R>
         => r.AddStaticReference(new(reference, item, isDefinition));
 
-    public static ResultBuilder WithDgnError(this ResultBuilder builder, string message, SourceRange range)
-        => builder.WithError(Diagnostic.Error(message, range));
-    public static void AddDgnError(this ResultBuilder builder, string message, SourceRange range)
-        => builder.AddError(Diagnostic.Error(message, range));
-    public static void AddWarning(this ResultBuilder builder, string message, SourceRange range)
-        => builder.AddMetadata(Diagnostic.Warning(message, range));
-    public static void AddNote(this ResultBuilder builder, string message, SourceRange range)
-        => builder.AddMetadata(Diagnostic.Note(message, range));
+    public static ResultBuilder WithDgnError(this ResultBuilder builder, MsgInfo info, SourceRange range)
+        => builder.WithError(Diagnostic.Error(info, range));
+    public static void AddDgnError(this ResultBuilder builder, MsgInfo info, SourceRange range)
+        => builder.AddError(Diagnostic.Error(info, range));
+    public static void AddWarning(this ResultBuilder builder, MsgInfo info, SourceRange range)
+        => builder.AddMetadata(Diagnostic.Warning(info, range));
+    public static void AddNote(this ResultBuilder builder, MsgInfo info, SourceRange range)
+        => builder.AddMetadata(Diagnostic.Note(info, range));
 }

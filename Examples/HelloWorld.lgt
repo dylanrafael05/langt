@@ -2,10 +2,14 @@ extern printf(text *u8 ...) none
 
 let main() none
 {
-    printf("%d", sizeof u64)
+    let x = str {0}
+    printf("%d", x.o + 9)
 }
 
-struct Test!<T>
+#[
+    This is a documentation comment
+]
+struct str 
 {
-    a T
+    x i64
 }

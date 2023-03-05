@@ -1,5 +1,5 @@
 using Langt.AST;
-
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -49,7 +49,7 @@ public class LangtNamedStructureType : LangtResolvableType, IStructureType
         {
             if(fieldDict.ContainsKey(fs.Name))
             {
-                builder.AddDgnError($"Cannot redefine field {FullName}.{fs.Name}", fs.Range);
+                builder.AddDgnError(Messages.Get("field-redefine", this, fs.Name), fs.Range);
                 continue;
             }
             
@@ -60,7 +60,7 @@ public class LangtNamedStructureType : LangtResolvableType, IStructureType
 
             if(ty.Stores(this))
             {
-                builder.AddDgnError($"Field {FullName}.{fs.Name} creates a cyclic type layout", fs.Range);
+                builder.AddDgnError(Messages.Get("field-cyclic", this, fs.Name), fs.Range);
             }
 
             fieldDict.Add(fs.Name, new LangtStructureField(fs.Name, ty, fieldDict.Count));

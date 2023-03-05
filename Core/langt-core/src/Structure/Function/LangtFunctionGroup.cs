@@ -1,5 +1,5 @@
 using Langt.AST;
-
+using Langt.Message;
 
 namespace Langt.Structure;
 
@@ -27,7 +27,7 @@ public class LangtFunctionGroup : ImmediateResolvable
 
         if(r) return Result.Error
         (
-            Diagnostic.Error($"Cannot redefine overload of function {FullName} with signature {overload.Type.SignatureString}", range)
+            Diagnostic.Error(Messages.Get("fn-overload-redefine", this, r.Value.Function.Type.SignatureString), range)
         );
 
         overloads.Add(overload);
@@ -36,14 +36,14 @@ public class LangtFunctionGroup : ImmediateResolvable
 
     private Result<Resolution> HandleOverload(Resolution[] resolves, SourceRange range, IEnumerable<LangtType?> parameterTypes) 
     {
-        string Types() => "type".Pluralize(parameterTypes.Count()) + parameterTypes.Stringify();
+        string Types() => "type".Pluralize(parameterTypes.Count()) + " " + parameterTypes.Stringify();
 
         var builder = ResultBuilder.Empty();
 
         if(resolves.Length == 0) 
         {
             return builder.WithDgnError(
-                $"Could not resolve any matching overloads for call to {FullName} with parameter {Types()}",
+                Messages.Get("fn-no-matching-overload", this, Types()),
                 range
             ).BuildError<Resolution>();
         }
@@ -62,7 +62,7 @@ public class LangtFunctionGroup : ImmediateResolvable
             if(byLevel.Length != 1)
             {
                 return builder.WithDgnError(
-                    $"Could not resolve any one matching overload for call to {FullName} with parameter {Types()}, multiple overloads are valid",
+                    Messages.Get("fn-multiple-matching-overload"),
                     range
                 ).BuildError<Resolution>();
             }

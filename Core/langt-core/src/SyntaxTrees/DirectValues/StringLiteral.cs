@@ -1,4 +1,5 @@
 using Langt.Lexing;
+using Langt.Message;
 using Langt.Structure;
 using Langt.Structure.Visitors;
 using Langt.Utility;
@@ -45,7 +46,7 @@ public record StringLiteral(ASTToken Tok) : ASTNode, IDirectValue
 
                 if(err)
                 {
-                    return ResultBuilder.Empty().WithDgnError($"Unrecognized string escape sequence '\\{source[i+1]}'", Range).BuildError<BoundASTNode>();
+                    return ResultBuilder.Empty().WithDgnError(Messages.Get("escape-char", source[i+1]), Range).BuildError<BoundASTNode>();
                 }
 
                 s += nc;
