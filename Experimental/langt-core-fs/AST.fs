@@ -16,43 +16,29 @@ module private Helpers =
     let (|Val|Unval|) (a : 'a Res) = if a.HasValue then Val(a.Value) else Unval
     let (|Succ|Err|) (a : 'a Res) = if a.HasErrors then Err(a.Errors) else Succ
 
-    let map r (f : 'a -> 'b) = 
+    let (@) r (f : 'a -> 'b) = 
         match r with
-        | Val x -> ResExt.WithDataFrom(ResultHelpers.Success (f x),  r)
+        | Val x -> ResultHelpers.Success (f x)
         | Unval -> r.ErrorCast()
 
-type DoBind<'a> = 
+    let (!) r = 
+        match r with 
+        | Val x -> x 
+        | Unval -> failwith "Expected a valid result"
 
-    val builder : ResBuilder
+    let (/) r a =
+        match r with 
+        | Val x -> x
+        | Unval -> a
 
-    new() = {builder = ResBuilder.Empty()}
+    let (*) r a = 
+        match r, a with
+        | (Val x, Val y) -> ResultHelpers.Success ((x, y))
+        | _ -> r.ErrorCast()
 
-    member this.Zero () = ResultHelpers.Blank()
-
-    member this.Bind (a : 'a Res, f : 'a -> 'b Res) = 
-        let k = a.Map<'b> f
-        this.builder.AddData k; k
-
-    member this.Return a = this.builder.Build a
-    member this.ReturnFrom a = 
-        match a with 
-        | Val x -> this.builder.Build x 
-        | Unval -> this.builder.BuildError<_>()
-
-    member _.Yield() = ()
-
-
-let bind state settings (a : #AST.ASTNode) = a.Bind(state, settings)
-let bindMatching state (t : #Structure.LangtType) (a : #AST.ASTNode) = a.BindMatchingExprType(state, t)
-
-let inline dobind<'a> = DoBind<'a> ()
-
-let test (state : AST.ASTPassState) (settings : 'Ignored) (x : AST.Return) = dobind {
-    if x.Value = null then 
-        return new AST.BoundReturn(x, null)
-    else 
-        let rtype = state.CTX.CurrentFunction.Type.ReturnType
-        let! vr = bindMatching state rtype x.Value 
-
-        return new AST.BoundReturn(x, vr)
-}
+    let k = Res 10
+    let x = k @ float
+    let p = !x
+    let z = k / 1
+    let m = k * x
+    let t = [k, x @ int, m @ fun (x, _) -> x]

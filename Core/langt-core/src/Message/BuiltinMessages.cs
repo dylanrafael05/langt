@@ -7,12 +7,12 @@ public static class BuiltinMessages
 //i.e. `many-problems, probs:str* = There are many problems: $probs`
 public const string Source =
 """
-int-range, val:str, type:qname = Integer $value out of range for type $type
+int-range, val:str, ty:qname = Integer $val out of range for type $ty
 
 unknown-char, ch:str = Unknown character '$ch'
 escape-char, ch:str = Unrecognized string escape sequence '\$ch'
 
-direct-REMOVE-ME, txt:str = $txt
+direct-REMOVE-ME, x:str = $x
 
 expected, ty:str = Expected to find a $ty but did not
 block-comment = Unterminated block comment
